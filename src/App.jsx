@@ -1190,16 +1190,17 @@ parlays.forEach(p => {
   });
 
   // Calculate net positions (who owes who overall)
-  const netPositions = {};
-  players.forEach(player => {
-    netPositions[player] = {};
-    players.forEach(otherPlayer => {
-      if (player !== otherPlayer) {
-        netPositions[player][otherPlayer] = 0;
-      }
-    });
+const allPlayers = ['Management', 'CD', '914', 'Junior', 'Jacoby'];
+const netPositions = {};
+allPlayers.forEach(player => {
+  netPositions[player] = {};
+  allPlayers.forEach(otherPlayer => {
+    if (player !== otherPlayer) {
+      netPositions[player][otherPlayer] = 0;
+    }
   });
-
+});
+    
   payments.forEach(payment => {
     if (payment.from && payment.to && payment.from !== payment.to) {
       netPositions[payment.from][payment.to] = (netPositions[payment.from][payment.to] || 0) + payment.amount;
@@ -1207,9 +1208,9 @@ parlays.forEach(p => {
   });
 
   // Simplify: if A owes B and B owes A, net them out
-  const simplifiedPayments = [];
-  players.forEach(player1 => {
-    players.forEach(player2 => {
+const simplifiedPayments = [];
+allPlayers.forEach(player1 => {
+  allPlayers.forEach(player2 => {
       if (player1 < player2) { // Only process each pair once
         const player1OwesPlayer2 = netPositions[player1][player2] || 0;
         const player2OwesPlayer1 = netPositions[player2][player1] || 0;
