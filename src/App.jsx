@@ -161,6 +161,8 @@ const commonPropTypes = [
         player: '',
         sport: 'NFL',
         team: '',
+        awayTeam: '',
+        homeTeam: '',
         betType: 'Spread',
         favorite: 'Favorite',
         spread: '',
@@ -224,6 +226,20 @@ const handlePropTypeInput = (id, value) => {
   setShowSuggestions({ ...showSuggestions, [`prop-${id}`]: suggestions.length > 0 });
 };
 
+const handleAwayTeamInput = (id, value, sport) => {
+  updateParticipant(id, 'awayTeam', value);
+  const suggestions = getTeamSuggestions(value, sport);
+  setSuggestions(suggestions);
+  setShowSuggestions({ ...showSuggestions, [`awayTeam-${id}`]: suggestions.length > 0 });
+};
+
+const handleHomeTeamInput = (id, value, sport) => {
+  updateParticipant(id, 'homeTeam', value);
+  const suggestions = getTeamSuggestions(value, sport);
+  setSuggestions(suggestions);
+  setShowSuggestions({ ...showSuggestions, [`homeTeam-${id}`]: suggestions.length > 0 });
+};
+  
 const selectSuggestion = (id, field, value) => {
   updateParticipant(id, field, value);
   setShowSuggestions({});
@@ -522,31 +538,6 @@ const selectSuggestion = (id, field, value) => {
           {sports.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
-      <div className="relative">
-  <label className="block text-xs font-medium mb-1">Team/Player</label>
-  <input
-    type="text"
-    value={participant.team}
-    onChange={(e) => handleTeamInput(id, e.target.value, participant.sport)}
-    onFocus={(e) => handleTeamInput(id, e.target.value, participant.sport)}
-    onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-    className="w-full px-2 py-1 border rounded text-sm"
-    placeholder="Start typing..."
-  />
-  {showSuggestions[`team-${id}`] && suggestions.length > 0 && (
-    <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
-      {suggestions.map((suggestion, idx) => (
-        <div
-          key={idx}
-          onClick={() => selectSuggestion(id, 'team', suggestion)}
-          className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-        >
-          {suggestion}
-        </div>
-      ))}
-    </div>
-  )}
-</div>
       <div>
         <label className="block text-xs font-medium mb-1">Bet Type</label>
         <select
@@ -560,7 +551,90 @@ const selectSuggestion = (id, field, value) => {
           <option value="Prop Bet">Prop Bet</option>
         </select>
       </div>
+      
+      {participant.betType !== 'Total' && (
+        <div className="relative">
+          <label className="block text-xs font-medium mb-1">Team/Player</label>
+          <input
+            type="text"
+            value={participant.team}
+            onChange={(e) => handleTeamInput(id, e.target.value, participant.sport)}
+            onFocus={(e) => handleTeamInput(id, e.target.value, participant.sport)}
+            onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
+            className="w-full px-2 py-1 border rounded text-sm"
+            placeholder="Start typing..."
+          />
+          {showSuggestions[`team-${id}`] && suggestions.length > 0 && (
+            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
+              {suggestions.map((suggestion, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => selectSuggestion(id, 'team', suggestion)}
+                  className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+                >
+                  {suggestion}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
+
+    {participant.betType === 'Total' && (
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="relative">
+          <label className="block text-xs font-medium mb-1">Away Team</label>
+          <input
+            type="text"
+            value={participant.awayTeam || ''}
+            onChange={(e) => handleAwayTeamInput(id, e.target.value, participant.sport)}
+            onFocus={(e) => handleAwayTeamInput(id, e.target.value, participant.sport)}
+            onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
+            className="w-full px-2 py-1 border rounded text-sm"
+            placeholder="Start typing..."
+          />
+          {showSuggestions[`awayTeam-${id}`] && suggestions.length > 0 && (
+            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
+              {suggestions.map((suggestion, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => selectSuggestion(id, 'awayTeam', suggestion)}
+                  className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+                >
+                  {suggestion}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="relative">
+          <label className="block text-xs font-medium mb-1">Home Team</label>
+          <input
+            type="text"
+            value={participant.homeTeam || ''}
+            onChange={(e) => handleHomeTeamInput(id, e.target.value, participant.sport)}
+            onFocus={(e) => handleHomeTeamInput(id, e.target.value, participant.sport)}
+            onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
+            className="w-full px-2 py-1 border rounded text-sm"
+            placeholder="Start typing..."
+          />
+          {showSuggestions[`homeTeam-${id}`] && suggestions.length > 0 && (
+            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
+              {suggestions.map((suggestion, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => selectSuggestion(id, 'homeTeam', suggestion)}
+                  className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+                >
+                  {suggestion}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )}
 
     <div className="grid grid-cols-4 gap-3 mb-3">
       {participant.betType === 'Spread' && (
@@ -618,30 +692,30 @@ const selectSuggestion = (id, field, value) => {
       {participant.betType === 'Prop Bet' && (
         <>
           <div className="relative">
-  <label className="block text-xs font-medium mb-1">Prop Type</label>
-  <input
-    type="text"
-    value={participant.propType || ''}
-    onChange={(e) => handlePropTypeInput(id, e.target.value)}
-    onFocus={(e) => handlePropTypeInput(id, e.target.value)}
-    onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-    className="w-full px-2 py-1 border rounded text-sm"
-    placeholder="Start typing..."
-  />
-  {showSuggestions[`prop-${id}`] && suggestions.length > 0 && (
-    <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
-      {suggestions.map((suggestion, idx) => (
-        <div
-          key={idx}
-          onClick={() => selectSuggestion(id, 'propType', suggestion)}
-          className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-        >
-          {suggestion}
-        </div>
-      ))}
-    </div>
-  )}
-</div>
+            <label className="block text-xs font-medium mb-1">Prop Type</label>
+            <input
+              type="text"
+              value={participant.propType || ''}
+              onChange={(e) => handlePropTypeInput(id, e.target.value)}
+              onFocus={(e) => handlePropTypeInput(id, e.target.value)}
+              onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
+              className="w-full px-2 py-1 border rounded text-sm"
+              placeholder="Start typing..."
+            />
+            {showSuggestions[`prop-${id}`] && suggestions.length > 0 && (
+              <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
+                {suggestions.map((suggestion, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => selectSuggestion(id, 'propType', suggestion)}
+                    className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+                  >
+                    {suggestion}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div>
             <label className="block text-xs font-medium mb-1">Over/Under</label>
             <select
@@ -747,7 +821,9 @@ const selectSuggestion = (id, field, value) => {
                   {Object.entries(parlay.participants).map(([pid, participant]) => (
                     <div key={pid} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
                       <span>
-                        <strong>{participant.player}</strong> - {participant.sport} - {participant.team} {
+                        <strong>{participant.player}</strong> - {participant.sport} - {
+                        participant.betType === 'Total' ? `${participant.awayTeam} @ ${participant.homeTeam}` : participant.team
+                        } {
                         participant.betType === 'Spread' ? `${participant.favorite} ${participant.spread}` :
                         participant.betType === 'Total' ? `${participant.overUnder} ${participant.total}` :
                         participant.betType === 'Prop Bet' ? `${participant.propType} ${participant.overUnder} ${participant.line}` :
