@@ -564,6 +564,29 @@ const selectSuggestion = (id, field, value) => {
     />
   </div>
 </div>
+<div className="grid grid-cols-2 gap-4 mb-4">
+  <div>
+    <label className="block text-sm font-medium mb-1">Date</label>
+    <input
+      type="date"
+      value={newParlay.date}
+      onChange={(e) => setNewParlay({...newParlay, date: e.target.value})}
+      className="w-full px-3 py-2 border rounded"
+    />
+  </div>
+  <div>
+    <label className="block text-sm font-medium mb-1">Placed By</label>
+    <select
+      value={newParlay.placedBy}
+      onChange={(e) => setNewParlay({...newParlay, placedBy: e.target.value})}
+      className="w-full px-3 py-2 border rounded"
+    >
+      <option value="">Select Big Guy</option>
+      {players.map(p => <option key={p} value={p}>{p}</option>)}
+    </select>
+  </div>
+</div>
+        
         <div className="space-y-4 mb-6">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Picks</h3>
