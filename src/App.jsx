@@ -4,7 +4,7 @@ import { PlusCircle, TrendingUp, Users, Award, AlertCircle, Loader } from 'lucid
 const App = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
-  const PASSWORD = 'brolay2024';
+  const PASSWORD = 'manipulation';
   
   const [activeTab, setActiveTab] = useState('entry');
   const [players] = useState(['Management', 'CD', '914', 'Junior', 'Jacoby']);
@@ -12,16 +12,14 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newParlay, setNewParlay] = useState({
-    date: new Date().toISOString().split('T')[0],
-    betAmount: 10,
-    sport: 'NFL',
-    participants: {},
-    placedBy: '',
-    settled: false
-  });
-
+  date: new Date().toISOString().split('T')[0],
+  betAmount: 10,
+  participants: {},
+  placedBy: '',
+  settled: false
+});
   const sports = ['NFL', 'NBA', 'MLB', 'NHL', 'Soccer', 'College Football', 'College Basketball', 'Other'];
-  const betTypes = ['Spread', 'Moneyline', 'Over/Under', 'Prop Bet', 'Other'];
+  const betTypes = ['Spread', 'Moneyline', 'Total', 'Prop Bet'];
 
   useEffect(() => {
     if (authenticated) {
@@ -74,23 +72,28 @@ const App = () => {
   };
 
   const addParticipant = () => {
-    const participantId = Object.keys(newParlay.participants).length;
-    setNewParlay({
-      ...newParlay,
-      participants: {
-        ...newParlay.participants,
-        [participantId]: {
-          player: '',
-          team: '',
-          betType: 'Spread',
-          line: '',
-          odds: '',
-          result: 'pending'
-        }
+  const participantId = Object.keys(newParlay.participants).length;
+  setNewParlay({
+    ...newParlay,
+    participants: {
+      ...newParlay.participants,
+      [participantId]: {
+        player: '',
+        sport: 'NFL',
+        team: '',
+        betType: 'Spread',
+        favorite: 'Favorite',
+        spread: '',
+        total: '',
+        overUnder: 'Over',
+        propType: '',
+        line: '',
+        odds: '',
+        result: 'pending'
       }
-    });
-  };
-
+    }
+  });
+};
   const updateParticipant = (id, field, value) => {
     setNewParlay({
       ...newParlay,
@@ -207,11 +210,11 @@ const App = () => {
         const playerStats = stats[participant.player];
         playerStats.totalPicks++;
 
-        if (!playerStats.bySport[parlay.sport]) {
-          playerStats.bySport[parlay.sport] = { wins: 0, losses: 0, total: 0 };
+        if (!playerStats.bySport[participant.sport]) {
+        playerStats.bySport[participant.sport] = { wins: 0, losses: 0, total: 0 };
         }
-        playerStats.bySport[parlay.sport].total++;
-
+        playerStats.bySport[participant.sport].total++;
+        
         if (!playerStats.byBetType[participant.betType]) {
           playerStats.byBetType[participant.betType] = { wins: 0, losses: 0, total: 0 };
         }
@@ -219,7 +222,7 @@ const App = () => {
 
         if (participant.result === 'win') {
           playerStats.wins++;
-          playerStats.bySport[parlay.sport].wins++;
+          playerStats.bySport[participant.sport].wins++;
           playerStats.byBetType[participant.betType].wins++;
           
           if (parlayWon) {
@@ -227,7 +230,7 @@ const App = () => {
           }
         } else if (participant.result === 'loss') {
           playerStats.losses++;
-          playerStats.bySport[parlay.sport].losses++;
+          playerStats.bySport[participant.sport].losses++;
           playerStats.byBetType[participant.betType].losses++;
           
           if (and1) {
@@ -288,48 +291,37 @@ const App = () => {
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-2xl font-bold mb-4">New Parlay Entry</h2>
         
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div>
-            <label className="block text-sm font-medium mb-1">Date</label>
-            <input
-              type="date"
-              value={newParlay.date}
-              onChange={(e) => setNewParlay({...newParlay, date: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Bet Amount (per person)</label>
-            <input
-              type="number"
-              value={newParlay.betAmount}
-              onChange={(e) => setNewParlay({...newParlay, betAmount: Number(e.target.value)})}
-              className="w-full px-3 py-2 border rounded"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Sport</label>
-            <select
-              value={newParlay.sport}
-              onChange={(e) => setNewParlay({...newParlay, sport: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
-            >
-              {sports.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Placed By</label>
-            <select
-              value={newParlay.placedBy}
-              onChange={(e) => setNewParlay({...newParlay, placedBy: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
-            >
-              <option value="">Select player</option>
-              {players.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-        </div>
-
+        <div className="grid grid-cols-3 gap-4 mb-6">
+  <div>
+    <label className="block text-sm font-medium mb-1">Date</label>
+    <input
+      type="date"
+      value={newParlay.date}
+      onChange={(e) => setNewParlay({...newParlay, date: e.target.value})}
+      className="w-full px-3 py-2 border rounded"
+    />
+  </div>
+  <div>
+    <label className="block text-sm font-medium mb-1">Bet Amount (per person)</label>
+    <input
+      type="number"
+      value={newParlay.betAmount}
+      onChange={(e) => setNewParlay({...newParlay, betAmount: Number(e.target.value)})}
+      className="w-full px-3 py-2 border rounded"
+    />
+  </div>
+  <div>
+    <label className="block text-sm font-medium mb-1">Placed By</label>
+    <select
+      value={newParlay.placedBy}
+      onChange={(e) => setNewParlay({...newParlay, placedBy: e.target.value})}
+      className="w-full px-3 py-2 border rounded"
+    >
+      <option value="">Select Big Guy</option>
+      {players.map(p => <option key={p} value={p}>{p}</option>)}
+    </select>
+  </div>
+</div>
         <div className="space-y-4 mb-6">
           <div className="flex justify-between items-center">
             <h3 className="text-lg font-semibold">Picks</h3>
@@ -343,80 +335,174 @@ const App = () => {
           </div>
 
           {Object.entries(newParlay.participants).map(([id, participant]) => (
-            <div key={id} className="border rounded p-4 bg-gray-50">
-              <div className="grid grid-cols-6 gap-3 mb-3">
-                <div>
-                  <label className="block text-xs font-medium mb-1">Player</label>
-                  <select
-                    value={participant.player}
-                    onChange={(e) => updateParticipant(id, 'player', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-sm"
-                  >
-                    <option value="">Select</option>
-                    {players.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">Team/Player</label>
-                  <input
-                    type="text"
-                    value={participant.team}
-                    onChange={(e) => updateParticipant(id, 'team', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-sm"
-                    placeholder="e.g., Joe Burrow"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">Bet Type</label>
-                  <select
-                    value={participant.betType}
-                    onChange={(e) => updateParticipant(id, 'betType', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-sm"
-                  >
-                    {betTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">Line</label>
-                  <input
-                    type="text"
-                    value={participant.line}
-                    onChange={(e) => updateParticipant(id, 'line', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-sm"
-                    placeholder="e.g., o255.5"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">Odds</label>
-                  <input
-                    type="text"
-                    value={participant.odds}
-                    onChange={(e) => updateParticipant(id, 'odds', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-sm"
-                    placeholder="e.g., -120"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1">Result</label>
-                  <select
-                    value={participant.result}
-                    onChange={(e) => updateParticipant(id, 'result', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-sm"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="win">Win</option>
-                    <option value="loss">Loss</option>
-                  </select>
-                </div>
-              </div>
-              <button
-                onClick={() => removeParticipant(id)}
-                className="text-red-600 text-sm hover:text-red-800"
-              >
-                Remove Pick
-              </button>
-            </div>
-          ))}
+  <div key={id} className="border rounded p-4 bg-gray-50">
+    <div className="grid grid-cols-4 gap-3 mb-3">
+      <div>
+        <label className="block text-xs font-medium mb-1">Big Guy</label>
+        <select
+          value={participant.player}
+          onChange={(e) => updateParticipant(id, 'player', e.target.value)}
+          className="w-full px-2 py-1 border rounded text-sm"
+        >
+          <option value="">Select</option>
+          {players.map(p => <option key={p} value={p}>{p}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-1">Sport</label>
+        <select
+          value={participant.sport}
+          onChange={(e) => updateParticipant(id, 'sport', e.target.value)}
+          className="w-full px-2 py-1 border rounded text-sm"
+        >
+          {sports.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-1">Team/Player</label>
+        <input
+          type="text"
+          value={participant.team}
+          onChange={(e) => updateParticipant(id, 'team', e.target.value)}
+          className="w-full px-2 py-1 border rounded text-sm"
+          placeholder="e.g., Joe Burrow"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-1">Bet Type</label>
+        <select
+          value={participant.betType}
+          onChange={(e) => updateParticipant(id, 'betType', e.target.value)}
+          className="w-full px-2 py-1 border rounded text-sm"
+        >
+          <option value="Spread">Spread</option>
+          <option value="Moneyline">Moneyline</option>
+          <option value="Total">Total</option>
+          <option value="Prop Bet">Prop Bet</option>
+        </select>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-4 gap-3 mb-3">
+      {participant.betType === 'Spread' && (
+        <>
+          <div>
+            <label className="block text-xs font-medium mb-1">Favorite/Dog</label>
+            <select
+              value={participant.favorite || 'Favorite'}
+              onChange={(e) => updateParticipant(id, 'favorite', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+            >
+              <option value="Favorite">Favorite</option>
+              <option value="Dog">Dog</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Spread</label>
+            <input
+              type="text"
+              value={participant.spread || ''}
+              onChange={(e) => updateParticipant(id, 'spread', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+              placeholder="e.g., 7.5"
+            />
+          </div>
+        </>
+      )}
+
+      {participant.betType === 'Total' && (
+        <>
+          <div>
+            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <select
+              value={participant.overUnder || 'Over'}
+              onChange={(e) => updateParticipant(id, 'overUnder', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+            >
+              <option value="Over">Over</option>
+              <option value="Under">Under</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Total</label>
+            <input
+              type="text"
+              value={participant.total || ''}
+              onChange={(e) => updateParticipant(id, 'total', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+              placeholder="e.g., 45.5"
+            />
+          </div>
+        </>
+      )}
+
+      {participant.betType === 'Prop Bet' && (
+        <>
+          <div>
+            <label className="block text-xs font-medium mb-1">Prop Type</label>
+            <input
+              type="text"
+              value={participant.propType || ''}
+              onChange={(e) => updateParticipant(id, 'propType', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+              placeholder="e.g., Passing Yards"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <select
+              value={participant.overUnder || 'Over'}
+              onChange={(e) => updateParticipant(id, 'overUnder', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+            >
+              <option value="Over">Over</option>
+              <option value="Under">Under</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Line</label>
+            <input
+              type="text"
+              value={participant.line || ''}
+              onChange={(e) => updateParticipant(id, 'line', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+              placeholder="e.g., 255.5"
+            />
+          </div>
+        </>
+      )}
+
+      <div>
+        <label className="block text-xs font-medium mb-1">Odds</label>
+        <input
+          type="text"
+          value={participant.odds || ''}
+          onChange={(e) => updateParticipant(id, 'odds', e.target.value)}
+          className="w-full px-2 py-1 border rounded text-sm"
+          placeholder="e.g., -120"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium mb-1">Result</label>
+        <select
+          value={participant.result}
+          onChange={(e) => updateParticipant(id, 'result', e.target.value)}
+          className="w-full px-2 py-1 border rounded text-sm"
+        >
+          <option value="pending">Pending</option>
+          <option value="win">Win</option>
+          <option value="loss">Loss</option>
+        </select>
+      </div>
+    </div>
+    <button
+      onClick={() => removeParticipant(id)}
+      className="text-red-600 text-sm hover:text-red-800"
+    >
+      Remove Pick
+    </button>
+  </div>
+))}
         </div>
 
         <button
@@ -467,7 +553,12 @@ const App = () => {
                   {Object.entries(parlay.participants).map(([pid, participant]) => (
                     <div key={pid} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
                       <span>
-                        <strong>{participant.player}</strong> - {participant.team} {participant.line} ({participant.betType})
+                        <strong>{participant.player}</strong> - {participant.sport} - {participant.team} {
+                        participant.betType === 'Spread' ? `${participant.favorite} ${participant.spread}` :
+                        participant.betType === 'Total' ? `${participant.overUnder} ${participant.total}` :
+                        participant.betType === 'Prop Bet' ? `${participant.propType} ${participant.overUnder} ${participant.line}` :
+                        'Moneyline'
+                        } ({participant.betType})
                       </span>
                       <select
                         value={participant.result}
@@ -593,18 +684,24 @@ const App = () => {
     const groupWinPct = totalParlays > 0 ? ((wonParlays / totalParlays) * 100).toFixed(1) : '0.0';
 
     const bySport = {};
-    parlays.forEach(p => {
-      if (!bySport[p.sport]) {
-        bySport[p.sport] = { total: 0, won: 0 };
+parlays.forEach(p => {
+  const participants = Object.values(p.participants);
+  const losers = participants.filter(part => part.result === 'loss');
+  const parlayWon = losers.length === 0 && participants.some(part => part.result === 'win');
+  
+  participants.forEach(part => {
+    if (part.sport) {
+      if (!bySport[part.sport]) {
+        bySport[part.sport] = { total: 0, won: 0 };
       }
-      bySport[p.sport].total++;
-      const participants = Object.values(p.participants);
-      const losers = participants.filter(part => part.result === 'loss');
-      if (losers.length === 0 && participants.some(part => part.result === 'win')) {
-        bySport[p.sport].won++;
+      bySport[part.sport].total++;
+      if (parlayWon && part.result === 'win') {
+        bySport[part.sport].won++;
       }
-    });
-
+    }
+  });
+});
+    
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Group Statistics</h2>
@@ -662,7 +759,7 @@ const App = () => {
               return (
                 <div key={parlay.id} className="border rounded p-3 flex justify-between items-center">
                   <div>
-                    <div className="font-semibold">{parlay.date} - {parlay.sport}</div>
+                    <div className="font-semibold">{parlay.date} - Multi-Sport Parlay</div>
                     <div className="text-sm text-gray-600">
                       {participants.length} picks • ${parlay.betAmount * participants.length} total
                       {parlay.settled && <span className="ml-2 text-green-600">✓ Settled</span>}
@@ -726,7 +823,7 @@ const App = () => {
                   <div key={parlay.id} className="border rounded p-4">
                    <div className="flex justify-between items-start mb-2">
                       <div>
-                        <div className="font-semibold">{parlay.date} - {parlay.sport}</div>
+                        <div className="font-semibold">{parlay.date} - Parlay</div>
                         <div className="text-sm text-gray-600">
                           Placed by: {parlay.placedBy || 'Unknown'}
                         </div>
@@ -767,7 +864,7 @@ const App = () => {
                 <div key={parlay.id} className="border rounded p-3 bg-gray-50">
                   <div className="flex justify-between items-center">
                     <div>
-                      <div className="font-semibold text-sm">{parlay.date} - {parlay.sport}</div>
+                      <div className="font-semibold text-sm">{parlay.date} - Parlay</div>
                       <div className="text-xs text-gray-600">
                         Paid by: {losers.map(l => l.player).join(', ')}
                       </div>
