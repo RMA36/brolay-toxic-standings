@@ -1,6 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, TrendingUp, Users, Award, AlertCircle, Loader } from 'lucide-react';
 
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
+
+// Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyDWhm77FUPJUHt7Bdb9R1NHH9PoAorkxlc",
+  authDomain: "brolay-toxic-standings.firebaseapp.com",
+  projectId: "brolay-toxic-standings",
+  storageBucket: "brolay-toxic-standings.firebasestorage.app",
+  messagingSenderId: "466981190192",
+  appId: "1:466981190192:web:f03423a047f8ce554a8bf5"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
 const App = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
@@ -82,12 +99,23 @@ const commonPropTypes = [
   'Saves',
   'Shots on Goal'
 ];
-  
   useEffect(() => {
-    if (authenticated) {
-      loadParlays();
-    }
-  }, [authenticated]);
+  if (authenticated) {
+    // Set up real-time listener
+    const parlaysCollection = collection(db, 'parlays');
+    const unsubscribe = onSnapshot(parlaysCollection, (snapshot) => {
+      const parlayList = snapshot.docs.map(doc => ({
+        ...doc.data(),
+        firestoreId: doc.id
+      }));
+      setParlays(parlayList);
+      setLoading(false);
+    });
+
+    // Cleanup listener on unmount
+    return () => unsubscribe();
+  }
+}, [authenticated]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -115,33 +143,36 @@ const commonPropTypes = [
   }, []);
   
   const loadParlays = async () => {
-    try {
-      setLoading(true);
-      const stored = localStorage.getItem('brolay-parlays');
-      if (stored) {
-        setParlays(JSON.parse(stored));
-      }
-    } catch (error) {
-      console.log('No existing data found, starting fresh');
-      setParlays([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  try {
+    setLoading(true);
+    const parlaysCollection = collection(db, 'parlays');
+    const parlaySnapshot = await getDocs(parlaysCollection);
+    const parlayList = parlaySnapshot.docs.map(doc => ({
+      ...doc.data(),
+      firestoreId: doc.id
+    }));
+    setParlays(parlayList);
+  } catch (error) {
+    console.error('Error loading parlays:', error);
+    setParlays([]);
+  } finally {
+    setLoading(false);
+  }
+};
+  
   const saveParlays = async (updatedParlays) => {
-    try {
-      setSaving(true);
-      localStorage.setItem('brolay-parlays', JSON.stringify(updatedParlays));
-      setParlays(updatedParlays);
-    } catch (error) {
-      console.error('Error saving data:', error);
-      alert('Failed to save data. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
+  try {
+    setSaving(true);
+    setParlays(updatedParlays);
+    // Note: Individual operations (add/update/delete) will handle Firestore sync
+  } catch (error) {
+    console.error('Error saving data:', error);
+    alert('Failed to save data. Please try again.');
+  } finally {
+    setSaving(false);
+  }
+};
+  
   const saveLearnedData = (teams, propTypes) => {
     localStorage.setItem('brolay-learned-data', JSON.stringify({
       teams: teams,
@@ -286,8 +317,17 @@ const selectSuggestion = (id, field, value) => {
   setLearnedPropTypes(newPropTypes);
   saveLearnedData(newTeams, newPropTypes);
   
-  const updatedParlays = [...parlays, parlayWithId];
-  await saveParlays(updatedParlays);
+  try {
+    // Save to Firebase
+    const parlaysCollection = collection(db, 'parlays');
+    const docRef = await addDoc(parlaysCollection, parlayWithId);
+    
+    const updatedParlays = [...parlays, { ...parlayWithId, firestoreId: docRef.id }];
+    setParlays(updatedParlays);
+  } catch (error) {
+    console.error('Error adding parlay:', error);
+    alert('Failed to save parlay. Please try again.');
+  }
   
   setNewParlay({
     date: new Date().toISOString().split('T')[0],
@@ -299,41 +339,79 @@ const selectSuggestion = (id, field, value) => {
 };
     
   const updateParlayResult = async (parlayId, participantId, newResult) => {
-    const updatedParlays = parlays.map(parlay => {
-      if (parlay.id === parlayId) {
-        return {
-          ...parlay,
-          participants: {
-            ...parlay.participants,
-            [participantId]: {
-              ...parlay.participants[participantId],
-              result: newResult
-            }
+  const updatedParlays = parlays.map(parlay => {
+    if (parlay.id === parlayId) {
+      return {
+        ...parlay,
+        participants: {
+          ...parlay.participants,
+          [participantId]: {
+            ...parlay.participants[participantId],
+            result: newResult
           }
-        };
-      }
-      return parlay;
-    });
-    await saveParlays(updatedParlays);
-  };
-
-  const toggleSettlement = async (parlayId) => {
-    const updatedParlays = parlays.map(parlay => {
-      if (parlay.id === parlayId) {
-        return { ...parlay, settled: !parlay.settled };
-      }
-      return parlay;
-    });
-    await saveParlays(updatedParlays);
-  };
-
-  const deleteParlay = async (parlayId) => {
-    if (window.confirm('Are you sure you want to delete this parlay?')) {
-      const updatedParlays = parlays.filter(p => p.id !== parlayId);
-      await saveParlays(updatedParlays);
+        }
+      };
     }
-  };
-
+    return parlay;
+  });
+  
+  setParlays(updatedParlays);
+  
+  // Update in Firebase
+  const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
+  if (parlayToUpdate && parlayToUpdate.firestoreId) {
+    try {
+      const parlayDoc = doc(db, 'parlays', parlayToUpdate.firestoreId);
+      await updateDoc(parlayDoc, {
+        participants: parlayToUpdate.participants
+      });
+    } catch (error) {
+      console.error('Error updating parlay:', error);
+    }
+  }
+};
+  
+  const toggleSettlement = async (parlayId) => {
+  const updatedParlays = parlays.map(parlay => {
+    if (parlay.id === parlayId) {
+      return { ...parlay, settled: !parlay.settled };
+    }
+    return parlay;
+  });
+  
+  setParlays(updatedParlays);
+  
+  // Update in Firebase
+  const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
+  if (parlayToUpdate && parlayToUpdate.firestoreId) {
+    try {
+      const parlayDoc = doc(db, 'parlays', parlayToUpdate.firestoreId);
+      await updateDoc(parlayDoc, {
+        settled: parlayToUpdate.settled
+      });
+    } catch (error) {
+      console.error('Error updating settlement:', error);
+    }
+  }
+};
+  
+  const deleteParlay = async (parlayId) => {
+  if (window.confirm('Are you sure you want to delete this parlay?')) {
+    const parlayToDelete = parlays.find(p => p.id === parlayId);
+    const updatedParlays = parlays.filter(p => p.id !== parlayId);
+    setParlays(updatedParlays);
+    
+    // Delete from Firebase
+    if (parlayToDelete && parlayToDelete.firestoreId) {
+      try {
+        const parlayDoc = doc(db, 'parlays', parlayToDelete.firestoreId);
+        await deleteDoc(parlayDoc);
+      } catch (error) {
+        console.error('Error deleting parlay:', error);
+      }
+    }
+  }
+};
   const calculateStats = () => {
     const stats = {};
     players.forEach(player => {
