@@ -858,9 +858,19 @@ const selectSuggestion = (id, field, value) => {
                 <div key={parlay.id} className="border rounded p-4">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <div className="font-semibold">{parlay.date} - {parlay.sport}</div>
+                    <div className="font-semibold">
+                      {parlay.date} - {
+                        // Determine parlay type
+                        (() => {
+                          const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
+                          if (sports.length > 1) return 'Multi-Sport Brolay';
+                          if (sports.length === 1) return `${sports[0]} Brolay`;
+                          return 'Brolay';
+                        })()
+                      }
+                    </div>
                     <div className="text-sm text-gray-600">
-                      {participants.length} picks • ${parlay.betAmount * participants.length} total
+                      {participants.length} picks • ${parlay.betAmount * participants.length} Risked • ${parlay.totalPayout || 0} Total Payout • ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -1089,11 +1099,20 @@ parlays.forEach(p => {
               return (
                 <div key={parlay.id} className="border rounded p-3 flex justify-between items-center">
                   <div>
-                    <div className="font-semibold">{parlay.date} - Multi-Sport Parlay</div>
-                    <div className="text-sm text-gray-600">
-                      {participants.length} picks • ${parlay.betAmount * participants.length} total
-                      {parlay.settled && <span className="ml-2 text-green-600">✓ Settled</span>}
-                    </div>
+                    <div className="font-semibold">
+  {parlay.date} - {
+    (() => {
+      const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
+      if (sports.length > 1) return 'Multi-Sport Brolay';
+      if (sports.length === 1) return `${sports[0]} Brolay`;
+      return 'Brolay';
+    })()
+  }
+</div>
+<div className="text-sm text-gray-600">
+  {participants.length} picks • ${parlay.betAmount * participants.length} Risked • ${parlay.totalPayout || 0} Total Payout • ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
+  {parlay.settled && <span className="ml-2 text-green-600">✓ Settled</span>}
+</div>
                   </div>
                   <div className="text-right">
                     {won && <span className="text-green-600 font-semibold">WON</span>}
@@ -1116,12 +1135,270 @@ parlays.forEach(p => {
   };
 
   const renderPayments = () => {
-    const unsettledParlays = parlays.filter(p => !p.settled);
-    const lostParlays = unsettledParlays.filter(p => {
-      const participants = Object.values(p.participants);
-      return participants.some(part => part.result === 'loss');
-    });
+  const unsettledParlays = parlays.filter(p => !p.settled);
+  const lostParlays = unsettledParlays.filter(p => {
+    const participants = Object.values(p.participants);
+    return participants.some(part => part.result === 'loss');
+  });
+  const wonParlays = unsettledParlays.filter(p => {
+    const participants = Object.values(p.participants);
+    const losers = participants.filter(part => part.result === 'loss');
+    return losers.length === 0 && participants.some(part => part.result === 'win');
+  });
 
+  // Calculate who owes who
+  const payments = [];
+  
+  // Lost parlays - winners get paid by placer
+  lostParlays.forEach(parlay => {
+    const participants = Object.values(parlay.participants);
+    const losers = participants.filter(p => p.result === 'loss');
+    const and1 = losers.length === 1;
+    const totalAmount = parlay.betAmount * participants.length;
+    const amountPerLoser = and1 ? totalAmount : totalAmount / losers.length;
+    
+    losers.forEach(loser => {
+      payments.push({
+        from: loser.player,
+        to: parlay.placedBy || 'Placer',
+        amount: amountPerLoser,
+        parlayId: parlay.id,
+        parlayDate: parlay.date,
+        type: 'loss',
+        and1: and1 && losers.length === 1 && losers[0].player === loser.player
+      });
+    });
+  });
+  
+  // Won parlays - placer pays winners
+  wonParlays.forEach(parlay => {
+    const participants = Object.values(parlay.participants);
+    const winners = participants.filter(p => p.result === 'win');
+    const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
+    const amountPerWinner = netProfit / winners.length;
+    
+    winners.forEach(winner => {
+      payments.push({
+        from: parlay.placedBy || 'Placer',
+        to: winner.player,
+        amount: amountPerWinner,
+        parlayId: parlay.id,
+        parlayDate: parlay.date,
+        type: 'win'
+      });
+    });
+  });
+
+  // Calculate net positions (who owes who overall)
+  const netPositions = {};
+  players.forEach(player => {
+    netPositions[player] = {};
+    players.forEach(otherPlayer => {
+      if (player !== otherPlayer) {
+        netPositions[player][otherPlayer] = 0;
+      }
+    });
+  });
+
+  payments.forEach(payment => {
+    if (payment.from && payment.to && payment.from !== payment.to) {
+      netPositions[payment.from][payment.to] = (netPositions[payment.from][payment.to] || 0) + payment.amount;
+    }
+  });
+
+  // Simplify: if A owes B and B owes A, net them out
+  const simplifiedPayments = [];
+  players.forEach(player1 => {
+    players.forEach(player2 => {
+      if (player1 < player2) { // Only process each pair once
+        const player1OwesPlayer2 = netPositions[player1][player2] || 0;
+        const player2OwesPlayer1 = netPositions[player2][player1] || 0;
+        const netAmount = player1OwesPlayer2 - player2OwesPlayer1;
+        
+        if (Math.abs(netAmount) > 0.01) { // Ignore tiny amounts due to rounding
+          simplifiedPayments.push({
+            from: netAmount > 0 ? player1 : player2,
+            to: netAmount > 0 ? player2 : player1,
+            amount: Math.abs(netAmount)
+          });
+        }
+      }
+    });
+  });
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">Payment Tracker</h2>
+      
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="text-yellow-600 mt-1" size={20} />
+          <div>
+            <h3 className="font-semibold text-yellow-800">Outstanding Payments</h3>
+            <p className="text-sm text-yellow-700">
+              {lostParlays.length} lost brolay(s) • {wonParlays.length} won brolay(s) need settlement
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Who Owes Who Summary Table */}
+      {simplifiedPayments.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="text-xl font-bold mb-4">💰 Who Owes Who (Net Summary)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b-2 border-gray-300">
+                  <th className="text-left py-2 px-4">From</th>
+                  <th className="text-left py-2 px-4">To</th>
+                  <th className="text-right py-2 px-4">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {simplifiedPayments.map((payment, idx) => (
+                  <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
+                    <td className="py-3 px-4 font-semibold text-red-600">{payment.from}</td>
+                    <td className="py-3 px-4 font-semibold text-green-600">{payment.to}</td>
+                    <td className="py-3 px-4 text-right font-bold text-lg">
+                      ${payment.amount.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Lost Brolays */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-bold mb-3 text-red-600">❌ Lost Brolays</h3>
+        <div className="space-y-3">
+          {lostParlays.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No lost brolays to settle</p>
+          ) : (
+            lostParlays.map(parlay => {
+              const participants = Object.values(parlay.participants);
+              const losers = participants.filter(p => p.result === 'loss');
+              const and1 = losers.length === 1;
+              const amountPerLoser = and1 
+                ? parlay.betAmount * participants.length 
+                : (parlay.betAmount * participants.length) / losers.length;
+
+              return (
+                <div key={parlay.id} className="border rounded p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-semibold">{parlay.date}</div>
+                      <div className="text-sm text-gray-600">
+                        Placed by: {parlay.placedBy || 'Unknown'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-red-600">
+                        ${(parlay.betAmount * participants.length).toFixed(2)}
+                      </div>
+                      {and1 && <span className="text-xs text-red-600 font-semibold">And-1</span>}
+                    </div>
+                  </div>
+                  <div className="text-sm mb-2">
+                    <span className="font-medium">Losers pay {parlay.placedBy}: </span>
+                    {losers.map(loser => `${loser.player} ($${amountPerLoser.toFixed(2)})`).join(', ')}
+                  </div>
+                  <button
+                    onClick={() => toggleSettlement(parlay.id)}
+                    disabled={saving}
+                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
+                  >
+                    Mark as Settled
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Won Brolays */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-bold mb-3 text-green-600">✅ Won Brolays</h3>
+        <div className="space-y-3">
+          {wonParlays.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No won brolays to settle</p>
+          ) : (
+            wonParlays.map(parlay => {
+              const participants = Object.values(parlay.participants);
+              const winners = participants.filter(p => p.result === 'win');
+              const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
+              const amountPerWinner = netProfit / winners.length;
+
+              return (
+                <div key={parlay.id} className="border rounded p-4 bg-green-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-semibold">{parlay.date}</div>
+                      <div className="text-sm text-gray-600">
+                        Placed by: {parlay.placedBy || 'Unknown'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-green-600">
+                        ${netProfit.toFixed(2)} profit
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        (${parlay.totalPayout || 0} payout)
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-sm mb-2">
+                    <span className="font-medium">{parlay.placedBy} pays winners: </span>
+                    {winners.map(winner => `${winner.player} ($${amountPerWinner.toFixed(2)})`).join(', ')}
+                  </div>
+                  <button
+                    onClick={() => toggleSettlement(parlay.id)}
+                    disabled={saving}
+                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
+                  >
+                    Mark as Settled
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Recently Settled */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-bold mb-3">Recently Settled</h3>
+        <div className="space-y-2">
+          {parlays.filter(p => p.settled).slice(-5).reverse().map(parlay => {
+            const participants = Object.values(parlay.participants);
+            const losers = participants.filter(p => p.result === 'loss');
+            const winners = participants.filter(p => p.result === 'win');
+            const won = losers.length === 0 && winners.length > 0;
+            
+            return (
+              <div key={parlay.id} className="border rounded p-3 bg-gray-50">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <div className="font-semibold text-sm">{parlay.date}</div>
+                    <div className="text-xs text-gray-600">
+                      {won ? `Winners paid by ${parlay.placedBy}: ${winners.map(w => w.player).join(', ')}` 
+                           : `Losers paid ${parlay.placedBy}: ${losers.map(l => l.player).join(', ')}`}
+                    </div>
+                  </div>
+                  <span className="text-green-600 text-sm">✓ Settled</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
     return (
       <div className="space-y-6">
         <h2 className="text-2xl font-bold">Payment Tracker</h2>
