@@ -298,31 +298,6 @@ const selectSuggestion = (id, field, value) => {
   });
 };
     
-    const hasEmptyPlayer = Object.values(newParlay.participants).some(p => !p.player);
-    if (hasEmptyPlayer) {
-      alert('Please select a player for all picks');
-      return;
-    }
-    
-    const parlayWithId = {
-      ...newParlay,
-      id: Date.now(),
-      totalParticipants: participantCount
-    };
-    
-    const updatedParlays = [...parlays, parlayWithId];
-    await saveParlays(updatedParlays);
-    
-    setNewParlay({
-      date: new Date().toISOString().split('T')[0],
-      betAmount: 10,
-      sport: 'NFL',
-      participants: {},
-      placedBy: '',
-      settled: false
-    });
-  };
-
   const updateParlayResult = async (parlayId, participantId, newResult) => {
     const updatedParlays = parlays.map(parlay => {
       if (parlay.id === parlayId) {
