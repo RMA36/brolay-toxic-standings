@@ -25,8 +25,6 @@ const App = () => {
   const sports = ['NFL', 'NBA', 'MLB', 'NHL', 'Soccer', 'College Football', 'College Basketball', 'Other'];
   const betTypes = ['Spread', 'Moneyline', 'Total', 'Prop Bet'];
 
-const betTypes = ['Spread', 'Moneyline', 'Total', 'Prop Bet'];
-
 // Pre-loaded teams and common values
 const preloadedTeams = {
   NFL: ['Arizona Cardinals', 'Atlanta Falcons', 'Baltimore Ravens', 'Buffalo Bills', 'Carolina Panthers', 
@@ -68,7 +66,7 @@ const commonPropTypes = [
   'Interceptions Thrown',
   'Rushing Yards',
   'Receiving Yards',
-  'Rushing & Receiving Yards'
+  'Rushing & Receiving Yards',
   'Total Touchdowns',
   'Passing Touchdowns',
   'Rushing Touchdowns',
