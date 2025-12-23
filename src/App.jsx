@@ -11,6 +11,10 @@ const App = () => {
   const [parlays, setParlays] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState({});
+  const [learnedTeams, setLearnedTeams] = useState([]);
+  const [learnedPropTypes, setLearnedPropTypes] = useState([]);
   const [newParlay, setNewParlay] = useState({
   date: new Date().toISOString().split('T')[0],
   betAmount: 10,
@@ -21,6 +25,66 @@ const App = () => {
   const sports = ['NFL', 'NBA', 'MLB', 'NHL', 'Soccer', 'College Football', 'College Basketball', 'Other'];
   const betTypes = ['Spread', 'Moneyline', 'Total', 'Prop Bet'];
 
+const betTypes = ['Spread', 'Moneyline', 'Total', 'Prop Bet'];
+
+// Pre-loaded teams and common values
+const preloadedTeams = {
+  NFL: ['Arizona Cardinals', 'Atlanta Falcons', 'Baltimore Ravens', 'Buffalo Bills', 'Carolina Panthers', 
+        'Chicago Bears', 'Cincinnati Bengals', 'Cleveland Browns', 'Dallas Cowboys', 'Denver Broncos',
+        'Detroit Lions', 'Green Bay Packers', 'Houston Texans', 'Indianapolis Colts', 'Jacksonville Jaguars',
+        'Kansas City Chiefs', 'Las Vegas Raiders', 'Los Angeles Chargers', 'Los Angeles Rams', 'Miami Dolphins',
+        'Minnesota Vikings', 'New England Patriots', 'New Orleans Saints', 'New York Giants', 'New York Jets',
+        'Philadelphia Eagles', 'Pittsburgh Steelers', 'San Francisco 49ers', 'Seattle Seahawks', 'Tampa Bay Buccaneers',
+        'Tennessee Titans', 'Washington Commanders'],
+  NBA: ['Atlanta Hawks', 'Boston Celtics', 'Brooklyn Nets', 'Charlotte Hornets', 'Chicago Bulls',
+        'Cleveland Cavaliers', 'Dallas Mavericks', 'Denver Nuggets', 'Detroit Pistons', 'Golden State Warriors',
+        'Houston Rockets', 'Indiana Pacers', 'LA Clippers', 'Los Angeles Lakers', 'Memphis Grizzlies',
+        'Miami Heat', 'Milwaukee Bucks', 'Minnesota Timberwolves', 'New Orleans Pelicans', 'New York Knicks',
+        'Oklahoma City Thunder', 'Orlando Magic', 'Philadelphia 76ers', 'Phoenix Suns', 'Portland Trail Blazers',
+        'Sacramento Kings', 'San Antonio Spurs', 'Toronto Raptors', 'Utah Jazz', 'Washington Wizards'],
+  MLB: ['Arizona Diamondbacks', 'Atlanta Braves', 'Baltimore Orioles', 'Boston Red Sox', 'Chicago Cubs',
+        'Chicago White Sox', 'Cincinnati Reds', 'Cleveland Guardians', 'Colorado Rockies', 'Detroit Tigers',
+        'Houston Astros', 'Kansas City Royals', 'Los Angeles Angels', 'Los Angeles Dodgers', 'Miami Marlins',
+        'Milwaukee Brewers', 'Minnesota Twins', 'New York Mets', 'New York Yankees', 'Oakland Athletics',
+        'Philadelphia Phillies', 'Pittsburgh Pirates', 'San Diego Padres', 'San Francisco Giants', 'Seattle Mariners',
+        'St. Louis Cardinals', 'Tampa Bay Rays', 'Texas Rangers', 'Toronto Blue Jays', 'Washington Nationals'],
+  NHL: ['Anaheim Ducks', 'Arizona Coyotes', 'Boston Bruins', 'Buffalo Sabres', 'Calgary Flames',
+        'Carolina Hurricanes', 'Chicago Blackhawks', 'Colorado Avalanche', 'Columbus Blue Jackets', 'Dallas Stars',
+        'Detroit Red Wings', 'Edmonton Oilers', 'Florida Panthers', 'Los Angeles Kings', 'Minnesota Wild',
+        'Montreal Canadiens', 'Nashville Predators', 'New Jersey Devils', 'New York Islanders', 'New York Rangers',
+        'Ottawa Senators', 'Philadelphia Flyers', 'Pittsburgh Penguins', 'San Jose Sharks', 'Seattle Kraken',
+        'St. Louis Blues', 'Tampa Bay Lightning', 'Toronto Maple Leafs', 'Vancouver Canucks', 'Vegas Golden Knights',
+        'Washington Capitals', 'Winnipeg Jets'],
+  'College Football': ['Vanderbilt'],
+  'College Basketball': ['Vanderbilt'],
+  Soccer: ['Arsenal', 'Chelsea', 'Liverpool', 'Manchester City', 'Manchester United', 'Tottenham',
+           'Barcelona', 'Real Madrid', 'Bayern Munich', 'Paris Saint-Germain', 'Juventus', 'Inter Milan'],
+  Other: []
+};
+
+const commonPropTypes = [
+  'Passing Yards',
+  'Passing Attempts',
+  'Interceptions Thrown',
+  'Rushing Yards',
+  'Receiving Yards',
+  'Rushing & Receiving Yards'
+  'Total Touchdowns',
+  'Passing Touchdowns',
+  'Rushing Touchdowns',
+  'Receptions',
+  'Points',
+  'Rebounds',
+  'Assists',
+  'Strikeouts',
+  'Hits',
+  'Home Runs',
+  'RBIs',
+  'Goals',
+  'Saves',
+  'Shots on Goal'
+];
+  
   useEffect(() => {
     if (authenticated) {
       loadParlays();
@@ -43,6 +107,15 @@ const App = () => {
     }
   }, []);
 
+  useEffect(() => {
+    const stored = localStorage.getItem('brolay-learned-data');
+    if (stored) {
+      const learned = JSON.parse(stored);
+      setLearnedTeams(learned.teams || []);
+      setLearnedPropTypes(learned.propTypes || []);
+    }
+  }, []);
+  
   const loadParlays = async () => {
     try {
       setLoading(true);
@@ -71,6 +144,13 @@ const App = () => {
     }
   };
 
+  const saveLearnedData = (teams, propTypes) => {
+    localStorage.setItem('brolay-learned-data', JSON.stringify({
+      teams: teams,
+      propTypes: propTypes
+    }));
+  };
+  
   const addParticipant = () => {
   const participantId = Object.keys(newParlay.participants).length;
   setNewParlay({
@@ -107,6 +187,49 @@ const App = () => {
     });
   };
 
+const getTeamSuggestions = (input, sport) => {
+  if (!input || input.length < 2) return [];
+  
+  const inputLower = input.toLowerCase();
+  const preloaded = preloadedTeams[sport] || [];
+  const allTeams = [...new Set([...preloaded, ...learnedTeams])];
+  
+  return allTeams
+    .filter(team => team.toLowerCase().includes(inputLower))
+    .slice(0, 8);
+};
+
+const getPropTypeSuggestions = (input) => {
+  if (!input || input.length < 2) return [];
+  
+  const inputLower = input.toLowerCase();
+  const allPropTypes = [...new Set([...commonPropTypes, ...learnedPropTypes])];
+  
+  return allPropTypes
+    .filter(prop => prop.toLowerCase().includes(inputLower))
+    .slice(0, 8);
+};
+
+const handleTeamInput = (id, value, sport) => {
+  updateParticipant(id, 'team', value);
+  const suggestions = getTeamSuggestions(value, sport);
+  setSuggestions(suggestions);
+  setShowSuggestions({ ...showSuggestions, [`team-${id}`]: suggestions.length > 0 });
+};
+
+const handlePropTypeInput = (id, value) => {
+  updateParticipant(id, 'propType', value);
+  const suggestions = getPropTypeSuggestions(value);
+  setSuggestions(suggestions);
+  setShowSuggestions({ ...showSuggestions, [`prop-${id}`]: suggestions.length > 0 });
+};
+
+const selectSuggestion = (id, field, value) => {
+  updateParticipant(id, field, value);
+  setShowSuggestions({});
+  setSuggestions([]);
+};
+  
   const removeParticipant = (id) => {
     const updated = { ...newParlay.participants };
     delete updated[id];
@@ -114,11 +237,52 @@ const App = () => {
   };
 
   const submitParlay = async () => {
-    const participantCount = Object.keys(newParlay.participants).length;
-    if (participantCount < 3) {
-      alert('Minimum 3 participants required');
-      return;
+  const participantCount = Object.keys(newParlay.participants).length;
+  if (participantCount < 3) {
+    alert('Minimum 3 participants required');
+    return;
+  }
+  
+  const hasEmptyPlayer = Object.values(newParlay.participants).some(p => !p.player);
+  if (hasEmptyPlayer) {
+    alert('Please select a player for all picks');
+    return;
+  }
+  
+  const parlayWithId = {
+    ...newParlay,
+    id: Date.now(),
+    totalParticipants: participantCount
+  };
+  
+  // Learn from new entries
+  const newTeams = [...learnedTeams];
+  const newPropTypes = [...learnedPropTypes];
+  
+  Object.values(newParlay.participants).forEach(p => {
+    if (p.team && !newTeams.includes(p.team)) {
+      newTeams.push(p.team);
     }
+    if (p.propType && !newPropTypes.includes(p.propType)) {
+      newPropTypes.push(p.propType);
+    }
+  });
+  
+  setLearnedTeams(newTeams);
+  setLearnedPropTypes(newPropTypes);
+  saveLearnedData(newTeams, newPropTypes);
+  
+  const updatedParlays = [...parlays, parlayWithId];
+  await saveParlays(updatedParlays);
+  
+  setNewParlay({
+    date: new Date().toISOString().split('T')[0],
+    betAmount: 10,
+    participants: {},
+    placedBy: '',
+    settled: false
+  });
+};
     
     const hasEmptyPlayer = Object.values(newParlay.participants).some(p => !p.player);
     if (hasEmptyPlayer) {
@@ -358,16 +522,31 @@ const App = () => {
           {sports.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
-      <div>
-        <label className="block text-xs font-medium mb-1">Team/Player</label>
-        <input
-          type="text"
-          value={participant.team}
-          onChange={(e) => updateParticipant(id, 'team', e.target.value)}
-          className="w-full px-2 py-1 border rounded text-sm"
-          placeholder="e.g., Joe Burrow"
-        />
-      </div>
+      <div className="relative">
+  <label className="block text-xs font-medium mb-1">Team/Player</label>
+  <input
+    type="text"
+    value={participant.team}
+    onChange={(e) => handleTeamInput(id, e.target.value, participant.sport)}
+    onFocus={(e) => handleTeamInput(id, e.target.value, participant.sport)}
+    onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
+    className="w-full px-2 py-1 border rounded text-sm"
+    placeholder="Start typing..."
+  />
+  {showSuggestions[`team-${id}`] && suggestions.length > 0 && (
+    <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
+      {suggestions.map((suggestion, idx) => (
+        <div
+          key={idx}
+          onClick={() => selectSuggestion(id, 'team', suggestion)}
+          className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+        >
+          {suggestion}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
       <div>
         <label className="block text-xs font-medium mb-1">Bet Type</label>
         <select
@@ -438,16 +617,31 @@ const App = () => {
 
       {participant.betType === 'Prop Bet' && (
         <>
-          <div>
-            <label className="block text-xs font-medium mb-1">Prop Type</label>
-            <input
-              type="text"
-              value={participant.propType || ''}
-              onChange={(e) => updateParticipant(id, 'propType', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
-              placeholder="e.g., Passing Yards"
-            />
-          </div>
+          <div className="relative">
+  <label className="block text-xs font-medium mb-1">Prop Type</label>
+  <input
+    type="text"
+    value={participant.propType || ''}
+    onChange={(e) => handlePropTypeInput(id, e.target.value)}
+    onFocus={(e) => handlePropTypeInput(id, e.target.value)}
+    onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
+    className="w-full px-2 py-1 border rounded text-sm"
+    placeholder="Start typing..."
+  />
+  {showSuggestions[`prop-${id}`] && suggestions.length > 0 && (
+    <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
+      {suggestions.map((suggestion, idx) => (
+        <div
+          key={idx}
+          onClick={() => selectSuggestion(id, 'propType', suggestion)}
+          className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+        >
+          {suggestion}
+        </div>
+      ))}
+    </div>
+  )}
+</div>
           <div>
             <label className="block text-xs font-medium mb-1">Over/Under</label>
             <select
