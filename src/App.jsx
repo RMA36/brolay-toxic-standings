@@ -35,6 +35,7 @@ const App = () => {
   const [newParlay, setNewParlay] = useState({
   date: new Date().toISOString().split('T')[0],
   betAmount: 10,
+  totalPayout: 0,
   participants: {},
   placedBy: '',
   settled: false
@@ -332,6 +333,7 @@ const selectSuggestion = (id, field, value) => {
   setNewParlay({
     date: new Date().toISOString().split('T')[0],
     betAmount: 10,
+    totalPayout: 0,
     participants: {},
     placedBy: '',
     settled: false
@@ -457,7 +459,8 @@ const selectSuggestion = (id, field, value) => {
           playerStats.byBetType[participant.betType].wins++;
           
           if (parlayWon) {
-            playerStats.moneyWon += (parlay.betAmount * participants.length) / participants.length;
+            const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+            playerStats.moneyWon += netProfit / winners.length;
           }
         } else if (participant.result === 'loss') {
           playerStats.losses++;
@@ -520,18 +523,9 @@ const selectSuggestion = (id, field, value) => {
   const renderEntry = () => (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold mb-4">New Parlay Entry</h2>
+        <h2 className="text-2xl font-bold mb-4">New Brolay Entry</h2>
         
-        <div className="grid grid-cols-3 gap-4 mb-6">
-  <div>
-    <label className="block text-sm font-medium mb-1">Date</label>
-    <input
-      type="date"
-      value={newParlay.date}
-      onChange={(e) => setNewParlay({...newParlay, date: e.target.value})}
-      className="w-full px-3 py-2 border rounded"
-    />
-  </div>
+        <div className="grid grid-cols-3 gap-4 mb-4">
   <div>
     <label className="block text-sm font-medium mb-1">Bet Amount (per person)</label>
     <input
@@ -542,15 +536,32 @@ const selectSuggestion = (id, field, value) => {
     />
   </div>
   <div>
-    <label className="block text-sm font-medium mb-1">Placed By</label>
-    <select
-      value={newParlay.placedBy}
-      onChange={(e) => setNewParlay({...newParlay, placedBy: e.target.value})}
+    <label className="block text-sm font-medium mb-1">Total Payout</label>
+    <input
+      type="number"
+      value={newParlay.totalPayout || ''}
+      onChange={(e) => {
+        const payout = Number(e.target.value) || 0;
+        setNewParlay({...newParlay, totalPayout: payout});
+      }}
       className="w-full px-3 py-2 border rounded"
-    >
-      <option value="">Select Big Guy</option>
-      {players.map(p => <option key={p} value={p}>{p}</option>)}
-    </select>
+      placeholder="Enter total payout"
+    />
+  </div>
+  <div>
+    <label className="block text-sm font-medium mb-1">Net Profit</label>
+    <input
+      type="number"
+      value={Math.max(0, (newParlay.totalPayout || 0) - (newParlay.betAmount * Object.keys(newParlay.participants).length))}
+      onChange={(e) => {
+        const netProfit = Number(e.target.value) || 0;
+        const totalRisk = newParlay.betAmount * Object.keys(newParlay.participants).length;
+        const calculatedPayout = netProfit + totalRisk;
+        setNewParlay({...newParlay, totalPayout: calculatedPayout});
+      }}
+      className="w-full px-3 py-2 border rounded"
+      placeholder="Or enter net profit"
+    />
   </div>
 </div>
         <div className="space-y-4 mb-6">
@@ -792,14 +803,14 @@ const selectSuggestion = (id, field, value) => {
       )}
 
       <div>
-        <label className="block text-xs font-medium mb-1">Odds</label>
-        <input
-          type="text"
-          value={participant.odds || ''}
-          onChange={(e) => updateParticipant(id, 'odds', e.target.value)}
-          className="w-full px-2 py-1 border rounded text-sm"
-          placeholder="e.g., -120"
-        />
+        <label className="block text-xs font-medium mb-1">Odds (Optional)</label>
+          <input
+            type="text"
+            value={participant.odds || ''}
+            onChange={(e) => updateParticipant(id, 'odds', e.target.value)}
+            className="w-full px-2 py-1 border rounded text-sm"
+            placeholder="e.g., -120 (Optional)"
+          />
       </div>
       <div>
         <label className="block text-xs font-medium mb-1">Result</label>
@@ -834,7 +845,7 @@ const selectSuggestion = (id, field, value) => {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-xl font-bold mb-4">Recent Parlays (Edit Results)</h3>
+        <h3 className="text-xl font-bold mb-4">Recent Brolays (Edit Results)</h3>
         <div className="space-y-3">
           {parlays.slice(-5).reverse().map(parlay => {
             const participants = Object.values(parlay.participants);
@@ -1007,8 +1018,6 @@ const selectSuggestion = (id, field, value) => {
     const bySport = {};
 parlays.forEach(p => {
   const participants = Object.values(p.participants);
-  const losers = participants.filter(part => part.result === 'loss');
-  const parlayWon = losers.length === 0 && participants.some(part => part.result === 'win');
   
   participants.forEach(part => {
     if (part.sport) {
@@ -1016,7 +1025,7 @@ parlays.forEach(p => {
         bySport[part.sport] = { total: 0, won: 0 };
       }
       bySport[part.sport].total++;
-      if (parlayWon && part.result === 'win') {
+      if (part.result === 'win') {
         bySport[part.sport].won++;
       }
     }
@@ -1068,7 +1077,7 @@ parlays.forEach(p => {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold mb-4">Recent Parlays</h3>
+          <h3 className="text-xl font-bold mb-4">Recent Brolays</h3>
           <div className="space-y-2">
             {parlays.slice(-10).reverse().map(parlay => {
               const participants = Object.values(parlay.participants);
@@ -1222,7 +1231,7 @@ parlays.forEach(p => {
               activeTab === 'entry' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
             }`}
           >
-            New Parlay
+            New Brolay
           </button>
           <button
             onClick={() => setActiveTab('individual')}
