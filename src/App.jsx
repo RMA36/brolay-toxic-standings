@@ -1230,7 +1230,7 @@ allPlayers.forEach(player => {
     }
   });
 
-  // Simplify: if A owes B and B owes A, net them out
+ // Simplify: if A owes B and B owes A, net them out
 const simplifiedPayments = [];
 allPlayers.forEach(player1 => {
   allPlayers.forEach(player2 => {
