@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, TrendingUp, Users, Award, AlertCircle, Loader } from 'lucide-react';
+import { PlusCircle, TrendingUp, Users, Award, AlertCircle, Loader, Menu, X } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
@@ -52,6 +52,25 @@ const App = () => {
   placedBy: '',
   settled: false
 });
+// Mobile-specific states
+const [isMobile, setIsMobile] = useState(false);
+const [sidebarOpen, setSidebarOpen] = useState(false);
+const [refreshing, setRefreshing] = useState(false);
+const [pullStartY, setPullStartY] = useState(0);
+const [pullDistance, setPullDistance] = useState(0);
+
+// Detect mobile device
+useEffect(() => {
+  const checkMobile = () => {
+    setIsMobile(window.innerWidth < 768);
+  };
+  
+  checkMobile();
+  window.addEventListener('resize', checkMobile);
+  
+  return () => window.removeEventListener('resize', checkMobile);
+}, []);
+  
   const sports = ['NFL', 'NBA', 'MLB', 'NHL', 'Soccer', 'College Football', 'College Basketball', 'Other'];
   const betTypes = ['Spread', 'Moneyline', 'Total', 'Prop Bet'];
 
@@ -154,6 +173,13 @@ const commonPropTypes = [
       setLearnedPropTypes(learned.propTypes || []);
     }
   }, []);
+
+// Refresh data when switching tabs
+useEffect(() => {
+  if (authenticated) {
+    loadParlays();
+  }
+}, [activeTab, authenticated]);
   
   const loadParlays = async () => {
   try {
@@ -171,6 +197,31 @@ const commonPropTypes = [
   } finally {
     setLoading(false);
   }
+};
+
+const handleTouchStart = (e) => {
+  if (!isMobile || window.scrollY > 0) return;
+  setPullStartY(e.touches[0].clientY);
+};
+
+const handleTouchMove = (e) => {
+  if (!isMobile || window.scrollY > 0 || pullStartY === 0) return;
+  const currentY = e.touches[0].clientY;
+  const distance = Math.max(0, currentY - pullStartY);
+  setPullDistance(Math.min(distance, 100));
+};
+
+const handleTouchEnd = async () => {
+  if (!isMobile) return;
+  if (pullDistance > 80) {
+    setRefreshing(true);
+    await loadParlays();
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 500);
+  }
+  setPullDistance(0);
+  setPullStartY(0);
 };
   
   const saveParlays = async (updatedParlays) => {
@@ -494,20 +545,21 @@ const renderEditModal = () => {
   const participants = editingParlay.participants || {};
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-4">Edit Brolay</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 md:p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto" style={{ maxWidth: isMobile ? '100%' : '1024px' }}>
+        <div className="p-4 md:p-6">
+          <h2 className="text-xl md:text-2xl font-bold mb-4">Edit Brolay</h2>
           
           {/* Brolay Info */}
-          <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium mb-1">Date</label>
               <input
                 type="date"
                 value={editingParlay.date}
                 onChange={(e) => setEditingParlay({...editingParlay, date: e.target.value})}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded text-base"
+                style={{ fontSize: isMobile ? '16px' : '14px' }}
               />
             </div>
             <div>
@@ -515,7 +567,8 @@ const renderEditModal = () => {
               <select
                 value={editingParlay.placedBy || ''}
                 onChange={(e) => setEditingParlay({...editingParlay, placedBy: e.target.value})}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded text-base"
+                style={{ fontSize: isMobile ? '16px' : '14px' }}
               >
                 <option value="">Select Big Guy</option>
                 {players.map(p => <option key={p} value={p}>{p}</option>)}
@@ -523,14 +576,15 @@ const renderEditModal = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium mb-1">Bet Amount (per person)</label>
               <input
                 type="number"
                 value={editingParlay.betAmount}
                 onChange={(e) => setEditingParlay({...editingParlay, betAmount: Number(e.target.value)})}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded text-base"
+                style={{ fontSize: isMobile ? '16px' : '14px' }}
               />
             </div>
             <div>
@@ -542,7 +596,8 @@ const renderEditModal = () => {
                   const payout = Number(e.target.value) || 0;
                   setEditingParlay({...editingParlay, totalPayout: payout});
                 }}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded text-base"
+                style={{ fontSize: isMobile ? '16px' : '14px' }}
               />
             </div>
             <div>
@@ -556,17 +611,18 @@ const renderEditModal = () => {
                   const calculatedPayout = netProfit + totalRisk;
                   setEditingParlay({...editingParlay, totalPayout: calculatedPayout});
                 }}
-                className="w-full px-3 py-2 border rounded"
+                className="w-full px-3 py-2 border rounded text-base"
+                style={{ fontSize: isMobile ? '16px' : '14px' }}
               />
             </div>
           </div>
 
           {/* Picks */}
-          <h3 className="text-lg font-semibold mb-3">Picks</h3>
+          <h3 className="text-base md:text-lg font-semibold mb-3">Picks</h3>
           <div className="space-y-4 mb-6">
             {Object.entries(participants).map(([id, participant]) => (
-              <div key={id} className="border rounded p-4 bg-gray-50">
-                <div className="grid grid-cols-4 gap-3 mb-3">
+              <div key={id} className="border rounded p-3 md:p-4 bg-gray-50">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                   <div>
                     <label className="block text-xs font-medium mb-1">Big Guy</label>
                     <select
@@ -576,7 +632,8 @@ const renderEditModal = () => {
                         updated.participants[id].player = e.target.value;
                         setEditingParlay(updated);
                       }}
-                      className="w-full px-2 py-1 border rounded text-sm"
+                      className="w-full px-2 py-1 border rounded text-base"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
                     >
                       <option value="">Select</option>
                       {players.map(p => <option key={p} value={p}>{p}</option>)}
@@ -591,7 +648,8 @@ const renderEditModal = () => {
                         updated.participants[id].sport = e.target.value;
                         setEditingParlay(updated);
                       }}
-                      className="w-full px-2 py-1 border rounded text-sm"
+                      className="w-full px-2 py-1 border rounded text-base"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
                     >
                       {sports.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
@@ -605,7 +663,8 @@ const renderEditModal = () => {
                         updated.participants[id].betType = e.target.value;
                         setEditingParlay(updated);
                       }}
-                      className="w-full px-2 py-1 border rounded text-sm"
+                      className="w-full px-2 py-1 border rounded text-base"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
                     >
                       <option value="Spread">Spread</option>
                       <option value="Moneyline">Moneyline</option>
@@ -625,14 +684,15 @@ const renderEditModal = () => {
                           updated.participants[id].team = e.target.value;
                           setEditingParlay(updated);
                         }}
-                        className="w-full px-2 py-1 border rounded text-sm"
+                        className="w-full px-2 py-1 border rounded text-base"
+                        style={{ fontSize: isMobile ? '16px' : '14px' }}
                       />
                     </div>
                   )}
                 </div>
 
                 {participant.betType === 'Total' && (
-                  <div className="grid grid-cols-2 gap-3 mb-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
                       <label className="block text-xs font-medium mb-1">Away Team</label>
                       <input
@@ -643,7 +703,8 @@ const renderEditModal = () => {
                           updated.participants[id].awayTeam = e.target.value;
                           setEditingParlay(updated);
                         }}
-                        className="w-full px-2 py-1 border rounded text-sm"
+                        className="w-full px-2 py-1 border rounded text-base"
+                        style={{ fontSize: isMobile ? '16px' : '14px' }}
                       />
                     </div>
                     <div>
@@ -656,13 +717,14 @@ const renderEditModal = () => {
                           updated.participants[id].homeTeam = e.target.value;
                           setEditingParlay(updated);
                         }}
-                        className="w-full px-2 py-1 border rounded text-sm"
+                        className="w-full px-2 py-1 border rounded text-base"
+                        style={{ fontSize: isMobile ? '16px' : '14px' }}
                       />
                     </div>
                   </div>
                 )}
 
-                <div className="grid grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                   {participant.betType === 'Spread' && (
                     <>
                       <div>
@@ -674,7 +736,8 @@ const renderEditModal = () => {
                             updated.participants[id].favorite = e.target.value;
                             setEditingParlay(updated);
                           }}
-                          className="w-full px-2 py-1 border rounded text-sm"
+                          className="w-full px-2 py-1 border rounded text-base"
+                          style={{ fontSize: isMobile ? '16px' : '14px' }}
                         >
                           <option value="Favorite">Favorite</option>
                           <option value="Dog">Dog</option>
@@ -690,7 +753,8 @@ const renderEditModal = () => {
                             updated.participants[id].spread = e.target.value;
                             setEditingParlay(updated);
                           }}
-                          className="w-full px-2 py-1 border rounded text-sm"
+                          className="w-full px-2 py-1 border rounded text-base"
+                          style={{ fontSize: isMobile ? '16px' : '14px' }}
                         />
                       </div>
                     </>
@@ -707,7 +771,8 @@ const renderEditModal = () => {
                             updated.participants[id].overUnder = e.target.value;
                             setEditingParlay(updated);
                           }}
-                          className="w-full px-2 py-1 border rounded text-sm"
+                          className="w-full px-2 py-1 border rounded text-base"
+                          style={{ fontSize: isMobile ? '16px' : '14px' }}
                         >
                           <option value="Over">Over</option>
                           <option value="Under">Under</option>
@@ -723,7 +788,8 @@ const renderEditModal = () => {
                             updated.participants[id].total = e.target.value;
                             setEditingParlay(updated);
                           }}
-                          className="w-full px-2 py-1 border rounded text-sm"
+                          className="w-full px-2 py-1 border rounded text-base"
+                          style={{ fontSize: isMobile ? '16px' : '14px' }}
                         />
                       </div>
                     </>
@@ -741,7 +807,8 @@ const renderEditModal = () => {
                             updated.participants[id].propType = e.target.value;
                             setEditingParlay(updated);
                           }}
-                          className="w-full px-2 py-1 border rounded text-sm"
+                          className="w-full px-2 py-1 border rounded text-base"
+                          style={{ fontSize: isMobile ? '16px' : '14px' }}
                         />
                       </div>
                       <div>
@@ -753,7 +820,8 @@ const renderEditModal = () => {
                             updated.participants[id].overUnder = e.target.value;
                             setEditingParlay(updated);
                           }}
-                          className="w-full px-2 py-1 border rounded text-sm"
+                          className="w-full px-2 py-1 border rounded text-base"
+                          style={{ fontSize: isMobile ? '16px' : '14px' }}
                         >
                           <option value="Over">Over</option>
                           <option value="Under">Under</option>
@@ -769,7 +837,8 @@ const renderEditModal = () => {
                             updated.participants[id].line = e.target.value;
                             setEditingParlay(updated);
                           }}
-                          className="w-full px-2 py-1 border rounded text-sm"
+                          className="w-full px-2 py-1 border rounded text-base"
+                          style={{ fontSize: isMobile ? '16px' : '14px' }}
                         />
                       </div>
                     </>
@@ -785,7 +854,8 @@ const renderEditModal = () => {
                         updated.participants[id].odds = e.target.value;
                         setEditingParlay(updated);
                       }}
-                      className="w-full px-2 py-1 border rounded text-sm"
+                      className="w-full px-2 py-1 border rounded text-base"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
                       placeholder="e.g., -120 (Optional)"
                     />
                   </div>
@@ -798,7 +868,8 @@ const renderEditModal = () => {
                         updated.participants[id].result = e.target.value;
                         setEditingParlay(updated);
                       }}
-                      className="w-full px-2 py-1 border rounded text-sm"
+                      className="w-full px-2 py-1 border rounded text-base"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
                     >
                       <option value="pending">Pending</option>
                       <option value="win">Win</option>
@@ -815,14 +886,16 @@ const renderEditModal = () => {
           <div className="flex gap-3 justify-end">
             <button
               onClick={() => setEditingParlay(null)}
-              className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+              className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
             >
               Cancel
             </button>
             <button
               onClick={() => saveEditedParlay(editingParlay)}
               disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
             >
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
@@ -984,9 +1057,9 @@ const importFromCSV = async (csvText) => {
 
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center p-3 md:p-4">
         <div className="bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
-          <h1 className="text-3xl font-bold text-center mb-2">Brolay Toxic Standings</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-center mb-2">Brolay Toxic Standings</h1>
           <p className="text-gray-600 text-center mb-6">Enter password to access</p>
           <form onSubmit={handleLogin}>
             <input
@@ -998,7 +1071,8 @@ const importFromCSV = async (csvText) => {
             />
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
             >
               Login
             </button>
@@ -1022,18 +1096,19 @@ const importFromCSV = async (csvText) => {
   }
 
   const renderEntry = () => (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-2xl font-bold mb-4">New Brolay Entry</h2>
+    <div className="space-y-4 md:space-y-6">
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h2 className="text-xl md:text-2xl font-bold mb-4">New Brolay Entry</h2>
         
-        <div className="grid grid-cols-3 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4">
   <div>
     <label className="block text-sm font-medium mb-1">Bet Amount (per person)</label>
     <input
       type="number"
       value={newParlay.betAmount}
       onChange={(e) => setNewParlay({...newParlay, betAmount: Number(e.target.value)})}
-      className="w-full px-3 py-2 border rounded"
+      className="w-full px-3 py-2 border rounded text-base"
+      style={{ fontSize: isMobile ? '16px' : '14px' }}
     />
   </div>
   <div>
@@ -1045,7 +1120,8 @@ const importFromCSV = async (csvText) => {
         const payout = Number(e.target.value) || 0;
         setNewParlay({...newParlay, totalPayout: payout});
       }}
-      className="w-full px-3 py-2 border rounded"
+      className="w-full px-3 py-2 border rounded text-base"
+      style={{ fontSize: isMobile ? '16px' : '14px' }}
       placeholder="Enter total payout"
     />
   </div>
@@ -1060,19 +1136,21 @@ const importFromCSV = async (csvText) => {
         const calculatedPayout = netProfit + totalRisk;
         setNewParlay({...newParlay, totalPayout: calculatedPayout});
       }}
-      className="w-full px-3 py-2 border rounded"
+      className="w-full px-3 py-2 border rounded text-base"
+      style={{ fontSize: isMobile ? '16px' : '14px' }}
       placeholder="Or enter net profit"
     />
   </div>
 </div>
-<div className="grid grid-cols-2 gap-4 mb-4">
+<div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
   <div>
     <label className="block text-sm font-medium mb-1">Date</label>
     <input
       type="date"
       value={newParlay.date}
       onChange={(e) => setNewParlay({...newParlay, date: e.target.value})}
-      className="w-full px-3 py-2 border rounded"
+      className="w-full px-3 py-2 border rounded text-base"
+      style={{ fontSize: isMobile ? '16px' : '14px' }}
     />
   </div>
   <div>
@@ -1080,7 +1158,8 @@ const importFromCSV = async (csvText) => {
     <select
       value={newParlay.placedBy}
       onChange={(e) => setNewParlay({...newParlay, placedBy: e.target.value})}
-      className="w-full px-3 py-2 border rounded"
+      className="w-full px-3 py-2 border rounded text-base"
+      style={{ fontSize: isMobile ? '16px' : '14px' }}
     >
       <option value="">Select Big Guy</option>
       {players.map(p => <option key={p} value={p}>{p}</option>)}
@@ -1090,25 +1169,19 @@ const importFromCSV = async (csvText) => {
         
         <div className="space-y-4 mb-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Picks</h3>
-            <button
-              onClick={addParticipant}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              <PlusCircle size={20} />
-              Add Pick
-            </button>
+            <h3 className="text-base md:text-lg font-semibold">Picks</h3>
           </div>
 
           {Object.entries(newParlay.participants).map(([id, participant]) => (
-  <div key={id} className="border rounded p-4 bg-gray-50">
-    <div className="grid grid-cols-4 gap-3 mb-3">
+  <div key={id} className="border rounded p-4 md:p-6 bg-gray-50">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
       <div>
         <label className="block text-xs font-medium mb-1">Big Guy</label>
         <select
           value={participant.player}
           onChange={(e) => updateParticipant(id, 'player', e.target.value)}
-          className="w-full px-2 py-1 border rounded text-sm"
+          className="w-full px-2 py-1 border rounded text-base"
+          style={{ fontSize: isMobile ? '16px' : '14px' }}
         >
           <option value="">Select</option>
           {players.map(p => <option key={p} value={p}>{p}</option>)}
@@ -1119,7 +1192,8 @@ const importFromCSV = async (csvText) => {
         <select
           value={participant.sport}
           onChange={(e) => updateParticipant(id, 'sport', e.target.value)}
-          className="w-full px-2 py-1 border rounded text-sm"
+          className="w-full px-2 py-1 border rounded text-base"
+          style={{ fontSize: isMobile ? '16px' : '14px' }}
         >
           {sports.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
@@ -1129,7 +1203,8 @@ const importFromCSV = async (csvText) => {
         <select
           value={participant.betType}
           onChange={(e) => updateParticipant(id, 'betType', e.target.value)}
-          className="w-full px-2 py-1 border rounded text-sm"
+          className="w-full px-2 py-1 border rounded text-base"
+          style={{ fontSize: isMobile ? '16px' : '14px' }}
         >
           <option value="Spread">Spread</option>
           <option value="Moneyline">Moneyline</option>
@@ -1147,7 +1222,8 @@ const importFromCSV = async (csvText) => {
             onChange={(e) => handleTeamInput(id, e.target.value, participant.sport)}
             onFocus={(e) => handleTeamInput(id, e.target.value, participant.sport)}
             onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-            className="w-full px-2 py-1 border rounded text-sm"
+            className="w-full px-2 py-1 border rounded text-base"
+            style={{ fontSize: isMobile ? '16px' : '14px' }}
             placeholder="Start typing..."
           />
           {showSuggestions[`team-${id}`] && suggestions.length > 0 && (
@@ -1168,7 +1244,7 @@ const importFromCSV = async (csvText) => {
     </div>
 
     {participant.betType === 'Total' && (
-      <div className="grid grid-cols-2 gap-3 mb-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <div className="relative">
           <label className="block text-xs font-medium mb-1">Away Team</label>
           <input
@@ -1177,7 +1253,8 @@ const importFromCSV = async (csvText) => {
             onChange={(e) => handleAwayTeamInput(id, e.target.value, participant.sport)}
             onFocus={(e) => handleAwayTeamInput(id, e.target.value, participant.sport)}
             onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-            className="w-full px-2 py-1 border rounded text-sm"
+            className="w-full px-2 py-1 border rounded text-base"
+            style={{ fontSize: isMobile ? '16px' : '14px' }}
             placeholder="Start typing..."
           />
           {showSuggestions[`awayTeam-${id}`] && suggestions.length > 0 && (
@@ -1202,7 +1279,8 @@ const importFromCSV = async (csvText) => {
             onChange={(e) => handleHomeTeamInput(id, e.target.value, participant.sport)}
             onFocus={(e) => handleHomeTeamInput(id, e.target.value, participant.sport)}
             onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-            className="w-full px-2 py-1 border rounded text-sm"
+            className="w-full px-2 py-1 border rounded text-base"
+            style={{ fontSize: isMobile ? '16px' : '14px' }}
             placeholder="Start typing..."
           />
           {showSuggestions[`homeTeam-${id}`] && suggestions.length > 0 && (
@@ -1222,7 +1300,7 @@ const importFromCSV = async (csvText) => {
       </div>
     )}
 
-    <div className="grid grid-cols-4 gap-3 mb-3">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
       {participant.betType === 'Spread' && (
         <>
           <div>
@@ -1230,7 +1308,8 @@ const importFromCSV = async (csvText) => {
             <select
               value={participant.favorite || 'Favorite'}
               onChange={(e) => updateParticipant(id, 'favorite', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
             >
               <option value="Favorite">Favorite</option>
               <option value="Dog">Dog</option>
@@ -1242,7 +1321,8 @@ const importFromCSV = async (csvText) => {
               type="text"
               value={participant.spread || ''}
               onChange={(e) => updateParticipant(id, 'spread', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
               placeholder="e.g., 7.5"
             />
           </div>
@@ -1256,7 +1336,8 @@ const importFromCSV = async (csvText) => {
             <select
               value={participant.overUnder || 'Over'}
               onChange={(e) => updateParticipant(id, 'overUnder', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
             >
               <option value="Over">Over</option>
               <option value="Under">Under</option>
@@ -1268,7 +1349,8 @@ const importFromCSV = async (csvText) => {
               type="text"
               value={participant.total || ''}
               onChange={(e) => updateParticipant(id, 'total', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
               placeholder="e.g., 45.5"
             />
           </div>
@@ -1285,7 +1367,8 @@ const importFromCSV = async (csvText) => {
               onChange={(e) => handlePropTypeInput(id, e.target.value)}
               onFocus={(e) => handlePropTypeInput(id, e.target.value)}
               onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
               placeholder="Start typing..."
             />
             {showSuggestions[`prop-${id}`] && suggestions.length > 0 && (
@@ -1307,7 +1390,8 @@ const importFromCSV = async (csvText) => {
             <select
               value={participant.overUnder || 'Over'}
               onChange={(e) => updateParticipant(id, 'overUnder', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
             >
               <option value="Over">Over</option>
               <option value="Under">Under</option>
@@ -1319,7 +1403,8 @@ const importFromCSV = async (csvText) => {
               type="text"
               value={participant.line || ''}
               onChange={(e) => updateParticipant(id, 'line', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
               placeholder="e.g., 255.5"
             />
           </div>
@@ -1332,7 +1417,8 @@ const importFromCSV = async (csvText) => {
             type="text"
             value={participant.odds || ''}
             onChange={(e) => updateParticipant(id, 'odds', e.target.value)}
-            className="w-full px-2 py-1 border rounded text-sm"
+            className="w-full px-2 py-1 border rounded text-base"
+            style={{ fontSize: isMobile ? '16px' : '14px' }}
             placeholder="e.g., -120 (Optional)"
           />
       </div>
@@ -1341,7 +1427,8 @@ const importFromCSV = async (csvText) => {
         <select
           value={participant.result}
           onChange={(e) => updateParticipant(id, 'result', e.target.value)}
-          className="w-full px-2 py-1 border rounded text-sm"
+          className="w-full px-2 py-1 border rounded text-base"
+          style={{ fontSize: isMobile ? '16px' : '14px' }}
         >
           <option value="pending">Pending</option>
           <option value="win">Win</option>
@@ -1352,7 +1439,8 @@ const importFromCSV = async (csvText) => {
     </div>
     <button
       onClick={() => removeParticipant(id)}
-      className="text-red-600 text-sm hover:text-red-800"
+      className="text-red-600 text-sm hover:text-red-800 text-base"
+      style={{ minHeight: isMobile ? '44px' : 'auto' }}
     >
       Remove Pick
     </button>
@@ -1361,9 +1449,19 @@ const importFromCSV = async (csvText) => {
         </div>
 
         <button
+          onClick={addParticipant}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-base"
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        >
+          <PlusCircle size={20} />
+          Add Pick
+        </button>
+        
+        <button
           onClick={submitParlay}
           disabled={saving}
-          className="w-full py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400"
+          className="w-full py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 text-base"
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
         >
           {saving ? 'Saving...' : 'Submit Parlay'}
         </button>
@@ -1371,21 +1469,197 @@ const importFromCSV = async (csvText) => {
     </div>
   );
 
-  const renderIndividualDashboard = () => (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Individual Statistics</h2>
+const calculateStatsForPlayer = (player, parlaysList) => {
+  const playerStats = {
+    totalPicks: 0,
+    wins: 0,
+    losses: 0,
+    moneyWon: 0,
+    moneyLost: 0,
+    and1s: 0,
+    and1Cost: 0,
+    bySport: {},
+    byBetType: {}
+  };
+
+  parlaysList.forEach(parlay => {
+    const participants = Object.values(parlay.participants);
+    const losers = participants.filter(p => p.result === 'loss');
+    const winners = participants.filter(p => p.result === 'win');
+    const parlayWon = losers.length === 0 && winners.length > 0;
+    const and1 = losers.length === 1 && winners.length === participants.length - 1;
+
+    participants.forEach(participant => {
+      if (participant.player !== player) return;
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      playerStats.totalPicks++;
+
+      if (!playerStats.bySport[participant.sport]) {
+        playerStats.bySport[participant.sport] = { wins: 0, losses: 0, total: 0 };
+      }
+      playerStats.bySport[participant.sport].total++;
+
+      if (!playerStats.byBetType[participant.betType]) {
+        playerStats.byBetType[participant.betType] = { wins: 0, losses: 0, total: 0 };
+      }
+      playerStats.byBetType[participant.betType].total++;
+
+      if (participant.result === 'win') {
+        playerStats.wins++;
+        playerStats.bySport[participant.sport].wins++;
+        playerStats.byBetType[participant.betType].wins++;
+        
+        if (parlayWon) {
+          const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+          playerStats.moneyWon += netProfit / winners.length;
+        }
+      } else if (participant.result === 'loss') {
+        playerStats.losses++;
+        playerStats.bySport[participant.sport].losses++;
+        playerStats.byBetType[participant.betType].losses++;
+        
+        if (and1) {
+          playerStats.and1s++;
+          playerStats.and1Cost += parlay.betAmount * participants.length;
+          playerStats.moneyLost += parlay.betAmount * participants.length;
+        } else {
+          playerStats.moneyLost += (parlay.betAmount * participants.length) / losers.length;
+        }
+      }
+    });
+  });
+
+  return playerStats;
+};
+
+  const renderIndividualDashboard = () => {
+  const filteredParlays = applyFilters([...parlays]);
+  
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <h2 className="text-xl md:text-2xl font-bold">Individual Statistics</h2>
+      
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-base md:text-lg font-semibold mb-4">Filters</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Date From</label>
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Date To</label>
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Big Guy</label>
+            <select
+              value={filters.player}
+              onChange={(e) => setFilters({...filters, player: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              {players.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Sport</label>
+            <select
+              value={filters.sport}
+              onChange={(e) => setFilters({...filters, sport: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              {sports.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Placed By</label>
+            <select
+              value={filters.placedBy}
+              onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              {players.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Min Payout</label>
+            <input
+              type="number"
+              value={filters.minPayout}
+              onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+              placeholder="$0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Max Payout</label>
+            <input
+              type="number"
+              value={filters.maxPayout}
+              onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+              placeholder="Any"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Result</label>
+            <select
+              value={filters.result}
+              onChange={(e) => setFilters({...filters, result: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              <option value="win">Win</option>
+              <option value="loss">Loss</option>
+              <option value="push">Push</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+        </div>
+        <button
+          onClick={() => setFilters({
+            dateFrom: '', dateTo: '', player: '', sport: '', 
+            placedBy: '', minPayout: '', maxPayout: '', result: ''
+          })}
+          className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        >
+          Clear Filters
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {players.map(player => {
-          const playerStats = stats[player];
+          const playerStats = calculateStatsForPlayer(player, filteredParlays);
           const winPct = playerStats.totalPicks > 0 
             ? ((playerStats.wins / playerStats.totalPicks) * 100).toFixed(1)
             : '0.0';
           const netMoney = playerStats.moneyWon - playerStats.moneyLost;
 
           return (
-            <div key={player} className="bg-white rounded-lg shadow p-6">
-              <h3 className="text-xl font-bold mb-4">{player}</h3>
+            <div key={player} className="bg-white rounded-lg shadow p-4 md:p-6">
+              <h3 className="text-lg md:text-xl font-bold mb-4">{player}</h3>
               
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between items-center">
@@ -1451,145 +1725,51 @@ const importFromCSV = async (csvText) => {
       </div>
     </div>
   );
+};
 
-  const renderGroupDashboard = () => {
-    const totalParlays = parlays.length;
-    const wonParlays = parlays.filter(p => {
-      const participants = Object.values(p.participants);
-      const losers = participants.filter(part => part.result === 'loss');
-      return losers.length === 0 && participants.some(part => part.result === 'win');
-    }).length;
-    const groupWinPct = totalParlays > 0 ? ((wonParlays / totalParlays) * 100).toFixed(1) : '0.0';
+const renderGroupDashboard = () => {
+  const filteredParlays = applyFilters([...parlays]);
+  const totalParlays = filteredParlays.length;
+  const wonParlays = filteredParlays.filter(p => {
+    const participants = Object.values(p.participants);
+    const losers = participants.filter(part => part.result === 'loss');
+    return losers.length === 0 && participants.some(part => part.result === 'win');
+  }).length;
+  const groupWinPct = totalParlays > 0 ? ((wonParlays / totalParlays) * 100).toFixed(1) : '0.0';
 
-    const bySport = {};
-parlays.forEach(p => {
-  const participants = Object.values(p.participants);
-  
-  participants.forEach(part => {
-    if (part.sport) {
-      if (!bySport[part.sport]) {
-        bySport[part.sport] = { total: 0, won: 0 };
-      }
-      bySport[part.sport].total++;
-      if (part.result === 'win') {
-        bySport[part.sport].won++;
-      }
-    }
-  });
-});
+  const bySport = {};
+  filteredParlays.forEach(p => {
+    const participants = Object.values(p.participants);
     
-    return (
-      <div className="space-y-6">
-        <h2 className="text-2xl font-bold">Group Statistics</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Users className="text-blue-600" size={24} />
-              <h3 className="text-lg font-semibold">Total Parlays</h3>
-            </div>
-            <p className="text-3xl font-bold">{totalParlays}</p>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <TrendingUp className="text-green-600" size={24} />
-              <h3 className="text-lg font-semibold">Parlays Won</h3>
-            </div>
-            <p className="text-3xl font-bold">{wonParlays}</p>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center gap-3 mb-2">
-              <Award className="text-purple-600" size={24} />
-              <h3 className="text-lg font-semibold">Win Percentage</h3>
-            </div>
-            <p className="text-3xl font-bold">{groupWinPct}%</p>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold mb-4">Performance by Sport</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {Object.entries(bySport).map(([sport, data]) => (
-              <div key={sport} className="border rounded p-3">
-                <div className="font-semibold">{sport}</div>
-                <div className="text-sm text-gray-600">
-                  {data.won}-{data.total - data.won} ({data.total > 0 ? ((data.won/data.total)*100).toFixed(0) : 0}%)
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold mb-4">Recent Brolays</h3>
-          <div className="space-y-2">
-            {parlays.slice(-10).reverse().map(parlay => {
-              const participants = Object.values(parlay.participants);
-              const losers = participants.filter(p => p.result === 'loss');
-              const winners = participants.filter(p => p.result === 'win');
-              const won = losers.length === 0 && winners.length > 0;
-              const and1 = losers.length === 1 && winners.length === participants.length - 1;
-              
-              return (
-                <div key={parlay.id} className="border rounded p-3 flex justify-between items-center">
-                  <div>
-                    <div className="font-semibold">
-  {parlay.date} - {
-    (() => {
-      const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
-      if (sports.length > 1) return 'Multi-Sport Brolay';
-      if (sports.length === 1) return `${sports[0]} Brolay`;
-      return 'Brolay';
-    })()
-  }
-</div>
-<div className="text-sm text-gray-600">
-  {participants.length} picks • ${parlay.betAmount * participants.length} Risked • ${parlay.totalPayout || 0} Total Payout • ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
-  {parlay.settled && <span className="ml-2 text-green-600">✓ Settled</span>}
-</div>
-                  </div>
-                  <div className="text-right">
-                    {won && <span className="text-green-600 font-semibold">WON</span>}
-                    {!won && losers.length > 0 && (
-                      <span className="text-red-600 font-semibold">
-                        LOST {and1 && '(And-1)'}
-                      </span>
-                    )}
-                    {losers.length === 0 && participants.every(p => p.result === 'pending') && (
-                      <span className="text-gray-500 font-semibold">PENDING</span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-const renderAllBrolays = () => {
-  const filteredParlays = applyFilters([...parlays]).sort((a, b) => 
-    new Date(b.date) - new Date(a.date)
-  );
+    participants.forEach(part => {
+      if (part.sport) {
+        if (!bySport[part.sport]) {
+          bySport[part.sport] = { total: 0, won: 0 };
+        }
+        bySport[part.sport].total++;
+        if (part.result === 'win') {
+          bySport[part.sport].won++;
+        }
+      }
+    });
+  });
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">All Brolays</h2>
+    <div className="space-y-4 md:space-y-6">
+      <h2 className="text-xl md:text-2xl font-bold">Group Statistics</h2>
       
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Filters</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-base md:text-lg font-semibold mb-4">Filters</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Date From</label>
             <input
               type="date"
               value={filters.dateFrom}
               onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
             />
           </div>
           <div>
@@ -1598,7 +1778,8 @@ const renderAllBrolays = () => {
               type="date"
               value={filters.dateTo}
               onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
             />
           </div>
           <div>
@@ -1606,7 +1787,8 @@ const renderAllBrolays = () => {
             <select
               value={filters.player}
               onChange={(e) => setFilters({...filters, player: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
             >
               <option value="">All</option>
               {players.map(p => <option key={p} value={p}>{p}</option>)}
@@ -1617,7 +1799,8 @@ const renderAllBrolays = () => {
             <select
               value={filters.sport}
               onChange={(e) => setFilters({...filters, sport: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
             >
               <option value="">All</option>
               {sports.map(s => <option key={s} value={s}>{s}</option>)}
@@ -1628,7 +1811,8 @@ const renderAllBrolays = () => {
             <select
               value={filters.placedBy}
               onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
             >
               <option value="">All</option>
               {players.map(p => <option key={p} value={p}>{p}</option>)}
@@ -1640,7 +1824,8 @@ const renderAllBrolays = () => {
               type="number"
               value={filters.minPayout}
               onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
               placeholder="$0"
             />
           </div>
@@ -1650,7 +1835,8 @@ const renderAllBrolays = () => {
               type="number"
               value={filters.maxPayout}
               onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
               placeholder="Any"
             />
           </div>
@@ -1659,7 +1845,8 @@ const renderAllBrolays = () => {
             <select
               value={filters.result}
               onChange={(e) => setFilters({...filters, result: e.target.value})}
-              className="w-full px-3 py-2 border rounded"
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
             >
               <option value="">All</option>
               <option value="win">Win</option>
@@ -1674,16 +1861,220 @@ const renderAllBrolays = () => {
             dateFrom: '', dateTo: '', player: '', sport: '', 
             placedBy: '', minPayout: '', maxPayout: '', result: ''
           })}
-          className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+          className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        >
+          Clear Filters
+        </button>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Users className="text-blue-600" size={24} />
+            <h3 className="text-base md:text-lg font-semibold">Total Brolays</h3>
+          </div>
+          <p className="text-2xl md:text-3xl font-bold">{totalParlays}</p>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <TrendingUp className="text-green-600" size={24} />
+            <h3 className="text-base md:text-lg font-semibold">Brolays Won</h3>
+          </div>
+          <p className="text-2xl md:text-3xl font-bold">{wonParlays}</p>
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <Award className="text-purple-600" size={24} />
+            <h3 className="text-base md:text-lg font-semibold">Win Percentage</h3>
+          </div>
+          <p className="text-2xl md:text-3xl font-bold">{groupWinPct}%</p>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-lg md:text-xl font-bold mb-4">Performance by Sport</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+          {Object.entries(bySport).map(([sport, data]) => (
+            <div key={sport} className="border rounded p-3">
+              <div className="font-semibold">{sport}</div>
+              <div className="text-sm text-gray-600">
+                {data.won}-{data.total - data.won} ({data.total > 0 ? ((data.won/data.total)*100).toFixed(0) : 0}%)
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-lg md:text-xl font-bold mb-4">Recent Brolays</h3>
+        <div className="space-y-2">
+          {filteredParlays.slice(-10).reverse().map(parlay => {
+            const participants = Object.values(parlay.participants);
+            const losers = participants.filter(p => p.result === 'loss');
+            const winners = participants.filter(p => p.result === 'win');
+            const won = losers.length === 0 && winners.length > 0;
+            const and1 = losers.length === 1 && winners.length === participants.length - 1;
+            
+            const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
+            const parlayType = sports.length > 1 ? 'Multi-Sport Brolay' : 
+                               sports.length === 1 ? `${sports[0]} Brolay` : 'Brolay';
+            
+            return (
+              <div key={parlay.id} className="border rounded p-3 flex flex-col md:flex-row md:justify-between md:items-center gap-2">
+                <div className="flex-1">
+                    <div className="font-semibold text-sm md:text-base">{parlay.date} - {parlayType}</div>
+                    <div className="text-xs md:text-sm text-gray-600">
+                    {participants.length} picks • ${parlay.betAmount * participants.length} Risked • ${parlay.totalPayout || 0} Total Payout • ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
+                    {parlay.placedBy && <span> • Placed by {parlay.placedBy}</span>}
+                    {parlay.settled && <span className="ml-2 text-green-600">✓ Settled</span>}
+                  </div>
+                </div>
+                <div className="text-left md:text-right">
+                  {won && <span className="text-green-600 font-semibold">WON</span>}
+                  {!won && losers.length > 0 && (
+                    <span className="text-red-600 font-semibold">
+                      LOST {and1 && '(And-1)'}
+                    </span>
+                  )}
+                  {losers.length === 0 && participants.every(p => p.result === 'pending') && (
+                    <span className="text-gray-500 font-semibold">PENDING</span>}
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const renderAllBrolays = () => {
+  const filteredParlays = applyFilters([...parlays]).sort((a, b) => 
+    new Date(b.date) - new Date(a.date)
+  );
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <h2 className="text-xl md:text-2xl font-bold">All Brolays</h2>
+      
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-base md:text-lg font-semibold mb-4">Filters</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Date From</label>
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Date To</label>
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Big Guy</label>
+            <select
+              value={filters.player}
+              onChange={(e) => setFilters({...filters, player: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              {players.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Sport</label>
+            <select
+              value={filters.sport}
+              onChange={(e) => setFilters({...filters, sport: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              {sports.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Placed By</label>
+            <select
+              value={filters.placedBy}
+              onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              {players.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Min Payout</label>
+            <input
+              type="number"
+              value={filters.minPayout}
+              onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+              placeholder="$0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Max Payout</label>
+            <input
+              type="number"
+              value={filters.maxPayout}
+              onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+              placeholder="Any"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Result</label>
+            <select
+              value={filters.result}
+              onChange={(e) => setFilters({...filters, result: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              <option value="win">Win</option>
+              <option value="loss">Loss</option>
+              <option value="push">Push</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+        </div>
+        <button
+          onClick={() => setFilters({
+            dateFrom: '', dateTo: '', player: '', sport: '', 
+            placedBy: '', minPayout: '', maxPayout: '', result: ''
+          })}
+          className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
         >
           Clear Filters
         </button>
       </div>
 
       {/* Brolays List */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">
+          <h3 className="text-lg md:text-xl font-bold">
             {filteredParlays.length} Brolay{filteredParlays.length !== 1 ? 's' : ''}
           </h3>
         </div>
@@ -1705,7 +2096,7 @@ const renderAllBrolays = () => {
                                  sports.length === 1 ? `${sports[0]} Brolay` : 'Brolay';
               
               return (
-                <div key={parlay.id} className="border rounded p-4">
+                <div key={parlay.id} className="border rounded p-4 md:p-6">
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <div className="font-semibold">{parlay.date} - {parlayType}</div>
@@ -1728,13 +2119,15 @@ const renderAllBrolays = () => {
                       )}
                       <button
                         onClick={() => setEditingParlay(parlay)}
-                        className="text-blue-600 text-sm hover:text-blue-800"
+                        className="text-blue-600 text-sm hover:text-blue-800 text-base"
+                        style={{ minHeight: isMobile ? '44px' : 'auto' }}
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => deleteParlay(parlay.id)}
-                        className="text-red-600 text-sm hover:text-red-800"
+                        className="text-red-600 text-sm hover:text-red-800 text-base"
+                        style={{ minHeight: isMobile ? '44px' : 'auto' }}
                       >
                         Delete
                       </button>
@@ -1743,7 +2136,7 @@ const renderAllBrolays = () => {
                   
                   <div className="space-y-2">
                     {Object.entries(parlay.participants).map(([pid, participant]) => (
-                      <div key={pid} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
+                      <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-50 p-2 rounded gap-1">
                         <span>
                           <strong>{participant.player}</strong> - {participant.sport} - {
                             participant.betType === 'Total' ? `${participant.awayTeam} @ ${participant.homeTeam}` : participant.team
@@ -1882,10 +2275,10 @@ const renderAllBrolays = () => {
   });
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Payment Tracker</h2>
+    <div className="space-y-4 md:space-y-6">
+      <h2 className="text-xl md:text-2xl font-bold">Payment Tracker</h2>
       
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6">
         <div className="flex items-start gap-2">
           <AlertCircle className="text-yellow-600 mt-1" size={20} />
           <div>
@@ -1899,8 +2292,8 @@ const renderAllBrolays = () => {
 
       {/* Who Owes Who Summary Table */}
       {simplifiedPayments.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold mb-4">💰 Who Owes Who (Net Summary)</h3>
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4">💰 Who Owes Who (Net Summary)</h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -1915,7 +2308,7 @@ const renderAllBrolays = () => {
                   <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
                     <td className="py-3 px-4 font-semibold text-red-600">{payment.from}</td>
                     <td className="py-3 px-4 font-semibold text-green-600">{payment.to}</td>
-                    <td className="py-3 px-4 text-right font-bold text-lg">
+                    <td className="py-3 px-4 text-right font-bold text-base md:text-lg">
                       ${payment.amount.toFixed(2)}
                     </td>
                   </tr>
@@ -1927,8 +2320,8 @@ const renderAllBrolays = () => {
       )}
 
       {/* Won Brolays */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-bold mb-3 text-green-600">✅ Won Brolays</h3>
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-base md:text-lg font-bold mb-3 text-green-600">✅ Won Brolays</h3>
         <div className="space-y-3">
           {wonParlays.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No won brolays to settle</p>
@@ -1940,7 +2333,7 @@ const renderAllBrolays = () => {
               const amountPerWinner = winners.length > 0 ? netProfit / winners.length : 0;
 
               return (
-                <div key={parlay.id} className="border rounded p-4 bg-green-50">
+                <div key={parlay.id} className="border rounded p-4 md:p-6 bg-green-50">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="font-semibold">{parlay.date}</div>
@@ -1949,7 +2342,7 @@ const renderAllBrolays = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-green-600">
+                      <div className="text-base md:text-lg font-bold text-green-600">
                         ${netProfit.toFixed(2)} profit
                       </div>
                       <div className="text-xs text-gray-600">
@@ -1964,7 +2357,8 @@ const renderAllBrolays = () => {
                   <button
                     onClick={() => toggleSettlement(parlay.id)}
                     disabled={saving}
-                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
+                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400 text-base"
+                    style={{ minHeight: isMobile ? '44px' : 'auto' }}
                   >
                     Mark as Settled
                   </button>
@@ -1976,8 +2370,8 @@ const renderAllBrolays = () => {
       </div>
       
       {/* Lost Brolays */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-bold mb-3 text-red-600">❌ Lost Brolays</h3>
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-base md:text-lg font-bold mb-3 text-red-600">❌ Lost Brolays</h3>
         <div className="space-y-3">
           {lostParlays.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No lost brolays to settle</p>
@@ -1992,7 +2386,7 @@ const renderAllBrolays = () => {
                 : (parlay.betAmount * participants.length) / losers.length;
 
               return (
-                <div key={parlay.id} className="border rounded p-4">
+                <div key={parlay.id} className="border rounded p-4 md:p-6">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="font-semibold">{parlay.date}</div>
@@ -2001,7 +2395,7 @@ const renderAllBrolays = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg font-bold text-red-600">
+                      <div className="text-base md:text-lg font-bold text-red-600">
                         ${(parlay.betAmount * participants.length).toFixed(2)}
                       </div>
                       {and1 && <span className="text-xs text-red-600 font-semibold">And-1</span>}
@@ -2014,7 +2408,8 @@ const renderAllBrolays = () => {
                   <button
                     onClick={() => toggleSettlement(parlay.id)}
                     disabled={saving}
-                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
+                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400 text-base"
+                    style={{ minHeight: isMobile ? '44px' : 'auto' }}
                   >
                     Mark as Settled
                   </button>
@@ -2026,8 +2421,8 @@ const renderAllBrolays = () => {
       </div>
 
 {/* Recently Settled */}
-<div className="bg-white rounded-lg shadow p-6">
-  <h3 className="text-lg font-bold mb-3">Recently Settled</h3>
+<div className="bg-white rounded-lg shadow p-4 md:p-6">
+  <h3 className="text-base md:text-lg font-bold mb-3">Recently Settled</h3>
   <div className="space-y-2">
     {parlays.filter(p => p.settled).slice(-5).reverse().map(parlay => {
       const participants = Object.values(parlay.participants);
@@ -2048,7 +2443,8 @@ const renderAllBrolays = () => {
             <button
               onClick={() => toggleSettlement(parlay.id)}
               disabled={saving}
-              className="ml-3 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:bg-gray-400 whitespace-nowrap"
+              className="ml-3 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:bg-gray-400 whitespace-nowrap text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
             >
               Mark as Not Settled
             </button>
@@ -2063,9 +2459,9 @@ const renderAllBrolays = () => {
 };
 
 const renderImport = () => (
-  <div className="space-y-6">
-    <div className="bg-white rounded-lg shadow p-6">
-      <h2 className="text-2xl font-bold mb-4">Import Historical Data</h2>
+  <div className="space-y-4 md:space-y-6">
+    <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      <h2 className="text-xl md:text-2xl font-bold mb-4">Import Historical Data</h2>
       <p className="text-gray-600 mb-4">
         Paste your CSV data below. Make sure it follows the exact format with all required columns.
       </p>
@@ -2074,6 +2470,7 @@ const renderImport = () => (
         value={csvInput}
         onChange={(e) => setCsvInput(e.target.value)}
         className="w-full h-64 px-3 py-2 border rounded font-mono text-sm"
+        style={{ fontSize: isMobile ? '16px' : '14px' }}
         placeholder="Paste CSV data here..."
       />
       
@@ -2084,13 +2481,14 @@ const renderImport = () => (
           }
         }}
         disabled={saving || !csvInput}
-        className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400"
+        className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 text-base"
+        style={{ minHeight: isMobile ? '44px' : 'auto' }}
       >
         {saving ? 'Importing...' : 'Import Data'}
       </button>
     </div>
     
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 md:p-6">
       <h3 className="font-semibold text-blue-900 mb-2">CSV Format Requirements:</h3>
       <ul className="text-sm text-blue-800 space-y-1">
         <li>• First row must be headers (column names)</li>
@@ -2106,7 +2504,7 @@ const renderImport = () => (
       </ul>
     </div>
     
-    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 md:p-6">
       <h3 className="font-semibold text-gray-900 mb-2">Example CSV:</h3>
       <pre className="text-xs overflow-x-auto">
 {`date,betAmount,totalPayout,placedBy,settled,pick1_player,pick1_sport,pick1_team,pick1_betType,pick1_favorite,pick1_spread,pick1_result,pick2_player,pick2_sport,pick2_awayTeam,pick2_homeTeam,pick2_betType,pick2_overUnder,pick2_total,pick2_result,pick3_player,pick3_sport,pick3_team,pick3_betType,pick3_propType,pick3_overUnder,pick3_line,pick3_result
@@ -2115,72 +2513,96 @@ const renderImport = () => (
     </div>
   </div>
 );
-  return (
-  <div className="min-h-screen bg-gray-100">
-    {renderEditModal()}
-    <div className="bg-blue-600 text-white p-6 shadow-lg">
-      <h1 className="text-3xl font-bold">Brolay Toxic Standings</h1>
-      <p className="text-blue-100">Track your group's betting performance</p>
-      {saving && (
-        <div className="mt-2 text-sm">
-          <Loader className="inline animate-spin mr-2" size={16} />
-          Saving changes...
-        </div>
-      )}
+ return (
+  <div 
+    className="min-h-screen bg-gray-100"
+    onTouchStart={handleTouchStart}
+    onTouchMove={handleTouchMove}
+    onTouchEnd={handleTouchEnd}
+  >
+    {/* Pull to refresh indicator */}
+{pullDistance > 0 && (
+  <div 
+    className="fixed top-0 left-0 right-0 flex justify-center items-center bg-blue-100 transition-all duration-200 z-50"
+    style={{ height: `${pullDistance}px` }}
+  >
+    <div className="text-blue-600 font-semibold">
+      {pullDistance > 80 ? 'Release to refresh...' : 'Pull to refresh...'}
     </div>
-    <div className="container mx-auto p-6">
-      <div className="mb-6 flex gap-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('entry')}
-          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-            activeTab === 'entry' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-          }`}
-        >
-          New Brolay
-        </button>
+  </div>
+)}
 
-        <button
-          onClick={() => setActiveTab('allBrolays')}
-          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-            activeTab === 'allBrolays' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-          }`}
-        >
-          All Brolays
-        </button>
-        
-        <button
-          onClick={() => setActiveTab('individual')}
-          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-            activeTab === 'individual' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-          }`}   
-          >
-          Individual Stats
-        </button>
-        <button
-          onClick={() => setActiveTab('group')}
-          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-            activeTab === 'group' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-          }`}
-        >
-          Group Stats
-        </button>
-        <button
-          onClick={() => setActiveTab('payments')}
-          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-            activeTab === 'payments' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-          }`}
-        >
-          Payments
-        </button>
-        <button
-          onClick={() => setActiveTab('import')}
-          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-            activeTab === 'import' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-          }`}
-        >
-          Import Data
-        </button>
+{refreshing && (
+  <div className="fixed top-0 left-0 right-0 bg-blue-500 text-white py-2 text-center z-50">
+    <Loader className="inline animate-spin mr-2" size={16} />
+    Refreshing...
+  </div>
+)}
+    {renderEditModal()}
+    <div className="bg-blue-600 text-white p-4 md:p-6 shadow-lg">
+  <div className="flex items-center justify-between">
+    {isMobile && (
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        className="p-2 text-base"
+        style={{ minHeight: isMobile ? '44px' : 'auto' }}
+      >
+        {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+    )}
+    <div className="flex-1">
+      <h1 className="text-2xl md:text-3xl font-bold">Brolay Toxic Standings</h1>
+      <p className="text-blue-100 text-sm md:text-base">Track your group's betting performance</p>
+    </div>
+    {saving && (
+      <div className="text-sm">
+        <Loader className="inline animate-spin" size={16} />
       </div>
+    )}
+  </div>
+</div>{/* Mobile Sidebar Overlay */}
+{isMobile && sidebarOpen && (
+  <div 
+    className="fixed inset-0 bg-black bg-opacity-50 z-40"
+    onClick={() => setSidebarOpen(false)}
+  />
+)}
+
+{/* Navigation - Collapsible sidebar for mobile, horizontal tabs for desktop */}
+<div className={`${
+  isMobile 
+    ? `fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`
+    : 'container mx-auto p-4 md:p-6'
+}`}>
+  <div className={isMobile ? 'pt-20 px-4' : 'mb-6 flex gap-2 overflow-x-auto'}>
+    {[
+      { id: 'entry', label: 'New Brolay' },
+      { id: 'allBrolays', label: 'All Brolays' },
+      { id: 'individual', label: 'Individual Stats' },
+      { id: 'group', label: 'Group Stats' },
+      { id: 'payments', label: 'Payments' },
+      { id: 'import', label: 'Import Data' }
+    ].map(tab => (
+      <button
+        key={tab.id}
+        onClick={() => {
+          setActiveTab(tab.id);
+          if (isMobile) setSidebarOpen(false);
+        }}
+        className={`${
+          isMobile ? 'w-full text-left' : 'whitespace-nowrap'
+        } px-4 py-3 rounded-lg font-semibold ${
+          activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-white text-gray-700' text-base
+        }`}
+        style={{ minHeight: isMobile ? '44px' : 'auto' }}
+      >
+        {tab.label}
+      </button>
+    ))}
+  </div>
+</div>
       {activeTab === 'entry' && renderEntry()}
       {activeTab === 'allBrolays' && renderAllBrolays()}
       {activeTab === 'individual' && renderIndividualDashboard()}
