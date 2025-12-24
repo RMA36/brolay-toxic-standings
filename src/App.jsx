@@ -487,6 +487,351 @@ const saveEditedParlay = async (editedParlay) => {
     setSaving(false);
   }
 };
+
+const renderEditModal = () => {
+  if (!editingParlay) return null;
+
+  const participants = editingParlay.participants || {};
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <h2 className="text-2xl font-bold mb-4">Edit Brolay</h2>
+          
+          {/* Brolay Info */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium mb-1">Date</label>
+              <input
+                type="date"
+                value={editingParlay.date}
+                onChange={(e) => setEditingParlay({...editingParlay, date: e.target.value})}
+                className="w-full px-3 py-2 border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Placed By</label>
+              <select
+                value={editingParlay.placedBy || ''}
+                onChange={(e) => setEditingParlay({...editingParlay, placedBy: e.target.value})}
+                className="w-full px-3 py-2 border rounded"
+              >
+                <option value="">Select Big Guy</option>
+                {players.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium mb-1">Bet Amount (per person)</label>
+              <input
+                type="number"
+                value={editingParlay.betAmount}
+                onChange={(e) => setEditingParlay({...editingParlay, betAmount: Number(e.target.value)})}
+                className="w-full px-3 py-2 border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Total Payout</label>
+              <input
+                type="number"
+                value={editingParlay.totalPayout || ''}
+                onChange={(e) => {
+                  const payout = Number(e.target.value) || 0;
+                  setEditingParlay({...editingParlay, totalPayout: payout});
+                }}
+                className="w-full px-3 py-2 border rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Net Profit</label>
+              <input
+                type="number"
+                value={Math.max(0, (editingParlay.totalPayout || 0) - (editingParlay.betAmount * Object.keys(participants).length))}
+                onChange={(e) => {
+                  const netProfit = Number(e.target.value) || 0;
+                  const totalRisk = editingParlay.betAmount * Object.keys(participants).length;
+                  const calculatedPayout = netProfit + totalRisk;
+                  setEditingParlay({...editingParlay, totalPayout: calculatedPayout});
+                }}
+                className="w-full px-3 py-2 border rounded"
+              />
+            </div>
+          </div>
+
+          {/* Picks */}
+          <h3 className="text-lg font-semibold mb-3">Picks</h3>
+          <div className="space-y-4 mb-6">
+            {Object.entries(participants).map(([id, participant]) => (
+              <div key={id} className="border rounded p-4 bg-gray-50">
+                <div className="grid grid-cols-4 gap-3 mb-3">
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Big Guy</label>
+                    <select
+                      value={participant.player}
+                      onChange={(e) => {
+                        const updated = {...editingParlay};
+                        updated.participants[id].player = e.target.value;
+                        setEditingParlay(updated);
+                      }}
+                      className="w-full px-2 py-1 border rounded text-sm"
+                    >
+                      <option value="">Select</option>
+                      {players.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Sport</label>
+                    <select
+                      value={participant.sport}
+                      onChange={(e) => {
+                        const updated = {...editingParlay};
+                        updated.participants[id].sport = e.target.value;
+                        setEditingParlay(updated);
+                      }}
+                      className="w-full px-2 py-1 border rounded text-sm"
+                    >
+                      {sports.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Bet Type</label>
+                    <select
+                      value={participant.betType}
+                      onChange={(e) => {
+                        const updated = {...editingParlay};
+                        updated.participants[id].betType = e.target.value;
+                        setEditingParlay(updated);
+                      }}
+                      className="w-full px-2 py-1 border rounded text-sm"
+                    >
+                      <option value="Spread">Spread</option>
+                      <option value="Moneyline">Moneyline</option>
+                      <option value="Total">Total</option>
+                      <option value="Prop Bet">Prop Bet</option>
+                    </select>
+                  </div>
+                  
+                  {participant.betType !== 'Total' && (
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Team/Player</label>
+                      <input
+                        type="text"
+                        value={participant.team || ''}
+                        onChange={(e) => {
+                          const updated = {...editingParlay};
+                          updated.participants[id].team = e.target.value;
+                          setEditingParlay(updated);
+                        }}
+                        className="w-full px-2 py-1 border rounded text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {participant.betType === 'Total' && (
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Away Team</label>
+                      <input
+                        type="text"
+                        value={participant.awayTeam || ''}
+                        onChange={(e) => {
+                          const updated = {...editingParlay};
+                          updated.participants[id].awayTeam = e.target.value;
+                          setEditingParlay(updated);
+                        }}
+                        className="w-full px-2 py-1 border rounded text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium mb-1">Home Team</label>
+                      <input
+                        type="text"
+                        value={participant.homeTeam || ''}
+                        onChange={(e) => {
+                          const updated = {...editingParlay};
+                          updated.participants[id].homeTeam = e.target.value;
+                          setEditingParlay(updated);
+                        }}
+                        className="w-full px-2 py-1 border rounded text-sm"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-4 gap-3">
+                  {participant.betType === 'Spread' && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Favorite/Dog</label>
+                        <select
+                          value={participant.favorite || 'Favorite'}
+                          onChange={(e) => {
+                            const updated = {...editingParlay};
+                            updated.participants[id].favorite = e.target.value;
+                            setEditingParlay(updated);
+                          }}
+                          className="w-full px-2 py-1 border rounded text-sm"
+                        >
+                          <option value="Favorite">Favorite</option>
+                          <option value="Dog">Dog</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Spread</label>
+                        <input
+                          type="text"
+                          value={participant.spread || ''}
+                          onChange={(e) => {
+                            const updated = {...editingParlay};
+                            updated.participants[id].spread = e.target.value;
+                            setEditingParlay(updated);
+                          }}
+                          className="w-full px-2 py-1 border rounded text-sm"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {participant.betType === 'Total' && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Over/Under</label>
+                        <select
+                          value={participant.overUnder || 'Over'}
+                          onChange={(e) => {
+                            const updated = {...editingParlay};
+                            updated.participants[id].overUnder = e.target.value;
+                            setEditingParlay(updated);
+                          }}
+                          className="w-full px-2 py-1 border rounded text-sm"
+                        >
+                          <option value="Over">Over</option>
+                          <option value="Under">Under</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Total</label>
+                        <input
+                          type="text"
+                          value={participant.total || ''}
+                          onChange={(e) => {
+                            const updated = {...editingParlay};
+                            updated.participants[id].total = e.target.value;
+                            setEditingParlay(updated);
+                          }}
+                          className="w-full px-2 py-1 border rounded text-sm"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {participant.betType === 'Prop Bet' && (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Prop Type</label>
+                        <input
+                          type="text"
+                          value={participant.propType || ''}
+                          onChange={(e) => {
+                            const updated = {...editingParlay};
+                            updated.participants[id].propType = e.target.value;
+                            setEditingParlay(updated);
+                          }}
+                          className="w-full px-2 py-1 border rounded text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Over/Under</label>
+                        <select
+                          value={participant.overUnder || 'Over'}
+                          onChange={(e) => {
+                            const updated = {...editingParlay};
+                            updated.participants[id].overUnder = e.target.value;
+                            setEditingParlay(updated);
+                          }}
+                          className="w-full px-2 py-1 border rounded text-sm"
+                        >
+                          <option value="Over">Over</option>
+                          <option value="Under">Under</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium mb-1">Line</label>
+                        <input
+                          type="text"
+                          value={participant.line || ''}
+                          onChange={(e) => {
+                            const updated = {...editingParlay};
+                            updated.participants[id].line = e.target.value;
+                            setEditingParlay(updated);
+                          }}
+                          className="w-full px-2 py-1 border rounded text-sm"
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Odds (Optional)</label>
+                    <input
+                      type="text"
+                      value={participant.odds || ''}
+                      onChange={(e) => {
+                        const updated = {...editingParlay};
+                        updated.participants[id].odds = e.target.value;
+                        setEditingParlay(updated);
+                      }}
+                      className="w-full px-2 py-1 border rounded text-sm"
+                      placeholder="e.g., -120 (Optional)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Result</label>
+                    <select
+                      value={participant.result}
+                      onChange={(e) => {
+                        const updated = {...editingParlay};
+                        updated.participants[id].result = e.target.value;
+                        setEditingParlay(updated);
+                      }}
+                      className="w-full px-2 py-1 border rounded text-sm"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="win">Win</option>
+                      <option value="loss">Loss</option>
+                      <option value="push">Push</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => setEditingParlay(null)}
+              className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => saveEditedParlay(editingParlay)}
+              disabled={saving}
+              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400"
+            >
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
   
 const importFromCSV = async (csvText) => {
   try {
@@ -1772,6 +2117,7 @@ const renderImport = () => (
 );
   return (
   <div className="min-h-screen bg-gray-100">
+    {renderEditModal()}
     <div className="bg-blue-600 text-white p-6 shadow-lg">
       <h1 className="text-3xl font-bold">Brolay Toxic Standings</h1>
       <p className="text-blue-100">Track your group's betting performance</p>
