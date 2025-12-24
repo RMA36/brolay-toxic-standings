@@ -1940,7 +1940,7 @@ const renderGroupDashboard = () => {
                     </span>
                   )}
                   {losers.length === 0 && participants.every(p => p.result === 'pending') && (
-                    <span className="text-gray-500 font-semibold">PENDING</span>}
+                    <span className="text-gray-500 font-semibold">PENDING</span>
                   )}
                 </div>
               </div>
