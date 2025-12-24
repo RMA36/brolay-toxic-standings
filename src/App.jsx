@@ -845,6 +845,7 @@ const selectSuggestion = (id, field, value) => {
           <option value="pending">Pending</option>
           <option value="win">Win</option>
           <option value="loss">Loss</option>
+          <option value="push">Push</option>
         </select>
       </div>
     </div>
@@ -934,6 +935,7 @@ const selectSuggestion = (id, field, value) => {
                         <option value="pending">Pending</option>
                         <option value="win">Win</option>
                         <option value="loss">Loss</option>
+                        <option value="push">Push</option>
                       </select>
                     </div>
                   ))}
@@ -1177,9 +1179,9 @@ parlays.forEach(p => {
     const participants = Object.values(parlay.participants);
     const losers = participants.filter(p => p.result === 'loss');
     const winners = participants.filter(p => p.result === 'win');
-    const and1 = losers.length === 1 && winners.length === participants.length - 1;
+    const and1 = losers.length === 1 && winners.length === participants.length - 1; // For tracking only
     const totalAmount = parlay.betAmount * participants.length;
-    const amountPerLoser = and1 ? totalAmount : totalAmount / losers.length;
+    const amountPerLoser = losers.length === 1 ? totalAmount : totalAmount / losers.length; // Payment logic
     
     losers.forEach(loser => {
       if (loser.player && parlay.placedBy) {
