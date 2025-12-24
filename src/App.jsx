@@ -33,6 +33,17 @@ const App = () => {
   const [showSuggestions, setShowSuggestions] = useState({});
   const [learnedTeams, setLearnedTeams] = useState([]);
   const [learnedPropTypes, setLearnedPropTypes] = useState([]);
+  const [editingParlay, setEditingParlay] = useState(null);
+  const [filters, setFilters] = useState({
+    dateFrom: '',
+    dateTo: '',
+    player: '',
+    sport: '',
+    placedBy: '',
+    minPayout: '',
+    maxPayout: '',
+    result: ''
+  });
   const [newParlay, setNewParlay] = useState({
   date: new Date().toISOString().split('T')[0],
   betAmount: 10,
@@ -330,7 +341,43 @@ const selectSuggestion = (id, field, value) => {
     console.error('Error adding parlay:', error);
     alert('Failed to save parlay. Please try again.');
   }
-  
+
+const applyFilters = (parlaysList) => {
+  return parlaysList.filter(parlay => {
+    // Date range filter
+    if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
+    if (filters.dateTo && parlay.date > filters.dateTo) return false;
+    
+    // Placed By filter
+    if (filters.placedBy && parlay.placedBy !== filters.placedBy) return false;
+    
+    // Total Payout range filter
+    const payout = parlay.totalPayout || 0;
+    if (filters.minPayout && payout < Number(filters.minPayout)) return false;
+    if (filters.maxPayout && payout > Number(filters.maxPayout)) return false;
+    
+    // Player filter (check if any participant matches)
+    if (filters.player) {
+      const hasPlayer = Object.values(parlay.participants || {}).some(p => p.player === filters.player);
+      if (!hasPlayer) return false;
+    }
+    
+    // Sport filter (check if any participant matches)
+    if (filters.sport) {
+      const hasSport = Object.values(parlay.participants || {}).some(p => p.sport === filters.sport);
+      if (!hasSport) return false;
+    }
+    
+    // Result filter (check if any participant matches)
+    if (filters.result) {
+      const hasResult = Object.values(parlay.participants || {}).some(p => p.result === filters.result);
+      if (!hasResult) return false;
+    }
+    
+    return true;
+  });
+};
+    
   setNewParlay({
     date: new Date().toISOString().split('T')[0],
     betAmount: 10,
@@ -416,6 +463,31 @@ const selectSuggestion = (id, field, value) => {
   }
 };
 
+const saveEditedParlay = async (editedParlay) => {
+  try {
+    setSaving(true);
+    
+    // Update in local state
+    const updatedParlays = parlays.map(p => 
+      p.id === editedParlay.id ? editedParlay : p
+    );
+    setParlays(updatedParlays);
+    
+    // Update in Firebase
+    if (editedParlay.firestoreId) {
+      const parlayDoc = doc(db, 'parlays', editedParlay.firestoreId);
+      await updateDoc(parlayDoc, editedParlay);
+    }
+    
+    setEditingParlay(null);
+  } catch (error) {
+    console.error('Error updating parlay:', error);
+    alert('Failed to update parlay. Please try again.');
+  } finally {
+    setSaving(false);
+  }
+};
+  
 const importFromCSV = async (csvText) => {
   try {
     const lines = csvText.trim().split('\n');
@@ -951,96 +1023,6 @@ const importFromCSV = async (csvText) => {
           {saving ? 'Saving...' : 'Submit Parlay'}
         </button>
       </div>
-
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-xl font-bold mb-4">Recent Brolays (Edit Results)</h3>
-        <div className="space-y-3">
-          {parlays.slice(-5).reverse().map(parlay => {
-            const participants = Object.values(parlay.participants);
-            const losers = participants.filter(p => p.result === 'loss');
-            const winners = participants.filter(p => p.result === 'win');
-            const won = losers.length === 0 && winners.length > 0;
-            const and1 = losers.length === 1 && winners.length === participants.length - 1;
-            
-            return (
-                <div key={parlay.id} className="border rounded p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <div className="font-semibold">
-                      {parlay.date} - {
-                        // Determine parlay type
-                        (() => {
-                          const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
-                          if (sports.length > 1) return 'Multi-Sport Brolay';
-                          if (sports.length === 1) return `${sports[0]} Brolay`;
-                          return 'Brolay';
-                        })()
-                      }
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {participants.length} picks • ${parlay.betAmount * participants.length} Risked • ${parlay.totalPayout || 0} Total Payout • ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {won && <span className="text-green-600 font-semibold">WON</span>}
-                    {!won && losers.length > 0 && (
-                      <span className="text-red-600 font-semibold">
-                        LOST {and1 && '(And-1)'}
-                      </span>
-                    )}
-                    <button
-                      onClick={() => deleteParlay(parlay.id)}
-                      className="text-red-600 text-sm hover:text-red-800"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  {Object.entries(parlay.participants).map(([pid, participant]) => (
-                    <div key={pid} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
-                      <span>
-                        <strong>{participant.player}</strong> - {participant.sport} - {
-                        participant.betType === 'Total' ? `${participant.awayTeam} @ ${participant.homeTeam}` : participant.team
-                        } {
-                        participant.betType === 'Spread' ? `${participant.favorite} ${participant.spread}` :
-                        participant.betType === 'Total' ? `${participant.overUnder} ${participant.total}` :
-                        participant.betType === 'Prop Bet' ? `${participant.propType} ${participant.overUnder} ${participant.line}` :
-                        'Moneyline'
-                        } ({participant.betType})
-                      </span>
-                      <select
-                        value={participant.result}
-                        onChange={(e) => updateParlayResult(parlay.id, pid, e.target.value)}
-                        disabled={saving}
-                        className="px-2 py-1 border rounded text-xs"
-                      >
-                        <option value="pending">Pending</option>
-                        <option value="win">Win</option>
-                        <option value="loss">Loss</option>
-                        <option value="push">Push</option>
-                      </select>
-                    </div>
-                  ))}
-                </div>
-                
-                <div className="mt-3">
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={parlay.settled}
-                      onChange={() => toggleSettlement(parlay.id)}
-                      disabled={saving}
-                    />
-                    <span>Payments settled</span>
-                  </label>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 
@@ -1243,6 +1225,211 @@ parlays.forEach(p => {
     );
   };
 
+const renderAllBrolays = () => {
+  const filteredParlays = applyFilters([...parlays]).sort((a, b) => 
+    new Date(b.date) - new Date(a.date)
+  );
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold">All Brolays</h2>
+      
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-semibold mb-4">Filters</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Date From</label>
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+              className="w-full px-3 py-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Date To</label>
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+              className="w-full px-3 py-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Big Guy</label>
+            <select
+              value={filters.player}
+              onChange={(e) => setFilters({...filters, player: e.target.value})}
+              className="w-full px-3 py-2 border rounded"
+            >
+              <option value="">All</option>
+              {players.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Sport</label>
+            <select
+              value={filters.sport}
+              onChange={(e) => setFilters({...filters, sport: e.target.value})}
+              className="w-full px-3 py-2 border rounded"
+            >
+              <option value="">All</option>
+              {sports.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Placed By</label>
+            <select
+              value={filters.placedBy}
+              onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+              className="w-full px-3 py-2 border rounded"
+            >
+              <option value="">All</option>
+              {players.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Min Payout</label>
+            <input
+              type="number"
+              value={filters.minPayout}
+              onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
+              className="w-full px-3 py-2 border rounded"
+              placeholder="$0"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Max Payout</label>
+            <input
+              type="number"
+              value={filters.maxPayout}
+              onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
+              className="w-full px-3 py-2 border rounded"
+              placeholder="Any"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Result</label>
+            <select
+              value={filters.result}
+              onChange={(e) => setFilters({...filters, result: e.target.value})}
+              className="w-full px-3 py-2 border rounded"
+            >
+              <option value="">All</option>
+              <option value="win">Win</option>
+              <option value="loss">Loss</option>
+              <option value="push">Push</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+        </div>
+        <button
+          onClick={() => setFilters({
+            dateFrom: '', dateTo: '', player: '', sport: '', 
+            placedBy: '', minPayout: '', maxPayout: '', result: ''
+          })}
+          className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+        >
+          Clear Filters
+        </button>
+      </div>
+
+      {/* Brolays List */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold">
+            {filteredParlays.length} Brolay{filteredParlays.length !== 1 ? 's' : ''}
+          </h3>
+        </div>
+        
+        <div className="space-y-3">
+          {filteredParlays.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No brolays match your filters</p>
+          ) : (
+            filteredParlays.map(parlay => {
+              const participants = Object.values(parlay.participants);
+              const losers = participants.filter(p => p.result === 'loss');
+              const winners = participants.filter(p => p.result === 'win');
+              const pushes = participants.filter(p => p.result === 'push');
+              const won = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
+              const and1 = losers.length === 1 && winners.length === participants.length - 1;
+              
+              const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
+              const parlayType = sports.length > 1 ? 'Multi-Sport Brolay' : 
+                                 sports.length === 1 ? `${sports[0]} Brolay` : 'Brolay';
+              
+              return (
+                <div key={parlay.id} className="border rounded p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="font-semibold">{parlay.date} - {parlayType}</div>
+                      <div className="text-sm text-gray-600">
+                        {participants.length} picks • ${parlay.betAmount * participants.length} Risked • 
+                        ${parlay.totalPayout || 0} Total Payout • 
+                        ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
+                        {parlay.placedBy && <span> • Placed by {parlay.placedBy}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {won && <span className="text-green-600 font-semibold">WON</span>}
+                      {!won && losers.length > 0 && (
+                        <span className="text-red-600 font-semibold">
+                          LOST {and1 && '(And-1)'}
+                        </span>
+                      )}
+                      {losers.length === 0 && winners.length === 0 && (
+                        <span className="text-gray-500 font-semibold">PENDING</span>
+                      )}
+                      <button
+                        onClick={() => setEditingParlay(parlay)}
+                        className="text-blue-600 text-sm hover:text-blue-800"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => deleteParlay(parlay.id)}
+                        className="text-red-600 text-sm hover:text-red-800"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {Object.entries(parlay.participants).map(([pid, participant]) => (
+                      <div key={pid} className="flex items-center justify-between text-sm bg-gray-50 p-2 rounded">
+                        <span>
+                          <strong>{participant.player}</strong> - {participant.sport} - {
+                            participant.betType === 'Total' ? `${participant.awayTeam} @ ${participant.homeTeam}` : participant.team
+                          } {
+                            participant.betType === 'Spread' ? `${participant.favorite} ${participant.spread}` :
+                            participant.betType === 'Total' ? `${participant.overUnder} ${participant.total}` :
+                            participant.betType === 'Prop Bet' ? `${participant.propType} ${participant.overUnder} ${participant.line}` :
+                            'Moneyline'
+                          } ({participant.betType})
+                        </span>
+                        <span className={`font-semibold ${
+                          participant.result === 'win' ? 'text-green-600' :
+                          participant.result === 'loss' ? 'text-red-600' :
+                          participant.result === 'push' ? 'text-yellow-600' :
+                          'text-gray-500'
+                        }`}>
+                          {participant.result.toUpperCase()}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+  
   const renderPayments = () => {
   const unsettledParlays = parlays.filter(p => !p.settled);
   const lostParlays = unsettledParlays.filter(p => {
@@ -1605,12 +1792,22 @@ const renderImport = () => (
         >
           New Brolay
         </button>
+
+        <button
+          onClick={() => setActiveTab('allBrolays')}
+          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
+            activeTab === 'allBrolays' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
+          }`}
+        >
+          All Brolays
+        </button>
+        
         <button
           onClick={() => setActiveTab('individual')}
           className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
             activeTab === 'individual' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-          }`}
-        >
+          }`}   
+          >
           Individual Stats
         </button>
         <button
@@ -1639,6 +1836,7 @@ const renderImport = () => (
         </button>
       </div>
       {activeTab === 'entry' && renderEntry()}
+      {activeTab === 'allBrolays' && renderAllBrolays()}
       {activeTab === 'individual' && renderIndividualDashboard()}
       {activeTab === 'group' && renderGroupDashboard()}
       {activeTab === 'payments' && renderPayments()}
