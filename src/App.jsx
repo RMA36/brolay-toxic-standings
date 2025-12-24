@@ -24,6 +24,7 @@ const App = () => {
   const PASSWORD = 'manipulation';
   
   const [activeTab, setActiveTab] = useState('entry');
+  const [csvInput, setCsvInput] = useState('');
   const [players] = useState(['Management', 'CD', '914', 'Junior', 'Jacoby']);
   const [parlays, setParlays] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -414,6 +415,89 @@ const selectSuggestion = (id, field, value) => {
     }
   }
 };
+
+const importFromCSV = async (csvText) => {
+  try {
+    const lines = csvText.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+    
+    const importedParlays = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue; // Skip empty lines
+      
+      const values = lines[i].split(',').map(v => v.trim());
+      const row = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index] || '';
+      });
+      
+      // Build participants object
+      const participants = {};
+      let pickNum = 0;
+      
+      for (let j = 1; j <= 5; j++) {
+        if (row[`pick${j}_player`]) {
+          participants[pickNum] = {
+            player: row[`pick${j}_player`],
+            sport: row[`pick${j}_sport`],
+            team: row[`pick${j}_team`] || '',
+            betType: row[`pick${j}_betType`],
+            
+            // Spread fields
+            favorite: row[`pick${j}_favorite`] || 'Favorite',
+            spread: row[`pick${j}_spread`] || '',
+            
+            // Total fields
+            awayTeam: row[`pick${j}_awayTeam`] || '',
+            homeTeam: row[`pick${j}_homeTeam`] || '',
+            overUnder: row[`pick${j}_overUnder`] || 'Over',
+            total: row[`pick${j}_total`] || '',
+            
+            // Prop fields
+            propType: row[`pick${j}_propType`] || '',
+            line: row[`pick${j}_line`] || '',
+            
+            // Common fields
+            odds: row[`pick${j}_odds`] || '',
+            result: row[`pick${j}_result`] || 'pending'
+          };
+          pickNum++;
+        }
+      }
+      
+      const parlay = {
+        date: row.date,
+        betAmount: Number(row.betAmount) || 10,
+        totalPayout: Number(row.totalPayout) || 0,
+        placedBy: row.placedBy || '', // Optional
+        settled: row.settled === 'true' || row.settled === 'TRUE',
+        participants: participants,
+        id: Date.now() + i + Math.random(), // Ensure unique IDs
+        totalParticipants: Object.keys(participants).length
+      };
+      
+      importedParlays.push(parlay);
+    }
+    
+    // Save all to Firebase
+    setSaving(true);
+    for (const parlay of importedParlays) {
+      const parlaysCollection = collection(db, 'parlays');
+      await addDoc(parlaysCollection, parlay);
+    }
+    
+    alert(`Successfully imported ${importedParlays.length} brolays!`);
+    await loadParlays(); // Refresh the list
+    setCsvInput(''); // Clear input
+  } catch (error) {
+    console.error('Import error:', error);
+    alert(`Error importing data: ${error.message}`);
+  } finally {
+    setSaving(false);
+  }
+};
+  
   const calculateStats = () => {
     const stats = {};
     players.forEach(player => {
@@ -1446,61 +1530,122 @@ parlays.forEach(p => {
   );
 };
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="bg-blue-600 text-white p-6 shadow-lg">
-        <h1 className="text-3xl font-bold">Brolay Toxic Standings</h1>
-        <p className="text-blue-100">Track your group's betting performance</p>
-        {saving && (
-          <div className="mt-2 text-sm">
-            <Loader className="inline animate-spin mr-2" size={16} />
-            Saving changes...
-          </div>
-        )}
-      </div>
-
-      <div className="container mx-auto p-6">
-        <div className="mb-6 flex gap-2 overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('entry')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-              activeTab === 'entry' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-            }`}
-          >
-            New Brolay
-          </button>
-          <button
-            onClick={() => setActiveTab('individual')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-              activeTab === 'individual' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-            }`}
-          >
-            Individual Stats
-          </button>
-          <button
-            onClick={() => setActiveTab('group')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-              activeTab === 'group' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-            }`}
-          >
-            Group Stats
-          </button>
-          <button
-            onClick={() => setActiveTab('payments')}
-            className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
-              activeTab === 'payments' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
-            }`}
-          >
-            Payments
-          </button>
-        </div>
-
-        {activeTab === 'entry' && renderEntry()}
-        {activeTab === 'individual' && renderIndividualDashboard()}
-        {activeTab === 'group' && renderGroupDashboard()}
-        {activeTab === 'payments' && renderPayments()}
-      </div>
+const renderImport = () => (
+  <div className="space-y-6">
+    <div className="bg-white rounded-lg shadow p-6">
+      <h2 className="text-2xl font-bold mb-4">Import Historical Data</h2>
+      <p className="text-gray-600 mb-4">
+        Paste your CSV data below. Make sure it follows the exact format with all required columns.
+      </p>
+      
+      <textarea
+        value={csvInput}
+        onChange={(e) => setCsvInput(e.target.value)}
+        className="w-full h-64 px-3 py-2 border rounded font-mono text-sm"
+        placeholder="Paste CSV data here..."
+      />
+      
+      <button
+        onClick={() => {
+          if (window.confirm('Import this data? This will add all rows to your database.')) {
+            importFromCSV(csvInput);
+          }
+        }}
+        disabled={saving || !csvInput}
+        className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400"
+      >
+        {saving ? 'Importing...' : 'Import Data'}
+      </button>
     </div>
+    
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+      <h3 className="font-semibold text-blue-900 mb-2">CSV Format Requirements:</h3>
+      <ul className="text-sm text-blue-800 space-y-1">
+        <li>• First row must be headers (column names)</li>
+        <li>• Date format: YYYY-MM-DD (e.g., 2024-12-20)</li>
+        <li>• Required: date, betAmount, totalPayout, settled</li>
+        <li>• Optional: placedBy (leave blank if unknown)</li>
+        <li>• For each pick (pick1 through pick5):</li>
+        <li className="ml-4">- pick#_player, pick#_sport, pick#_team, pick#_betType, pick#_result</li>
+        <li className="ml-4">- For Spread: pick#_favorite, pick#_spread</li>
+        <li className="ml-4">- For Total: pick#_awayTeam, pick#_homeTeam, pick#_overUnder, pick#_total</li>
+        <li className="ml-4">- For Prop: pick#_propType, pick#_overUnder, pick#_line</li>
+        <li>• Results: win, loss, push, or pending</li>
+      </ul>
+    </div>
+    
+    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <h3 className="font-semibold text-gray-900 mb-2">Example CSV:</h3>
+      <pre className="text-xs overflow-x-auto">
+{`date,betAmount,totalPayout,placedBy,settled,pick1_player,pick1_sport,pick1_team,pick1_betType,pick1_favorite,pick1_spread,pick1_result,pick2_player,pick2_sport,pick2_awayTeam,pick2_homeTeam,pick2_betType,pick2_overUnder,pick2_total,pick2_result,pick3_player,pick3_sport,pick3_team,pick3_betType,pick3_propType,pick3_overUnder,pick3_line,pick3_result
+2024-12-20,10,675,Management,false,Management,NFL,Chiefs,Spread,Favorite,7.5,win,CD,NFL,Bills,Chiefs,Total,Over,45.5,win,914,NBA,Lakers,Prop Bet,Points,Over,25.5,loss`}
+      </pre>
+    </div>
+  </div>
+);
+  return (
+  <div className="min-h-screen bg-gray-100">
+    <div className="bg-blue-600 text-white p-6 shadow-lg">
+      <h1 className="text-3xl font-bold">Brolay Toxic Standings</h1>
+      <p className="text-blue-100">Track your group's betting performance</p>
+      {saving && (
+        <div className="mt-2 text-sm">
+          <Loader className="inline animate-spin mr-2" size={16} />
+          Saving changes...
+        </div>
+      )}
+    </div>
+    <div className="container mx-auto p-6">
+      <div className="mb-6 flex gap-2 overflow-x-auto">
+        <button
+          onClick={() => setActiveTab('entry')}
+          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
+            activeTab === 'entry' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
+          }`}
+        >
+          New Brolay
+        </button>
+        <button
+          onClick={() => setActiveTab('individual')}
+          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
+            activeTab === 'individual' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
+          }`}
+        >
+          Individual Stats
+        </button>
+        <button
+          onClick={() => setActiveTab('group')}
+          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
+            activeTab === 'group' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
+          }`}
+        >
+          Group Stats
+        </button>
+        <button
+          onClick={() => setActiveTab('payments')}
+          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
+            activeTab === 'payments' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
+          }`}
+        >
+          Payments
+        </button>
+        <button
+          onClick={() => setActiveTab('import')}
+          className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap ${
+            activeTab === 'import' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'
+          }`}
+        >
+          Import Data
+        </button>
+      </div>
+      {activeTab === 'entry' && renderEntry()}
+      {activeTab === 'individual' && renderIndividualDashboard()}
+      {activeTab === 'group' && renderGroupDashboard()}
+      {activeTab === 'payments' && renderPayments()}
+      {activeTab === 'import' && renderImport()}
+    </div>
+  </div>
+);
   );
 };
 
