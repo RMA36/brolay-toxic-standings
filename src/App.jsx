@@ -1646,7 +1646,6 @@ const renderImport = () => (
     </div>
   </div>
 );
-  );
 };
 
 export default App;
