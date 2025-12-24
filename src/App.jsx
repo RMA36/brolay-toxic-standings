@@ -1176,20 +1176,23 @@ parlays.forEach(p => {
   lostParlays.forEach(parlay => {
     const participants = Object.values(parlay.participants);
     const losers = participants.filter(p => p.result === 'loss');
-    const and1 = losers.length === 1;
+    const winners = participants.filter(p => p.result === 'win');
+    const and1 = losers.length === 1 && winners.length === participants.length - 1;
     const totalAmount = parlay.betAmount * participants.length;
     const amountPerLoser = and1 ? totalAmount : totalAmount / losers.length;
     
     losers.forEach(loser => {
-      payments.push({
-        from: loser.player,
-        to: parlay.placedBy || 'Placer',
-        amount: amountPerLoser,
-        parlayId: parlay.id,
-        parlayDate: parlay.date,
-        type: 'loss',
-        and1: and1 && losers.length === 1 && losers[0].player === loser.player
-      });
+      if (loser.player && parlay.placedBy) {
+        payments.push({
+          from: loser.player,
+          to: parlay.placedBy,
+          amount: amountPerLoser,
+          parlayId: parlay.id,
+          parlayDate: parlay.date,
+          type: 'loss',
+          and1: and1
+        });
+      }
     });
   });
   
@@ -1198,45 +1201,55 @@ parlays.forEach(p => {
     const participants = Object.values(parlay.participants);
     const winners = participants.filter(p => p.result === 'win');
     const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
-    const amountPerWinner = netProfit / winners.length;
+    const amountPerWinner = winners.length > 0 ? netProfit / winners.length : 0;
     
     winners.forEach(winner => {
-      payments.push({
-        from: parlay.placedBy || 'Placer',
-        to: winner.player,
-        amount: amountPerWinner,
-        parlayId: parlay.id,
-        parlayDate: parlay.date,
-        type: 'win'
-      });
+      if (winner.player && parlay.placedBy) {
+        payments.push({
+          from: parlay.placedBy,
+          to: winner.player,
+          amount: amountPerWinner,
+          parlayId: parlay.id,
+          parlayDate: parlay.date,
+          type: 'win'
+        });
+      }
     });
   });
 
-  // Calculate net positions (who owes who overall)
-const allPlayers = ['Management', 'CD', '914', 'Junior', 'Jacoby'];
-const netPositions = {};
-allPlayers.forEach(player => {
-  netPositions[player] = {};
-  allPlayers.forEach(otherPlayer => {
-    if (player !== otherPlayer) {
-      netPositions[player][otherPlayer] = 0;
-    }
+  // Get all unique players from payments
+  const allPlayersSet = new Set();
+  payments.forEach(payment => {
+    if (payment.from) allPlayersSet.add(payment.from);
+    if (payment.to) allPlayersSet.add(payment.to);
   });
-});
+  const allPlayers = Array.from(allPlayersSet);
+
+  // Calculate net positions (who owes who overall)
+  const netPositions = {};
+  allPlayers.forEach(player => {
+    netPositions[player] = {};
+    allPlayers.forEach(otherPlayer => {
+      if (player !== otherPlayer) {
+        netPositions[player][otherPlayer] = 0;
+      }
+    });
+  });
     
   payments.forEach(payment => {
-    if (payment.from && payment.to && payment.from !== payment.to) {
-      netPositions[payment.from][payment.to] = (netPositions[payment.from][payment.to] || 0) + payment.amount;
+    if (payment.from && payment.to && payment.from !== payment.to && 
+        netPositions[payment.from] && netPositions[payment.from][payment.to] !== undefined) {
+      netPositions[payment.from][payment.to] += payment.amount;
     }
   });
 
- // Simplify: if A owes B and B owes A, net them out
-const simplifiedPayments = [];
-allPlayers.forEach(player1 => {
-  allPlayers.forEach(player2 => {
+  // Simplify: if A owes B and B owes A, net them out
+  const simplifiedPayments = [];
+  allPlayers.forEach(player1 => {
+    allPlayers.forEach(player2 => {
       if (player1 < player2) { // Only process each pair once
-        const player1OwesPlayer2 = netPositions[player1][player2] || 0;
-        const player2OwesPlayer1 = netPositions[player2][player1] || 0;
+        const player1OwesPlayer2 = netPositions[player1]?.[player2] || 0;
+        const player2OwesPlayer1 = netPositions[player2]?.[player1] || 0;
         const netAmount = player1OwesPlayer2 - player2OwesPlayer1;
         
         if (Math.abs(netAmount) > 0.01) { // Ignore tiny amounts due to rounding
@@ -1305,7 +1318,8 @@ allPlayers.forEach(player1 => {
             lostParlays.map(parlay => {
               const participants = Object.values(parlay.participants);
               const losers = participants.filter(p => p.result === 'loss');
-              const and1 = losers.length === 1;
+              const winners = participants.filter(p => p.result === 'win');
+              const and1 = losers.length === 1 && winners.length === participants.length - 1;
               const amountPerLoser = and1 
                 ? parlay.betAmount * participants.length 
                 : (parlay.betAmount * participants.length) / losers.length;
@@ -1327,7 +1341,7 @@ allPlayers.forEach(player1 => {
                     </div>
                   </div>
                   <div className="text-sm mb-2">
-                    <span className="font-medium">Losers pay {parlay.placedBy}: </span>
+                    <span className="font-medium">Losers pay {parlay.placedBy || 'Unknown'}: </span>
                     {losers.map(loser => `${loser.player} ($${amountPerLoser.toFixed(2)})`).join(', ')}
                   </div>
                   <button
@@ -1355,7 +1369,7 @@ allPlayers.forEach(player1 => {
               const participants = Object.values(parlay.participants);
               const winners = participants.filter(p => p.result === 'win');
               const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
-              const amountPerWinner = netProfit / winners.length;
+              const amountPerWinner = winners.length > 0 ? netProfit / winners.length : 0;
 
               return (
                 <div key={parlay.id} className="border rounded p-4 bg-green-50">
@@ -1376,7 +1390,7 @@ allPlayers.forEach(player1 => {
                     </div>
                   </div>
                   <div className="text-sm mb-2">
-                    <span className="font-medium">{parlay.placedBy} pays winners: </span>
+                    <span className="font-medium">{parlay.placedBy || 'Unknown'} pays winners: </span>
                     {winners.map(winner => `${winner.player} ($${amountPerWinner.toFixed(2)})`).join(', ')}
                   </div>
                   <button
@@ -1409,8 +1423,8 @@ allPlayers.forEach(player1 => {
                   <div>
                     <div className="font-semibold text-sm">{parlay.date}</div>
                     <div className="text-xs text-gray-600">
-                      {won ? `Winners paid by ${parlay.placedBy}: ${winners.map(w => w.player).join(', ')}` 
-                           : `Losers paid ${parlay.placedBy}: ${losers.map(l => l.player).join(', ')}`}
+                      {won ? `Winners paid by ${parlay.placedBy || 'Unknown'}: ${winners.map(w => w.player).join(', ')}` 
+                           : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
                     </div>
                   </div>
                   <span className="text-green-600 text-sm">✓ Settled</span>
