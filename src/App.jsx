@@ -1308,6 +1308,55 @@ parlays.forEach(p => {
         </div>
       )}
 
+      {/* Won Brolays */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h3 className="text-lg font-bold mb-3 text-green-600">✅ Won Brolays</h3>
+        <div className="space-y-3">
+          {wonParlays.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No won brolays to settle</p>
+          ) : (
+            wonParlays.map(parlay => {
+              const participants = Object.values(parlay.participants);
+              const winners = participants.filter(p => p.result === 'win');
+              const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
+              const amountPerWinner = winners.length > 0 ? netProfit / winners.length : 0;
+
+              return (
+                <div key={parlay.id} className="border rounded p-4 bg-green-50">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-semibold">{parlay.date}</div>
+                      <div className="text-sm text-gray-600">
+                        Placed by: {parlay.placedBy || 'Unknown'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-bold text-green-600">
+                        ${netProfit.toFixed(2)} profit
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        (${parlay.totalPayout || 0} payout)
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-sm mb-2">
+                    <span className="font-medium">{parlay.placedBy || 'Unknown'} pays winners: </span>
+                    {winners.map(winner => `${winner.player} ($${amountPerWinner.toFixed(2)})`).join(', ')}
+                  </div>
+                  <button
+                    onClick={() => toggleSettlement(parlay.id)}
+                    disabled={saving}
+                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
+                  >
+                    Mark as Settled
+                  </button>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+      
       {/* Lost Brolays */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-bold mb-3 text-red-600">❌ Lost Brolays</h3>
@@ -1358,82 +1407,39 @@ parlays.forEach(p => {
         </div>
       </div>
 
-      {/* Won Brolays */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-bold mb-3 text-green-600">✅ Won Brolays</h3>
-        <div className="space-y-3">
-          {wonParlays.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No won brolays to settle</p>
-          ) : (
-            wonParlays.map(parlay => {
-              const participants = Object.values(parlay.participants);
-              const winners = participants.filter(p => p.result === 'win');
-              const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
-              const amountPerWinner = winners.length > 0 ? netProfit / winners.length : 0;
-
-              return (
-                <div key={parlay.id} className="border rounded p-4 bg-green-50">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <div className="font-semibold">{parlay.date}</div>
-                      <div className="text-sm text-gray-600">
-                        Placed by: {parlay.placedBy || 'Unknown'}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-green-600">
-                        ${netProfit.toFixed(2)} profit
-                      </div>
-                      <div className="text-xs text-gray-600">
-                        (${parlay.totalPayout || 0} payout)
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-sm mb-2">
-                    <span className="font-medium">{parlay.placedBy || 'Unknown'} pays winners: </span>
-                    {winners.map(winner => `${winner.player} ($${amountPerWinner.toFixed(2)})`).join(', ')}
-                  </div>
-                  <button
-                    onClick={() => toggleSettlement(parlay.id)}
-                    disabled={saving}
-                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400"
-                  >
-                    Mark as Settled
-                  </button>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-
-      {/* Recently Settled */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-bold mb-3">Recently Settled</h3>
-        <div className="space-y-2">
-          {parlays.filter(p => p.settled).slice(-5).reverse().map(parlay => {
-            const participants = Object.values(parlay.participants);
-            const losers = participants.filter(p => p.result === 'loss');
-            const winners = participants.filter(p => p.result === 'win');
-            const won = losers.length === 0 && winners.length > 0;
-            
-            return (
-              <div key={parlay.id} className="border rounded p-3 bg-gray-50">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <div className="font-semibold text-sm">{parlay.date}</div>
-                    <div className="text-xs text-gray-600">
-                      {won ? `Winners paid by ${parlay.placedBy || 'Unknown'}: ${winners.map(w => w.player).join(', ')}` 
-                           : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
-                    </div>
-                  </div>
-                  <span className="text-green-600 text-sm">✓ Settled</span>
-                </div>
+{/* Recently Settled */}
+<div className="bg-white rounded-lg shadow p-6">
+  <h3 className="text-lg font-bold mb-3">Recently Settled</h3>
+  <div className="space-y-2">
+    {parlays.filter(p => p.settled).slice(-5).reverse().map(parlay => {
+      const participants = Object.values(parlay.participants);
+      const losers = participants.filter(p => p.result === 'loss');
+      const winners = participants.filter(p => p.result === 'win');
+      const won = losers.length === 0 && winners.length > 0;
+      
+      return (
+        <div key={parlay.id} className="border rounded p-3 bg-gray-50">
+          <div className="flex justify-between items-start">
+            <div className="flex-1">
+              <div className="font-semibold text-sm">{parlay.date}</div>
+              <div className="text-xs text-gray-600">
+                {won ? `Winners paid by ${parlay.placedBy || 'Unknown'}: ${winners.map(w => w.player).join(', ')}` 
+                     : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
               </div>
-            );
-          })}
+            </div>
+            <button
+              onClick={() => toggleSettlement(parlay.id)}
+              disabled={saving}
+              className="ml-3 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:bg-gray-400 whitespace-nowrap"
+            >
+              Mark as Not Settled
+            </button>
+          </div>
         </div>
-      </div>
+      );
+    })}
+  </div>
+</div>
     </div>
   );
 };
