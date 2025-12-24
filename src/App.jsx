@@ -2595,7 +2595,6 @@ const renderImport = () => (
           isMobile ? 'w-full text-left' : 'whitespace-nowrap'
         } px-4 py-3 rounded-lg font-semibold ${
           activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'} text-base`}
-        }`}
         style={{ minHeight: isMobile ? '44px' : 'auto' }}
       >
         {tab.label}
