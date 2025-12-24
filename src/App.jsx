@@ -341,6 +341,16 @@ const selectSuggestion = (id, field, value) => {
     console.error('Error adding parlay:', error);
     alert('Failed to save parlay. Please try again.');
   }
+    
+  setNewParlay({
+    date: new Date().toISOString().split('T')[0],
+    betAmount: 10,
+    totalPayout: 0,
+    participants: {},
+    placedBy: '',
+    settled: false
+  });
+};
 
 const applyFilters = (parlaysList) => {
   return parlaysList.filter(parlay => {
@@ -377,17 +387,7 @@ const applyFilters = (parlaysList) => {
     return true;
   });
 };
-    
-  setNewParlay({
-    date: new Date().toISOString().split('T')[0],
-    betAmount: 10,
-    totalPayout: 0,
-    participants: {},
-    placedBy: '',
-    settled: false
-  });
-};
-    
+  
   const updateParlayResult = async (parlayId, participantId, newResult) => {
   const updatedParlays = parlays.map(parlay => {
     if (parlay.id === parlayId) {
