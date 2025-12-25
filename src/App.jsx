@@ -2297,6 +2297,13 @@ const calculateStatsForPlayer = (player, parlaysList) => {
 
 const renderGroupDashboard = () => {
   const filteredParlays = applyFilters([...parlays]);
+  
+  // MOVE THIS TO THE TOP - Calculate pending picks count
+  const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
+    const participants = Object.values(parlay.participants || {});
+    return count + participants.filter(p => p.result === 'pending').length;
+  }, 0);
+  
   const totalParlays = filteredParlays.length;
   const wonParlays = filteredParlays.filter(p => {
     const participants = Object.values(p.participants);
@@ -2320,10 +2327,6 @@ const renderGroupDashboard = () => {
         }
       }
     });
-  const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
-    const participants = Object.values(parlay.participants || {});
-    return count + participants.filter(p => p.result === 'pending').length;
-    }, 0);
   });
 
   return (
