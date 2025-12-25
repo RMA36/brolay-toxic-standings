@@ -2554,7 +2554,7 @@ const renderImport = () => (
     )}
     <div className="flex-1">
       <h1 className="text-2xl md:text-3xl font-bold">Brolay Toxic Standings</h1>
-      <p className="text-blue-100 text-sm md:text-base">Track your group's betting performance</p>
+      <p className="text-blue-100 text-sm md:text-base">5 Big Guys, Inc.</p>
     </div>
     {saving && (
       <div className="text-sm">
