@@ -2558,9 +2558,27 @@ const renderAllBrolays = () => {
     new Date(b.date) - new Date(a.date)
   );
 
+  const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
+    const participants = Object.values(parlay.participants || {});
+    return count + participants.filter(p => p.result === 'pending').length;
+  }, 0);
+
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold">All Brolays</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl md:text-2xl font-bold">All Brolays</h2>
+        {pendingPicksCount > 0 && (
+          <button
+            onClick={autoUpdatePendingPicks}
+            disabled={autoUpdating}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 text-base"
+            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          >
+            <RefreshCw size={isMobile ? 20 : 16} className={autoUpdating ? 'animate-spin' : ''} />
+            {autoUpdating ? 'Updating...' : `Auto-Update ${pendingPicksCount} Pending`}
+          </button>
+        )}
+      </div>
       
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
