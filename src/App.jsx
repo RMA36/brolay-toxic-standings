@@ -35,6 +35,7 @@ const App = () => {
   const [learnedPropTypes, setLearnedPropTypes] = useState([]);
   const [editingParlay, setEditingParlay] = useState(null);
   const [autoUpdating, setAutoUpdating] = useState(false);
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [filters, setFilters] = useState({
     dateFrom: '',
     dateTo: '',
@@ -2094,127 +2095,138 @@ const calculateStatsForPlayer = (player, parlaysList) => {
         )}
       </div>
       
-      {/* Filters */}
+      {/* Filters - Collapsible */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <h3 className="text-base md:text-lg font-semibold mb-4">Filters</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Date From</label>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Date To</label>
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Big Guy</label>
-            <select
-              value={filters.player}
-              onChange={(e) => setFilters({...filters, player: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              {players.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Sport</label>
-            <select
-              value={filters.sport}
-              onChange={(e) => setFilters({...filters, sport: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              {sports.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Placed By</label>
-            <select
-              value={filters.placedBy}
-              onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              {players.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Min Payout</label>
-            <input
-              type="number"
-              value={filters.minPayout}
-              onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-              placeholder="$0"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Max Payout</label>
-            <input
-              type="number"
-              value={filters.maxPayout}
-              onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-              placeholder="Any"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Result</label>
-            <select
-              value={filters.result}
-              onChange={(e) => setFilters({...filters, result: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              <option value="win">Win</option>
-              <option value="loss">Loss</option>
-              <option value="push">Push</option>
-              <option value="pending">Pending</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Auto-Updated</label>
-            <select
-              value={filters.autoUpdated}
-              onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              <option value="true">Auto-Updated Only</option>
-              <option value="false">Manual Only</option>
-            </select>
-          </div>
-        </div>
         <button
-          onClick={() => setFilters({
-            dateFrom: '', dateTo: '', player: '', sport: '', 
-            placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
-          })}
-          className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
-          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          onClick={() => setFiltersExpanded(!filtersExpanded)}
+          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2"
         >
-          Clear Filters
+          <span>Filters</span>
+          <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
         </button>
+        
+        {filtersExpanded && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Date From</label>
+                <input
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Date To</label>
+                <input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Big Guy</label>
+                <select
+                  value={filters.player}
+                  onChange={(e) => setFilters({...filters, player: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {players.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Sport</label>
+                <select
+                  value={filters.sport}
+                  onChange={(e) => setFilters({...filters, sport: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {sports.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Placed By</label>
+                <select
+                  value={filters.placedBy}
+                  onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {players.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Min Payout</label>
+                <input
+                  type="number"
+                  value={filters.minPayout}
+                  onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="$0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Max Payout</label>
+                <input
+                  type="number"
+                  value={filters.maxPayout}
+                  onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="Any"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Result</label>
+                <select
+                  value={filters.result}
+                  onChange={(e) => setFilters({...filters, result: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  <option value="win">Win</option>
+                  <option value="loss">Loss</option>
+                  <option value="push">Push</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Auto-Updated</label>
+                <select
+                  value={filters.autoUpdated}
+                  onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  <option value="true">Auto-Updated Only</option>
+                  <option value="false">Manual Only</option>
+                </select>
+              </div>
+            </div>
+            <button
+              onClick={() => setFilters({
+                dateFrom: '', dateTo: '', player: '', sport: '', 
+                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
+              })}
+              className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              Clear Filters
+            </button>
+          </>
+        )}
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
@@ -2346,127 +2358,138 @@ const renderGroupDashboard = () => {
         )}
       </div>
       
-      {/* Filters */}
+      {/* Filters - Collapsible */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <h3 className="text-base md:text-lg font-semibold mb-4">Filters</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Date From</label>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Date To</label>
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Big Guy</label>
-            <select
-              value={filters.player}
-              onChange={(e) => setFilters({...filters, player: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              {players.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Sport</label>
-            <select
-              value={filters.sport}
-              onChange={(e) => setFilters({...filters, sport: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              {sports.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Placed By</label>
-            <select
-              value={filters.placedBy}
-              onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              {players.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Min Payout</label>
-            <input
-              type="number"
-              value={filters.minPayout}
-              onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-              placeholder="$0"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Max Payout</label>
-            <input
-              type="number"
-              value={filters.maxPayout}
-              onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-              placeholder="Any"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Result</label>
-            <select
-              value={filters.result}
-              onChange={(e) => setFilters({...filters, result: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              <option value="win">Win</option>
-              <option value="loss">Loss</option>
-              <option value="push">Push</option>
-              <option value="pending">Pending</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Auto-Updated</label>
-            <select
-              value={filters.autoUpdated}
-              onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              <option value="true">Auto-Updated Only</option>
-              <option value="false">Manual Only</option>
-            </select>
-          </div>
-        </div>
         <button
-          onClick={() => setFilters({
-            dateFrom: '', dateTo: '', player: '', sport: '', 
-            placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
-          })}
-          className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
-          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          onClick={() => setFiltersExpanded(!filtersExpanded)}
+          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2"
         >
-          Clear Filters
+          <span>Filters</span>
+          <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
         </button>
+        
+        {filtersExpanded && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Date From</label>
+                <input
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Date To</label>
+                <input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Big Guy</label>
+                <select
+                  value={filters.player}
+                  onChange={(e) => setFilters({...filters, player: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {players.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Sport</label>
+                <select
+                  value={filters.sport}
+                  onChange={(e) => setFilters({...filters, sport: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {sports.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Placed By</label>
+                <select
+                  value={filters.placedBy}
+                  onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {players.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Min Payout</label>
+                <input
+                  type="number"
+                  value={filters.minPayout}
+                  onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="$0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Max Payout</label>
+                <input
+                  type="number"
+                  value={filters.maxPayout}
+                  onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="Any"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Result</label>
+                <select
+                  value={filters.result}
+                  onChange={(e) => setFilters({...filters, result: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  <option value="win">Win</option>
+                  <option value="loss">Loss</option>
+                  <option value="push">Push</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Auto-Updated</label>
+                <select
+                  value={filters.autoUpdated}
+                  onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  <option value="true">Auto-Updated Only</option>
+                  <option value="false">Manual Only</option>
+                </select>
+              </div>
+            </div>
+            <button
+              onClick={() => setFilters({
+                dateFrom: '', dateTo: '', player: '', sport: '', 
+                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
+              })}
+              className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              Clear Filters
+            </button>
+          </>
+        )}
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
@@ -2580,114 +2603,139 @@ const renderAllBrolays = () => {
         )}
       </div>
       
-      {/* Filters */}
+      {/* Filters - Collapsible */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <h3 className="text-base md:text-lg font-semibold mb-4">Filters</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Date From</label>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Date To</label>
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Big Guy</label>
-            <select
-              value={filters.player}
-              onChange={(e) => setFilters({...filters, player: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              {players.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Sport</label>
-            <select
-              value={filters.sport}
-              onChange={(e) => setFilters({...filters, sport: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              {sports.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Placed By</label>
-            <select
-              value={filters.placedBy}
-              onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              {players.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Min Payout</label>
-            <input
-              type="number"
-              value={filters.minPayout}
-              onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-              placeholder="$0"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Max Payout</label>
-            <input
-              type="number"
-              value={filters.maxPayout}
-              onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-              placeholder="Any"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Result</label>
-            <select
-              value={filters.result}
-              onChange={(e) => setFilters({...filters, result: e.target.value})}
-              className="w-full px-3 py-2 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="">All</option>
-              <option value="win">Win</option>
-              <option value="loss">Loss</option>
-              <option value="push">Push</option>
-              <option value="pending">Pending</option>
-            </select>
-          </div>
-        </div>
         <button
-          onClick={() => setFilters({
-            dateFrom: '', dateTo: '', player: '', sport: '', 
-            placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
-          })}
-          className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
-          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          onClick={() => setFiltersExpanded(!filtersExpanded)}
+          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2"
         >
-          Clear Filters
+          <span>Filters</span>
+          <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
         </button>
+        
+        {filtersExpanded && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Date From</label>
+                <input
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Date To</label>
+                <input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Big Guy</label>
+                <select
+                  value={filters.player}
+                  onChange={(e) => setFilters({...filters, player: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {players.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Sport</label>
+                <select
+                  value={filters.sport}
+                  onChange={(e) => setFilters({...filters, sport: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {sports.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Placed By</label>
+                <select
+                  value={filters.placedBy}
+                  onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {players.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Min Payout</label>
+                <input
+                  type="number"
+                  value={filters.minPayout}
+                  onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="$0"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Max Payout</label>
+                <input
+                  type="number"
+                  value={filters.maxPayout}
+                  onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="Any"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Result</label>
+                <select
+                  value={filters.result}
+                  onChange={(e) => setFilters({...filters, result: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  <option value="win">Win</option>
+                  <option value="loss">Loss</option>
+                  <option value="push">Push</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+              {/* ADD THIS: Auto-Updated Filter */}
+              <div>
+                <label className="block text-sm font-medium mb-1">Auto-Updated</label>
+                <select
+                  value={filters.autoUpdated}
+                  onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  <option value="true">Auto-Updated Only</option>
+                  <option value="false">Manual Only</option>
+                </select>
+              </div>
+            </div>
+            <button
+              onClick={() => setFilters({
+                dateFrom: '', dateTo: '', player: '', sport: '', 
+                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
+              })}
+              className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              Clear Filters
+            </button>
+          </>
+        )}
       </div>
 
       {/* Brolays List */}
