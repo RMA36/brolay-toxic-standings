@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PlusCircle, TrendingUp, Users, Award, AlertCircle, Loader, Menu, X } from 'lucide-react';
+import { PlusCircle, TrendingUp, Users, Award, AlertCircle, Loader, Menu, X, RefreshCw } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
@@ -34,6 +34,7 @@ const App = () => {
   const [learnedTeams, setLearnedTeams] = useState([]);
   const [learnedPropTypes, setLearnedPropTypes] = useState([]);
   const [editingParlay, setEditingParlay] = useState(null);
+  const [autoUpdating, setAutoUpdating] = useState(false);
   const [filters, setFilters] = useState({
     dateFrom: '',
     dateTo: '',
@@ -42,7 +43,8 @@ const App = () => {
     placedBy: '',
     minPayout: '',
     maxPayout: '',
-    result: ''
+    result: '',
+    autoUpdated: ''
   });
   const [newParlay, setNewParlay] = useState({
   date: new Date().toISOString().split('T')[0],
@@ -131,6 +133,525 @@ const commonPropTypes = [
   'Saves',
   'Shots on Goal'
 ];
+
+const normalizePlayerName = (name) => {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .replace(/\s+(jr\.?|sr\.?|ii|iii|iv)$/i, '')
+    .replace(/[^a-z\s]/g, '')
+    .trim();
+};
+
+const matchPlayerName = (pickPlayer, apiPlayer) => {
+  if (!pickPlayer || !apiPlayer) return false;
+  
+  const normalizedPick = normalizePlayerName(pickPlayer);
+  const normalizedApi = normalizePlayerName(apiPlayer);
+  
+  if (normalizedPick === normalizedApi) return true;
+  
+  const pickParts = normalizedPick.split(' ');
+  const apiParts = normalizedApi.split(' ');
+  const pickLastName = pickParts[pickParts.length - 1];
+  const apiLastName = apiParts[apiParts.length - 1];
+  
+  if (pickLastName === apiLastName && pickLastName.length > 3) {
+    return true;
+  }
+  
+  return false;
+};
+
+const normalizePropType = (propType) => {
+  if (!propType) return '';
+  const normalized = propType.toLowerCase().trim();
+  
+  const mappings = {
+    'passing yards': ['pass yards', 'passing yds', 'pass yds'],
+    'passing completions': ['completions', 'comp', 'pass comp'],
+    'rushing yards': ['rush yards', 'rushing yds', 'rush yds'],
+    'receiving yards': ['rec yards', 'receiving yds', 'rec yds'],
+    'rushing & receiving yards': ['rush + rec yards', 'rush and rec yards', 'rush/rec yards'],
+    'receptions': ['rec', 'catches'],
+    'passing touchdowns': ['pass td', 'pass tds', 'passing td'],
+    'rushing touchdowns': ['rush td', 'rushing td'],
+    'receiving touchdowns': ['rec td', 'receiving td'],
+    'total touchdowns': ['td', 'touchdowns', 'tds'],
+    'anytime touchdown scorer': ['anytime td', 'anytime td scorer', 'to score a td'],
+    'interceptions thrown': ['int', 'ints', 'interceptions'],
+    'points': ['pts'],
+    'rebounds': ['reb', 'rebs'],
+    'assists': ['ast', 'asst'],
+    'steals': ['stl'],
+    'blocks': ['blk'],
+    'three pointers made': ['3pm', '3pt', 'threes', 'three pointers'],
+    'turnovers': ['to'],
+    'strikeouts': ['k', 'ks', 'so'],
+    'hits': ['h'],
+    'home runs': ['hr', 'homers'],
+    'rbis': ['rbi', 'runs batted in'],
+    'runs': ['r'],
+    'stolen bases': ['sb', 'steals'],
+    'goals': ['g'],
+    'saves': ['sv'],
+    'shots on goal': ['sog', 'shots']
+  };
+  
+  for (const [standard, variations] of Object.entries(mappings)) {
+    if (normalized === standard || variations.includes(normalized)) {
+      return standard;
+    }
+  }
+  
+  return normalized;
+};
+
+const getStatValue = (stats, propType, sport, labels) => {
+  if (!stats || !labels) return null;
+  
+  const statMappings = {
+    'NFL': {
+      'passing yards': ['YDS', 'Passing Yards'],
+      'passing attempts': ['ATT', 'Attempts'],
+      'passing completions': ['C/ATT', 'COMP', 'Completions'],
+      'interceptions thrown': ['INT', 'Interceptions'],
+      'rushing yards': ['YDS', 'Rushing Yards'],
+      'receiving yards': ['YDS', 'Receiving Yards'],
+      'rushing & receiving yards': ['YDS'],
+      'receptions': ['REC', 'Receptions'],
+      'passing touchdowns': ['TD', 'Passing TDs'],
+      'rushing touchdowns': ['TD', 'Rushing TDs'],
+      'receiving touchdowns': ['TD', 'Receiving TDs'],
+      'total touchdowns': ['TD']
+    },
+    'NBA': {
+      'points': ['PTS', 'Points'],
+      'rebounds': ['REB', 'Rebounds'],
+      'assists': ['AST', 'Assists'],
+      'steals': ['STL', 'Steals'],
+      'blocks': ['BLK', 'Blocks'],
+      'three pointers made': ['3PM', '3PT'],
+      'turnovers': ['TO', 'Turnovers']
+    },
+    'MLB': {
+      'strikeouts': ['K', 'SO', 'Strikeouts'],
+      'hits': ['H', 'Hits'],
+      'home runs': ['HR', 'Home Runs'],
+      'rbis': ['RBI', 'RBIs'],
+      'runs': ['R', 'Runs'],
+      'stolen bases': ['SB', 'Stolen Bases']
+    },
+    'NHL': {
+      'goals': ['G', 'Goals'],
+      'assists': ['A', 'Assists'],
+      'points': ['PTS', 'Points'],
+      'saves': ['SV', 'Saves'],
+      'shots on goal': ['SOG', 'Shots']
+    }
+  };
+  
+  const sportMappings = statMappings[sport] || {};
+  const possibleLabels = sportMappings[propType] || [];
+  
+  if (propType === 'passing completions') {
+    const index = labels.findIndex(label => 
+      label === 'C/ATT' || label.toUpperCase() === 'COMP'
+    );
+    
+    if (index !== -1 && stats[index] !== undefined) {
+      const value = stats[index].toString().split('/')[0];
+      const parsed = parseFloat(value);
+      if (!isNaN(parsed)) return parsed;
+    }
+  }
+  
+  for (const possibleLabel of possibleLabels) {
+    const index = labels.findIndex(label => 
+      label.toUpperCase() === possibleLabel.toUpperCase() ||
+      label.toUpperCase().includes(possibleLabel.toUpperCase())
+    );
+    
+    if (index !== -1 && stats[index] !== undefined) {
+      const value = parseFloat(stats[index]);
+      if (!isNaN(value)) return value;
+    }
+  }
+  
+  return null;
+};
+
+const extractPlayerStat = (boxscoreData, playerName, propType, sport) => {
+  if (!boxscoreData || !boxscoreData.players) return null;
+  
+  const normalizedPropType = normalizePropType(propType);
+  const propLower = propType.toLowerCase();
+  
+  const isTDScorerProp = propLower.includes('anytime') || 
+                         propLower.includes('2+') || 
+                         propLower.includes('multiple td');
+  
+  try {
+    let totalTDs = 0;
+    let playerFound = false;
+    
+    for (const team of boxscoreData.players) {
+      if (!team.statistics) continue;
+      
+      for (const statCategory of team.statistics) {
+        if (!statCategory.athletes) continue;
+        
+        for (const athlete of statCategory.athletes) {
+          if (!matchPlayerName(playerName, athlete.athlete?.displayName)) continue;
+          
+          playerFound = true;
+          
+          if (isTDScorerProp && sport === 'NFL') {
+            const rushingTDs = getStatValue(athlete.stats, 'rushing touchdowns', sport, statCategory.labels) || 0;
+            const receivingTDs = getStatValue(athlete.stats, 'receiving touchdowns', sport, statCategory.labels) || 0;
+            totalTDs += rushingTDs + receivingTDs;
+            continue;
+          }
+          
+          const stat = getStatValue(athlete.stats, normalizedPropType, sport, statCategory.labels);
+          if (stat !== null) return stat;
+        }
+      }
+    }
+    
+    if (isTDScorerProp && playerFound) {
+      return totalTDs;
+    }
+    
+  } catch (error) {
+    console.error('Error extracting player stat:', error);
+  }
+  
+  return null;
+};
+
+const checkTDScorerResult = (totalTDs, propType, overUnder, line) => {
+  const propLower = propType.toLowerCase();
+  
+  if (propLower.includes('anytime') && (propLower.includes('td') || propLower.includes('touchdown'))) {
+    const lineValue = parseFloat(line);
+    
+    if (overUnder === 'Over') {
+      return totalTDs >= 1 ? 'win' : 'loss';
+    } else {
+      return totalTDs === 0 ? 'win' : 'loss';
+    }
+  }
+  
+  if (propLower.includes('2+') || 
+      propLower.includes('multiple') || 
+      propLower.includes('2 or more')) {
+    
+    if (overUnder === 'Over') {
+      return totalTDs >= 2 ? 'win' : 'loss';
+    } else {
+      return totalTDs < 2 ? 'win' : 'loss';
+    }
+  }
+  
+  const lineValue = parseFloat(line);
+  if (isNaN(lineValue)) return 'pending';
+  
+  if (overUnder === 'Over') {
+    if (totalTDs > lineValue) return 'win';
+    if (totalTDs < lineValue) return 'loss';
+    return 'push';
+  } else {
+    if (totalTDs < lineValue) return 'win';
+    if (totalTDs > lineValue) return 'loss';
+    return 'push';
+  }
+};
+
+const checkPropBetResult = async (participant, gameDate) => {
+  const { sport, team: playerName, propType, overUnder, line } = participant;
+  
+  if (!playerName || !propType || !line) return 'pending';
+  
+  try {
+    let espnSport = '';
+    switch(sport) {
+      case 'NFL': espnSport = 'football/nfl'; break;
+      case 'NBA': espnSport = 'basketball/nba'; break;
+      case 'MLB': espnSport = 'baseball/mlb'; break;
+      case 'NHL': espnSport = 'hockey/nhl'; break;
+      case 'College Football': espnSport = 'football/college-football'; break;
+      case 'College Basketball': espnSport = 'basketball/mens-college-basketball'; break;
+      default: return 'pending';
+    }
+
+    const formattedDate = gameDate.replace(/-/g, '');
+    const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (!data.events || data.events.length === 0) {
+      return 'pending';
+    }
+
+    for (const event of data.events) {
+      const competition = event.competitions[0];
+      
+      if (competition.status.type.completed !== true) {
+        continue;
+      }
+
+      const gameId = event.id;
+      const boxscoreUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/summary?event=${gameId}`;
+      
+      try {
+        const boxscoreResponse = await fetch(boxscoreUrl);
+        const boxscoreData = await boxscoreResponse.json();
+        
+        if (boxscoreData.boxscore) {
+          const playerStat = extractPlayerStat(boxscoreData.boxscore, playerName, propType, sport);
+          
+          if (playerStat !== null) {
+            const propLower = propType.toLowerCase();
+            const isTDScorerProp = propLower.includes('anytime') || 
+                                   propLower.includes('2+') || 
+                                   propLower.includes('multiple td');
+            
+            if (isTDScorerProp) {
+              return checkTDScorerResult(playerStat, propType, overUnder, line);
+            }
+            
+            const lineValue = parseFloat(line);
+            if (isNaN(lineValue)) return 'pending';
+            
+            if (overUnder === 'Over') {
+              if (playerStat > lineValue) return 'win';
+              if (playerStat < lineValue) return 'loss';
+              return 'push';
+            } else {
+              if (playerStat < lineValue) return 'win';
+              if (playerStat > lineValue) return 'loss';
+              return 'push';
+            }
+          }
+        }
+      } catch (boxscoreError) {
+        console.error('Error fetching boxscore:', boxscoreError);
+        continue;
+      }
+    }
+    
+    return 'pending';
+    
+  } catch (error) {
+    console.error('Error checking prop bet:', error);
+    return 'pending';
+  }
+};
+
+const matchTeamName = (pickTeam, apiTeam) => {
+  if (!pickTeam || !apiTeam) return false;
+  
+  const normalize = (name) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const normalizedPick = normalize(pickTeam);
+  const normalizedApi = normalize(apiTeam);
+  
+  return normalizedApi.includes(normalizedPick) || normalizedPick.includes(normalizedApi);
+};
+
+const determineSpreadResult = (pickedTeam, favoriteOrDog, spreadValue, homeComp, awayComp, homeScore, awayScore) => {
+  const spread = parseFloat(spreadValue);
+  if (isNaN(spread)) return 'pending';
+
+  let pickedTeamScore, opponentScore;
+  const pickedTeamIsHome = matchTeamName(pickedTeam, homeComp.team.displayName);
+  
+  if (pickedTeamIsHome) {
+    pickedTeamScore = homeScore;
+    opponentScore = awayScore;
+  } else {
+    pickedTeamScore = awayScore;
+    opponentScore = homeScore;
+  }
+
+  let adjustedScore;
+  if (favoriteOrDog === 'Favorite') {
+    adjustedScore = pickedTeamScore - spread;
+  } else {
+    adjustedScore = pickedTeamScore + spread;
+  }
+
+  if (adjustedScore > opponentScore) return 'win';
+  if (adjustedScore < opponentScore) return 'loss';
+  return 'push';
+};
+
+const determineMoneylineResult = (pickedTeam, homeComp, awayComp) => {
+  const pickedTeamIsHome = matchTeamName(pickedTeam, homeComp.team.displayName);
+  const pickedTeamWon = pickedTeamIsHome ? homeComp.winner : awayComp.winner;
+  
+  return pickedTeamWon ? 'win' : 'loss';
+};
+
+const determineTotalResult = (overUnder, totalLine, finalTotal) => {
+  const line = parseFloat(totalLine);
+  if (isNaN(line)) return 'pending';
+
+  if (overUnder === 'Over') {
+    if (finalTotal > line) return 'win';
+    if (finalTotal < line) return 'loss';
+    return 'push';
+  } else {
+    if (finalTotal < line) return 'win';
+    if (finalTotal > line) return 'loss';
+    return 'push';
+  }
+};
+
+const checkGameResult = async (participant, gameDate) => {
+  const { sport, betType, team, awayTeam, homeTeam, favorite, spread, overUnder, total } = participant;
+  
+  if (betType === 'Prop Bet') {
+    return await checkPropBetResult(participant, gameDate);
+  }
+  
+  try {
+    let espnSport = '';
+    switch(sport) {
+      case 'NFL': espnSport = 'football/nfl'; break;
+      case 'NBA': espnSport = 'basketball/nba'; break;
+      case 'MLB': espnSport = 'baseball/mlb'; break;
+      case 'NHL': espnSport = 'hockey/nhl'; break;
+      case 'College Football': espnSport = 'football/college-football'; break;
+      case 'College Basketball': espnSport = 'basketball/mens-college-basketball'; break;
+      default: return 'pending';
+    }
+
+    const formattedDate = gameDate.replace(/-/g, '');
+    const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (!data.events || data.events.length === 0) {
+      return 'pending';
+    }
+
+    let relevantGame = null;
+    
+    for (const event of data.events) {
+      const competition = event.competitions[0];
+      const competitors = competition.competitors;
+      
+      if (competition.status.type.completed !== true) {
+        continue;
+      }
+
+      const homeTeamName = competitors.find(c => c.homeAway === 'home')?.team.displayName || '';
+      const awayTeamName = competitors.find(c => c.homeAway === 'away')?.team.displayName || '';
+      
+      if (betType === 'Total') {
+        if (matchTeamName(awayTeam, awayTeamName) && matchTeamName(homeTeam, homeTeamName)) {
+          relevantGame = competition;
+          break;
+        }
+      } else {
+        if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
+          relevantGame = competition;
+          break;
+        }
+      }
+    }
+
+    if (!relevantGame) {
+      return 'pending';
+    }
+
+    const competitors = relevantGame.competitors;
+    const homeComp = competitors.find(c => c.homeAway === 'home');
+    const awayComp = competitors.find(c => c.homeAway === 'away');
+    
+    const homeScore = parseInt(homeComp.score);
+    const awayScore = parseInt(awayComp.score);
+
+    if (betType === 'Spread') {
+      return determineSpreadResult(team, favorite, spread, homeComp, awayComp, homeScore, awayScore);
+    } else if (betType === 'Moneyline') {
+      return determineMoneylineResult(team, homeComp, awayComp);
+    } else if (betType === 'Total') {
+      return determineTotalResult(overUnder, total, homeScore + awayScore);
+    }
+    
+    return 'pending';
+    
+  } catch (error) {
+    console.error('Error fetching game data:', error);
+    return 'pending';
+  }
+};
+
+const autoUpdatePendingPicks = async () => {
+  try {
+    setAutoUpdating(true);
+    let updatedCount = 0;
+    
+    const parlaysToUpdate = parlays.filter(parlay => {
+      const participants = Object.values(parlay.participants || {});
+      return participants.some(p => p.result === 'pending');
+    });
+
+    for (const parlay of parlaysToUpdate) {
+      let parlayUpdated = false;
+      const updatedParticipants = { ...parlay.participants };
+      
+      for (const [participantId, participant] of Object.entries(parlay.participants)) {
+        if (participant.result !== 'pending') continue;
+
+        try {
+          const result = await checkGameResult(participant, parlay.date);
+          
+          if (result && result !== 'pending') {
+            updatedParticipants[participantId] = {
+              ...participant,
+              result: result,
+              autoUpdated: true,
+              autoUpdatedAt: new Date().toISOString()
+            };
+            parlayUpdated = true;
+            updatedCount++;
+          }
+        } catch (error) {
+          console.error(`Error checking result for pick ${participantId}:`, error);
+        }
+      }
+
+      if (parlayUpdated && parlay.firestoreId) {
+        try {
+          const parlayDoc = doc(db, 'parlays', parlay.firestoreId);
+          await updateDoc(parlayDoc, {
+            participants: updatedParticipants
+          });
+        } catch (error) {
+          console.error('Error updating parlay in Firebase:', error);
+        }
+      }
+    }
+
+    if (updatedCount > 0) {
+      alert(`Successfully updated ${updatedCount} pending pick(s)!`);
+      await loadParlays();
+    } else {
+      alert('No pending picks could be updated at this time.');
+    }
+  } catch (error) {
+    console.error('Error in auto-update:', error);
+    alert('Error updating picks. Please try again.');
+  } finally {
+    setAutoUpdating(false);
+  }
+};
+  
   useEffect(() => {
   if (authenticated) {
     // Set up real-time listener
@@ -435,42 +956,49 @@ const applyFilters = (parlaysList) => {
       if (!hasResult) return false;
     }
     
+    if (filters.autoUpdated) {
+      const hasAutoUpdated = Object.values(parlay.participants || {}).some(p => 
+        filters.autoUpdated === 'true' ? p.autoUpdated : !p.autoUpdated
+      );
+      if (!hasAutoUpdated) return false;
+    }
     return true;
   });
 };
-  
+    
   const updateParlayResult = async (parlayId, participantId, newResult) => {
-  const updatedParlays = parlays.map(parlay => {
-    if (parlay.id === parlayId) {
-      return {
-        ...parlay,
-        participants: {
-          ...parlay.participants,
-          [participantId]: {
-            ...parlay.participants[participantId],
-            result: newResult
+    const updatedParlays = parlays.map(parlay => {
+      if (parlay.id === parlayId) {
+        return {
+          ...parlay,
+          participants: {
+            ...parlay.participants,
+            [participantId]: {
+              ...parlay.participants[participantId],
+              result: newResult,
+              autoUpdated: false,
+              manuallyOverridden: newResult !== 'pending'
+            }
           }
-        }
-      };
+        };
+      }
+      return parlay;
+    });
+    
+    setParlays(updatedParlays);
+    
+    const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
+    if (parlayToUpdate && parlayToUpdate.firestoreId) {
+      try {
+        const parlayDoc = doc(db, 'parlays', parlayToUpdate.firestoreId);
+        await updateDoc(parlayDoc, {
+          participants: parlayToUpdate.participants
+        });
+      } catch (error) {
+        console.error('Error updating parlay:', error);
+      }
     }
-    return parlay;
-  });
-  
-  setParlays(updatedParlays);
-  
-  // Update in Firebase
-  const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
-  if (parlayToUpdate && parlayToUpdate.firestoreId) {
-    try {
-      const parlayDoc = doc(db, 'parlays', parlayToUpdate.firestoreId);
-      await updateDoc(parlayDoc, {
-        participants: parlayToUpdate.participants
-      });
-    } catch (error) {
-      console.error('Error updating parlay:', error);
-    }
-  }
-};
+  };
   
   const toggleSettlement = async (parlayId) => {
   const updatedParlays = parlays.map(parlay => {
@@ -622,6 +1150,11 @@ const renderEditModal = () => {
           <div className="space-y-4 mb-6">
             {Object.entries(participants).map(([id, participant]) => (
               <div key={id} className="border rounded p-3 md:p-4 bg-gray-50">
+                {participant.autoUpdated && (
+                      <div className="mb-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                        ✓ Auto-updated on {new Date(participant.autoUpdatedAt).toLocaleString()}
+                      </div>
+                    )}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                   <div>
                     <label className="block text-xs font-medium mb-1">Big Guy</label>
@@ -866,6 +1399,8 @@ const renderEditModal = () => {
                       onChange={(e) => {
                         const updated = {...editingParlay};
                         updated.participants[id].result = e.target.value;
+                        updated.participants[id].autoUpdated = false;  // ← ADD THIS LINE
+                        updated.participants[id].manuallyOverridden = e.target.value !== 'pending';  // ← ADD THIS LINE
                         setEditingParlay(updated);
                       }}
                       className="w-full px-2 py-1 border rounded text-base"
@@ -1535,11 +2070,29 @@ const calculateStatsForPlayer = (player, parlaysList) => {
 };
 
   const renderIndividualDashboard = () => {
-  const filteredParlays = applyFilters([...parlays]);
-  
+    const filteredParlays = applyFilters([...parlays]);
+
+    const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
+        const participants = Object.values(parlay.participants || {});
+        return count + participants.filter(p => p.result === 'pending').length;
+      }, 0);
+    
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold">Individual Statistics</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl md:text-2xl font-bold">Individual Statistics</h2>
+        {pendingPicksCount > 0 && (
+          <button
+            onClick={autoUpdatePendingPicks}
+            disabled={autoUpdating}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 text-base"
+            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          >
+            <RefreshCw size={isMobile ? 20 : 16} className={autoUpdating ? 'animate-spin' : ''} />
+            {autoUpdating ? 'Updating...' : `Auto-Update ${pendingPicksCount} Pending`}
+          </button>
+        )}
+      </div>
       
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
@@ -1638,11 +2191,24 @@ const calculateStatsForPlayer = (player, parlaysList) => {
               <option value="pending">Pending</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Auto-Updated</label>
+            <select
+              value={filters.autoUpdated}
+              onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              <option value="true">Auto-Updated Only</option>
+              <option value="false">Manual Only</option>
+            </select>
+          </div>
         </div>
         <button
           onClick={() => setFilters({
             dateFrom: '', dateTo: '', player: '', sport: '', 
-            placedBy: '', minPayout: '', maxPayout: '', result: ''
+            placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
           })}
           className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
           style={{ minHeight: isMobile ? '44px' : 'auto' }}
@@ -1754,11 +2320,28 @@ const renderGroupDashboard = () => {
         }
       }
     });
+  const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
+    const participants = Object.values(parlay.participants || {});
+    return count + participants.filter(p => p.result === 'pending').length;
+    }, 0);
   });
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold">Group Statistics</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl md:text-2xl font-bold">Group Statistics</h2>
+        {pendingPicksCount > 0 && (
+          <button
+            onClick={autoUpdatePendingPicks}
+            disabled={autoUpdating}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 text-base"
+            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          >
+            <RefreshCw size={isMobile ? 20 : 16} className={autoUpdating ? 'animate-spin' : ''} />
+            {autoUpdating ? 'Updating...' : `Auto-Update ${pendingPicksCount} Pending`}
+          </button>
+        )}
+      </div>
       
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
@@ -1857,11 +2440,24 @@ const renderGroupDashboard = () => {
               <option value="pending">Pending</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Auto-Updated</label>
+            <select
+              value={filters.autoUpdated}
+              onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
+              className="w-full px-3 py-2 border rounded text-base"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              <option value="true">Auto-Updated Only</option>
+              <option value="false">Manual Only</option>
+            </select>
+          </div>
         </div>
         <button
           onClick={() => setFilters({
             dateFrom: '', dateTo: '', player: '', sport: '', 
-            placedBy: '', minPayout: '', maxPayout: '', result: ''
+            placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
           })}
           className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
           style={{ minHeight: isMobile ? '44px' : 'auto' }}
@@ -2149,6 +2745,27 @@ const renderAllBrolays = () => {
                             'Moneyline'
                           } ({participant.betType})
                         </span>
+                        <div className="flex items-center gap-2">
+                              {participant.autoUpdated && (
+                                <span 
+                                  className="text-blue-600 cursor-help text-base" 
+                                  title={`Auto-updated on ${new Date(participant.autoUpdatedAt).toLocaleString()}`}
+                                >
+                                  🤖
+                                </span>
+                              )}
+                              
+                              <span className={`font-semibold ${
+                                participant.result === 'win' ? 'text-green-600' :
+                                participant.result === 'loss' ? 'text-red-600' :
+                                participant.result === 'push' ? 'text-yellow-600' :
+                                'text-gray-500'
+                              }`}>
+                                {participant.result.toUpperCase()}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                         <span className={`font-semibold ${
                           participant.result === 'win' ? 'text-green-600' :
                           participant.result === 'loss' ? 'text-red-600' :
