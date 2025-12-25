@@ -2531,47 +2531,6 @@ const renderGroupDashboard = () => {
           ))}
         </div>
       </div>
-
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <h3 className="text-lg md:text-xl font-bold mb-4">Recent Brolays</h3>
-        <div className="space-y-2">
-          {filteredParlays.slice(-10).reverse().map(parlay => {
-            const participants = Object.values(parlay.participants);
-            const losers = participants.filter(p => p.result === 'loss');
-            const winners = participants.filter(p => p.result === 'win');
-            const won = losers.length === 0 && winners.length > 0;
-            const and1 = losers.length === 1 && winners.length === participants.length - 1;
-            
-            const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
-            const parlayType = sports.length > 1 ? 'Multi-Sport Brolay' : 
-                               sports.length === 1 ? `${sports[0]} Brolay` : 'Brolay';
-            
-            return (
-              <div key={parlay.id} className="border rounded p-3 flex flex-col md:flex-row md:justify-between md:items-center gap-2">
-                <div className="flex-1">
-                    <div className="font-semibold text-sm md:text-base">{parlay.date} - {parlayType}</div>
-                    <div className="text-xs md:text-sm text-gray-600">
-                    {participants.length} picks • ${parlay.betAmount * participants.length} Risked • ${parlay.totalPayout || 0} Total Payout • ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
-                    {parlay.placedBy && <span> • Placed by {parlay.placedBy}</span>}
-                    {parlay.settled && <span className="ml-2 text-green-600">✓ Settled</span>}
-                  </div>
-                </div>
-                <div className="text-left md:text-right">
-                  {won && <span className="text-green-600 font-semibold">WON</span>}
-                  {!won && losers.length > 0 && (
-                    <span className="text-red-600 font-semibold">
-                      LOST {and1 && '(And-1)'}
-                    </span>
-                  )}
-                  {losers.length === 0 && participants.every(p => p.result === 'pending') && (
-                    <span className="text-gray-500 font-semibold">PENDING</span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
     </div>
   );
 };
