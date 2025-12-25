@@ -2660,7 +2660,7 @@ const renderAllBrolays = () => {
         <button
           onClick={() => setFilters({
             dateFrom: '', dateTo: '', player: '', sport: '', 
-            placedBy: '', minPayout: '', maxPayout: '', result: ''
+            placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
           })}
           className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
           style={{ minHeight: isMobile ? '44px' : 'auto' }}
@@ -2735,7 +2735,7 @@ const renderAllBrolays = () => {
                   <div className="space-y-2">
                     {Object.entries(parlay.participants).map(([pid, participant]) => (
                       <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-50 p-2 rounded gap-1">
-                        <span>
+                        <span className="flex-1">
                           <strong>{participant.player}</strong> - {participant.sport} - {
                             participant.betType === 'Total' ? `${participant.awayTeam} @ ${participant.homeTeam}` : participant.team
                           } {
@@ -2745,35 +2745,26 @@ const renderAllBrolays = () => {
                             'Moneyline'
                           } ({participant.betType})
                         </span>
+                        
                         <div className="flex items-center gap-2">
-                              {participant.autoUpdated && (
-                                <span 
-                                  className="text-blue-600 cursor-help text-base" 
-                                  title={`Auto-updated on ${new Date(participant.autoUpdatedAt).toLocaleString()}`}
-                                >
-                                  🤖
-                                </span>
-                              )}
-                              
-                              <span className={`font-semibold ${
-                                participant.result === 'win' ? 'text-green-600' :
-                                participant.result === 'loss' ? 'text-red-600' :
-                                participant.result === 'push' ? 'text-yellow-600' :
-                                'text-gray-500'
-                              }`}>
-                                {participant.result.toUpperCase()}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                        <span className={`font-semibold ${
-                          participant.result === 'win' ? 'text-green-600' :
-                          participant.result === 'loss' ? 'text-red-600' :
-                          participant.result === 'push' ? 'text-yellow-600' :
-                          'text-gray-500'
-                        }`}>
-                          {participant.result.toUpperCase()}
-                        </span>
+                          {participant.autoUpdated && (
+                            <span 
+                              className="text-blue-600 cursor-help text-base" 
+                              title={`Auto-updated on ${new Date(participant.autoUpdatedAt).toLocaleString()}`}
+                            >
+                              🤖
+                            </span>
+                          )}
+                          
+                          <span className={`font-semibold ${
+                            participant.result === 'win' ? 'text-green-600' :
+                            participant.result === 'loss' ? 'text-red-600' :
+                            participant.result === 'push' ? 'text-yellow-600' :
+                            'text-gray-500'
+                          }`}>
+                            {participant.result.toUpperCase()}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2785,8 +2776,7 @@ const renderAllBrolays = () => {
       </div>
     </div>
   );
-};
-  
+};  
   const renderPayments = () => {
   const unsettledParlays = parlays.filter(p => !p.settled);
   const lostParlays = unsettledParlays.filter(p => {
