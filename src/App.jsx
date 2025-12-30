@@ -1854,10 +1854,11 @@ const renderEditModal = () => {
             {Object.entries(participants).map(([id, participant]) => (
               <div key={id} className="border rounded p-3 md:p-4 bg-gray-50">
                 {participant.autoUpdated && (
-                      <div className="mb-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                        ✓ Auto-updated on {new Date(participant.autoUpdatedAt).toLocaleString()}
-                      </div>
-                    )}
+                  <div className="mb-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                    ✓ Auto-updated on {new Date(participant.autoUpdatedAt).toLocaleString()}
+                  </div>
+                )}
+                
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                   <div>
                     <label className="block text-xs font-medium mb-1">Big Guy</label>
