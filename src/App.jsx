@@ -2297,198 +2297,168 @@ const importFromCSV = async (csvText) => {
           </div>
 
           {Object.entries(newParlay.participants).map(([id, participant]) => (
-  <div key={id} className="border rounded p-4 md:p-6 bg-gray-50">
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-      <div>
-        <label className="block text-xs font-medium mb-1">Big Guy</label>
-        <select
-          value={participant.player}
-          onChange={(e) => updateParticipant(id, 'player', e.target.value)}
-          className="w-full px-2 py-1 border rounded text-base"
-          style={{ fontSize: isMobile ? '16px' : '14px' }}
-        >
-          <option value="">Select</option>
-          {players.map(p => <option key={p} value={p}>{p}</option>)}
-        </select>
-      </div>
-      <div>
-        <label className="block text-xs font-medium mb-1">Sport</label>
-        <select
-          value={participant.sport}
-          onChange={(e) => updateParticipant(id, 'sport', e.target.value)}
-          className="w-full px-2 py-1 border rounded text-base"
-          style={{ fontSize: isMobile ? '16px' : '14px' }}
-        >
-          {sports.map(s => <option key={s} value={s}>{s}</option>)}
-        </select>
-      </div>
-      <div>
-        <label className="block text-xs font-medium mb-1">Bet Type</label>
-        <select
-          value={participant.betType}
-          onChange={(e) => updateParticipant(id, 'betType', e.target.value)}
-          className="w-full px-2 py-1 border rounded text-base"
-          style={{ fontSize: isMobile ? '16px' : '14px' }}
-        >
-          <option value="Spread">Spread</option>
-          <option value="Moneyline">Moneyline</option>
-          <option value="Total">Total</option>
-          <option value="Prop Bet">Prop Bet</option>
-        </select>
-      </div>
-      
-      {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
-        <div className="relative">
-          <label className="block text-xs font-medium mb-1">Team/Player</label>
-          <input
-            type="text"
-            value={participant.team}
-            onChange={(e) => handleTeamInput(id, e.target.value, participant.sport)}
-            onFocus={(e) => handleTeamInput(id, e.target.value, participant.sport)}
-            onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-            className="w-full px-2 py-1 border rounded text-base"
-            style={{ fontSize: isMobile ? '16px' : '14px' }}
-            placeholder="Start typing..."
-          />
-          {showSuggestions[`team-${id}`] && suggestions.length > 0 && (
-            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
-              {suggestions.map((suggestion, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => selectSuggestion(id, 'team', suggestion)}
-                  className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-                >
-                  {suggestion}
+            <div key={id} className="border rounded p-4 md:p-6 bg-gray-50">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1">Big Guy</label>
+                  <select
+                    value={participant.player}
+                    onChange={(e) => updateParticipant(id, 'player', e.target.value)}
+                    className="w-full px-2 py-1 border rounded text-base"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    <option value="">Select</option>
+                    {players.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-
-    {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-        <div className="relative">
-          <label className="block text-xs font-medium mb-1">Away Team</label>
-          <input
-            type="text"
-            value={participant.awayTeam || ''}
-            onChange={(e) => handleAwayTeamInput(id, e.target.value, participant.sport)}
-            onFocus={(e) => handleAwayTeamInput(id, e.target.value, participant.sport)}
-            onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-            className="w-full px-2 py-1 border rounded text-base"
-            style={{ fontSize: isMobile ? '16px' : '14px' }}
-            placeholder="Start typing..."
-          />
-          {showSuggestions[`awayTeam-${id}`] && suggestions.length > 0 && (
-            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
-              {suggestions.map((suggestion, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => selectSuggestion(id, 'awayTeam', suggestion)}
-                  className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-                >
-                  {suggestion}
+                <div>
+                  <label className="block text-xs font-medium mb-1">Sport</label>
+                  <select
+                    value={participant.sport}
+                    onChange={(e) => updateParticipant(id, 'sport', e.target.value)}
+                    className="w-full px-2 py-1 border rounded text-base"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    {sports.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div className="relative">
-          <label className="block text-xs font-medium mb-1">Home Team</label>
-          <input
-            type="text"
-            value={participant.homeTeam || ''}
-            onChange={(e) => handleHomeTeamInput(id, e.target.value, participant.sport)}
-            onFocus={(e) => handleHomeTeamInput(id, e.target.value, participant.sport)}
-            onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-            className="w-full px-2 py-1 border rounded text-base"
-            style={{ fontSize: isMobile ? '16px' : '14px' }}
-            placeholder="Start typing..."
-          />
-          {showSuggestions[`homeTeam-${id}`] && suggestions.length > 0 && (
-            <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
-              {suggestions.map((suggestion, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => selectSuggestion(id, 'homeTeam', suggestion)}
-                  className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-                >
-                  {suggestion}
+                <div>
+                  <label className="block text-xs font-medium mb-1">Bet Type</label>
+                  <select
+                    value={participant.betType}
+                    onChange={(e) => updateParticipant(id, 'betType', e.target.value)}
+                    className="w-full px-2 py-1 border rounded text-base"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    {betTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+                  </select>
                 </div>
-              ))}
+                
+                {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
+                  <div className="relative">
+                    <label className="block text-xs font-medium mb-1">Team/Player</label>
+                    <input
+                      type="text"
+                      value={participant.team}
+                      onChange={(e) => handleTeamInput(id, e.target.value, participant.sport)}
+                      onFocus={(e) => handleTeamInput(id, e.target.value, participant.sport)}
+                      onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
+                      className="w-full px-2 py-1 border rounded text-base"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                      placeholder="Start typing..."
+                    />
+                    {showSuggestions[`team-${id}`] && suggestions.length > 0 && (
+                      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
+                        {suggestions.map((suggestion, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => selectSuggestion(id, 'team', suggestion)}
+                            className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+                          >
+                            {suggestion}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+          
+              {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                  <div className="relative">
+                    <label className="block text-xs font-medium mb-1">Away Team</label>
+                    <input
+                      type="text"
+                      value={participant.awayTeam || ''}
+                      onChange={(e) => handleAwayTeamInput(id, e.target.value, participant.sport)}
+                      onFocus={(e) => handleAwayTeamInput(id, e.target.value, participant.sport)}
+                      onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
+                      className="w-full px-2 py-1 border rounded text-base"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                      placeholder="Start typing..."
+                    />
+                    {showSuggestions[`awayTeam-${id}`] && suggestions.length > 0 && (
+                      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
+                        {suggestions.map((suggestion, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => selectSuggestion(id, 'awayTeam', suggestion)}
+                            className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+                          >
+                            {suggestion}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <label className="block text-xs font-medium mb-1">Home Team</label>
+                    <input
+                      type="text"
+                      value={participant.homeTeam || ''}
+                      onChange={(e) => handleHomeTeamInput(id, e.target.value, participant.sport)}
+                      onFocus={(e) => handleHomeTeamInput(id, e.target.value, participant.sport)}
+                      onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
+                      className="w-full px-2 py-1 border rounded text-base"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                      placeholder="Start typing..."
+                    />
+                    {showSuggestions[`homeTeam-${id}`] && suggestions.length > 0 && (
+                      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
+                        {suggestions.map((suggestion, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => selectSuggestion(id, 'homeTeam', suggestion)}
+                            className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+                          >
+                            {suggestion}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+          
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                {renderBetSpecificFields(participant, id, false)}
+          
+                <div>
+                  <label className="block text-xs font-medium mb-1">Odds (Optional)</label>
+                  <input
+                    type="text"
+                    value={participant.odds || ''}
+                    onChange={(e) => updateParticipant(id, 'odds', e.target.value)}
+                    className="w-full px-2 py-1 border rounded text-base"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                    placeholder="e.g., -120 (Optional)"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1">Result</label>
+                  <select
+                    value={participant.result}
+                    onChange={(e) => updateParticipant(id, 'result', e.target.value)}
+                    className="w-full px-2 py-1 border rounded text-base"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="win">Win</option>
+                    <option value="loss">Loss</option>
+                    <option value="push">Push</option>
+                  </select>
+                </div>
+              </div>
+              <button
+                onClick={() => removeParticipant(id)}
+                className="text-red-600 text-sm hover:text-red-800 text-base"
+                style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              >
+                Remove Pick
+              </button>
             </div>
-          )}
-        </div>
-      </div>
-    )}
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-        {renderBetSpecificFields(participant, id, false)}
-      
-        <div>
-          <label className="block text-xs font-medium mb-1">Odds (Optional)</label>
-          <input
-            type="text"
-            value={participant.odds || ''}
-            onChange={(e) => updateParticipant(id, 'odds', e.target.value)}
-            className="w-full px-2 py-1 border rounded text-base"
-            style={{ fontSize: isMobile ? '16px' : '14px' }}
-            placeholder="e.g., -120 (Optional)"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium mb-1">Result</label>
-          <select
-            value={participant.result}
-            onChange={(e) => updateParticipant(id, 'result', e.target.value)}
-            className="w-full px-2 py-1 border rounded text-base"
-            style={{ fontSize: isMobile ? '16px' : '14px' }}
-          >
-            <option value="pending">Pending</option>
-            <option value="win">Win</option>
-            <option value="loss">Loss</option>
-            <option value="push">Push</option>
-          </select>
-        </div>
-      </div>
-      
-      <div>
-        <label className="block text-xs font-medium mb-1">Odds (Optional)</label>
-          <input
-            type="text"
-            value={participant.odds || ''}
-            onChange={(e) => updateParticipant(id, 'odds', e.target.value)}
-            className="w-full px-2 py-1 border rounded text-base"
-            style={{ fontSize: isMobile ? '16px' : '14px' }}
-            placeholder="e.g., -120 (Optional)"
-          />
-      </div>
-      <div>
-        <label className="block text-xs font-medium mb-1">Result</label>
-        <select
-          value={participant.result}
-          onChange={(e) => updateParticipant(id, 'result', e.target.value)}
-          className="w-full px-2 py-1 border rounded text-base"
-          style={{ fontSize: isMobile ? '16px' : '14px' }}
-        >
-          <option value="pending">Pending</option>
-          <option value="win">Win</option>
-          <option value="loss">Loss</option>
-          <option value="push">Push</option>
-        </select>
-      </div>
-    </div>
-    <button
-      onClick={() => removeParticipant(id)}
-      className="text-red-600 text-sm hover:text-red-800 text-base"
-      style={{ minHeight: isMobile ? '44px' : 'auto' }}
-    >
-      Remove Pick
-    </button>
-  </div>
-))}
+          ))}
         </div>
 
         <div className="flex justify-end">
