@@ -75,8 +75,19 @@ useEffect(() => {
 }, []);
   
   const sports = ['NFL', 'NBA', 'MLB', 'NHL', 'Soccer', 'College Football', 'College Basketball', 'Other'];
-  const betTypes = ['Spread', 'Moneyline', 'Total', 'Prop Bet'];
-
+  const betTypes = [
+  'Spread', 
+  'Moneyline', 
+  'Total', 
+  'Prop Bet',
+  'First Half Moneyline',
+  'First Half Total',
+  'First Half Team Total',
+  'First Inning Runs',
+  'Quarter Moneyline',
+  'Quarter Total',
+  'Quarter Team Total'
+];
 // Pre-loaded teams and common values
 const preloadedTeams = {
   NFL: ['Arizona Cardinals', 'Atlanta Falcons', 'Baltimore Ravens', 'Buffalo Bills', 'Carolina Panthers', 
@@ -510,11 +521,355 @@ const determineTotalResult = (overUnder, totalLine, finalTotal) => {
   }
 };
 
+// ========================================
+// ADD THESE TWO FUNCTIONS BEFORE checkGameResult (around line 600)
+// ========================================
+
+// Function to check first half and first inning results
+const checkFirstHalfResult = async (participant, gameDate) => {
+  const { sport, betType, team, awayTeam, homeTeam, overUnder, total, yesNoRuns } = participant;
+  
+  try {
+    let espnSport = '';
+    switch(sport) {
+      case 'NFL': espnSport = 'football/nfl'; break;
+      case 'NBA': espnSport = 'basketball/nba'; break;
+      case 'MLB': espnSport = 'baseball/mlb'; break;
+      case 'NHL': espnSport = 'hockey/nhl'; break;
+      case 'College Football': espnSport = 'football/college-football'; break;
+      case 'College Basketball': espnSport = 'basketball/mens-college-basketball'; break;
+      default: return 'pending';
+    }
+
+    const formattedDate = gameDate.replace(/-/g, '');
+    const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (!data.events || data.events.length === 0) {
+      return 'pending';
+    }
+
+    let relevantGame = null;
+    
+    for (const event of data.events) {
+      const competition = event.competitions[0];
+      const competitors = competition.competitors;
+      
+      if (competition.status.type.completed !== true) {
+        continue;
+      }
+
+      const homeTeamName = competitors.find(c => c.homeAway === 'home')?.team.displayName || '';
+      const awayTeamName = competitors.find(c => c.homeAway === 'away')?.team.displayName || '';
+      
+      // Match game based on bet type
+      if (betType === 'First Half Total' || betType === 'First Inning Runs') {
+        if (matchTeamName(awayTeam, awayTeamName) && matchTeamName(homeTeam, homeTeamName)) {
+          relevantGame = { competition, event };
+          break;
+        }
+      } else if (betType === 'First Half Team Total') {
+        if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
+          relevantGame = { competition, event };
+          break;
+        }
+      } else { // First Half Moneyline
+        if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
+          relevantGame = { competition, event };
+          break;
+        }
+      }
+    }
+
+    if (!relevantGame) {
+      return 'pending';
+    }
+
+    // Get detailed game data for period scores
+    const gameId = relevantGame.event.id;
+    const detailUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/summary?event=${gameId}`;
+    
+    try {
+      const detailResponse = await fetch(detailUrl);
+      const detailData = await detailResponse.json();
+      
+      // Check for First Inning Runs (MLB specific)
+      if (betType === 'First Inning Runs' && sport === 'MLB') {
+        if (detailData.boxscore && detailData.boxscore.teams) {
+          let firstInningRuns = 0;
+          
+          for (const teamData of detailData.boxscore.teams) {
+            if (teamData.statistics) {
+              const inningStats = teamData.statistics.find(stat => stat.type === 'linescores');
+              if (inningStats && inningStats.labels && inningStats.stats) {
+                const firstInningIndex = 0; // First inning is index 0
+                if (inningStats.stats[firstInningIndex]) {
+                  firstInningRuns += parseInt(inningStats.stats[firstInningIndex]) || 0;
+                }
+              }
+            }
+          }
+          
+          if (yesNoRuns === 'Yes') {
+            return firstInningRuns > 0 ? 'win' : 'loss';
+          } else {
+            return firstInningRuns === 0 ? 'win' : 'loss';
+          }
+        }
+      }
+      
+      // Check for First Half data
+      let firstHalfHomeScore = 0;
+      let firstHalfAwayScore = 0;
+      
+      if (detailData.boxscore && detailData.boxscore.teams) {
+        const homeTeamData = detailData.boxscore.teams.find(t => t.homeAway === 'home');
+        const awayTeamData = detailData.boxscore.teams.find(t => t.homeAway === 'away');
+        
+        if (homeTeamData && awayTeamData) {
+          // For NFL/College Football - first 2 quarters
+          if (sport === 'NFL' || sport === 'College Football') {
+            const homeStats = homeTeamData.statistics?.find(stat => stat.type === 'linescores');
+            const awayStats = awayTeamData.statistics?.find(stat => stat.type === 'linescores');
+            
+            if (homeStats && awayStats && homeStats.stats && awayStats.stats) {
+              // Sum first 2 quarters (Q1 and Q2)
+              firstHalfHomeScore = (parseInt(homeStats.stats[0]) || 0) + (parseInt(homeStats.stats[1]) || 0);
+              firstHalfAwayScore = (parseInt(awayStats.stats[0]) || 0) + (parseInt(awayStats.stats[1]) || 0);
+            }
+          }
+          
+          // For NBA/College Basketball - first 2 quarters or first half
+          if (sport === 'NBA' || sport === 'College Basketball') {
+            const homeStats = homeTeamData.statistics?.find(stat => stat.type === 'linescores');
+            const awayStats = awayTeamData.statistics?.find(stat => stat.type === 'linescores');
+            
+            if (homeStats && awayStats && homeStats.stats && awayStats.stats) {
+              if (sport === 'College Basketball') {
+                // College uses halves
+                firstHalfHomeScore = parseInt(homeStats.stats[0]) || 0;
+                firstHalfAwayScore = parseInt(awayStats.stats[0]) || 0;
+              } else {
+                // NBA uses quarters
+                firstHalfHomeScore = (parseInt(homeStats.stats[0]) || 0) + (parseInt(homeStats.stats[1]) || 0);
+                firstHalfAwayScore = (parseInt(awayStats.stats[0]) || 0) + (parseInt(awayStats.stats[1]) || 0);
+              }
+            }
+          }
+          
+          // For NHL - first period
+          if (sport === 'NHL') {
+            const homeStats = homeTeamData.statistics?.find(stat => stat.type === 'linescores');
+            const awayStats = awayTeamData.statistics?.find(stat => stat.type === 'linescores');
+            
+            if (homeStats && awayStats && homeStats.stats && awayStats.stats) {
+              firstHalfHomeScore = parseInt(homeStats.stats[0]) || 0;
+              firstHalfAwayScore = parseInt(awayStats.stats[0]) || 0;
+            }
+          }
+          
+          // Determine result based on bet type
+          if (betType === 'First Half Moneyline') {
+            const competitors = relevantGame.competition.competitors;
+            const homeComp = competitors.find(c => c.homeAway === 'home');
+            const awayComp = competitors.find(c => c.homeAway === 'away');
+            const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
+            
+            if (pickedTeamIsHome) {
+              if (firstHalfHomeScore > firstHalfAwayScore) return 'win';
+              if (firstHalfHomeScore < firstHalfAwayScore) return 'loss';
+              return 'push'; // Tie at half
+            } else {
+              if (firstHalfAwayScore > firstHalfHomeScore) return 'win';
+              if (firstHalfAwayScore < firstHalfHomeScore) return 'loss';
+              return 'push'; // Tie at half
+            }
+          }
+          
+          if (betType === 'First Half Total') {
+            const firstHalfTotal = firstHalfHomeScore + firstHalfAwayScore;
+            return determineTotalResult(overUnder, total, firstHalfTotal);
+          }
+          
+          if (betType === 'First Half Team Total') {
+            const competitors = relevantGame.competition.competitors;
+            const homeComp = competitors.find(c => c.homeAway === 'home');
+            const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
+            const teamTotal = pickedTeamIsHome ? firstHalfHomeScore : firstHalfAwayScore;
+            
+            return determineTotalResult(overUnder, total, teamTotal);
+          }
+        }
+      }
+      
+    } catch (detailError) {
+      console.error('Error fetching game details:', detailError);
+    }
+    
+    return 'pending';
+    
+  } catch (error) {
+    console.error('Error checking first half result:', error);
+    return 'pending';
+  }
+};
+
+// Function to check quarter results (football only)
+const checkQuarterResult = async (participant, gameDate) => {
+  const { sport, betType, team, awayTeam, homeTeam, overUnder, total, quarter } = participant;
+  
+  // Only works for football
+  if (sport !== 'NFL' && sport !== 'College Football') {
+    return 'pending';
+  }
+  
+  try {
+    let espnSport = sport === 'NFL' ? 'football/nfl' : 'football/college-football';
+
+    const formattedDate = gameDate.replace(/-/g, '');
+    const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (!data.events || data.events.length === 0) {
+      return 'pending';
+    }
+
+    let relevantGame = null;
+    
+    for (const event of data.events) {
+      const competition = event.competitions[0];
+      const competitors = competition.competitors;
+      
+      if (competition.status.type.completed !== true) {
+        continue;
+      }
+
+      const homeTeamName = competitors.find(c => c.homeAway === 'home')?.team.displayName || '';
+      const awayTeamName = competitors.find(c => c.homeAway === 'away')?.team.displayName || '';
+      
+      // Match game based on bet type
+      if (betType === 'Quarter Total') {
+        if (matchTeamName(awayTeam, awayTeamName) && matchTeamName(homeTeam, homeTeamName)) {
+          relevantGame = { competition, event };
+          break;
+        }
+      } else if (betType === 'Quarter Team Total') {
+        if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
+          relevantGame = { competition, event };
+          break;
+        }
+      } else { // Quarter Moneyline
+        if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
+          relevantGame = { competition, event };
+          break;
+        }
+      }
+    }
+
+    if (!relevantGame) {
+      return 'pending';
+    }
+
+    // Get detailed game data for period scores
+    const gameId = relevantGame.event.id;
+    const detailUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/summary?event=${gameId}`;
+    
+    try {
+      const detailResponse = await fetch(detailUrl);
+      const detailData = await detailResponse.json();
+      
+      // Get quarter scores
+      let quarterHomeScore = 0;
+      let quarterAwayScore = 0;
+      
+      if (detailData.boxscore && detailData.boxscore.teams) {
+        const homeTeamData = detailData.boxscore.teams.find(t => t.homeAway === 'home');
+        const awayTeamData = detailData.boxscore.teams.find(t => t.homeAway === 'away');
+        
+        if (homeTeamData && awayTeamData) {
+          const homeStats = homeTeamData.statistics?.find(stat => stat.type === 'linescores');
+          const awayStats = awayTeamData.statistics?.find(stat => stat.type === 'linescores');
+          
+          if (homeStats && awayStats && homeStats.stats && awayStats.stats) {
+            // Determine which quarter index (0=Q1, 1=Q2, 2=Q3, 3=Q4)
+            const quarterIndex = {
+              '1Q': 0,
+              '2Q': 1,
+              '3Q': 2,
+              '4Q': 3
+            }[quarter];
+            
+            if (quarterIndex !== undefined && homeStats.stats[quarterIndex] !== undefined && awayStats.stats[quarterIndex] !== undefined) {
+              quarterHomeScore = parseInt(homeStats.stats[quarterIndex]) || 0;
+              quarterAwayScore = parseInt(awayStats.stats[quarterIndex]) || 0;
+            } else {
+              return 'pending'; // Quarter data not available
+            }
+          }
+        }
+        
+        // Determine result based on bet type
+        if (betType === 'Quarter Moneyline') {
+          const competitors = relevantGame.competition.competitors;
+          const homeComp = competitors.find(c => c.homeAway === 'home');
+          const awayComp = competitors.find(c => c.homeAway === 'away');
+          const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
+          
+          if (pickedTeamIsHome) {
+            if (quarterHomeScore > quarterAwayScore) return 'win';
+            if (quarterHomeScore < quarterAwayScore) return 'loss';
+            return 'push'; // Tie in quarter
+          } else {
+            if (quarterAwayScore > quarterHomeScore) return 'win';
+            if (quarterAwayScore < quarterHomeScore) return 'loss';
+            return 'push'; // Tie in quarter
+          }
+        }
+        
+        if (betType === 'Quarter Total') {
+          const quarterTotal = quarterHomeScore + quarterAwayScore;
+          return determineTotalResult(overUnder, total, quarterTotal);
+        }
+        
+        if (betType === 'Quarter Team Total') {
+          const competitors = relevantGame.competition.competitors;
+          const homeComp = competitors.find(c => c.homeAway === 'home');
+          const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
+          const teamTotal = pickedTeamIsHome ? quarterHomeScore : quarterAwayScore;
+          
+          return determineTotalResult(overUnder, total, teamTotal);
+        }
+      }
+      
+    } catch (detailError) {
+      console.error('Error fetching game details:', detailError);
+    }
+    
+    return 'pending';
+    
+  } catch (error) {
+    console.error('Error checking quarter result:', error);
+    return 'pending';
+  }
+};
+  
 const checkGameResult = async (participant, gameDate) => {
   const { sport, betType, team, awayTeam, homeTeam, favorite, spread, overUnder, total } = participant;
   
   if (betType === 'Prop Bet') {
     return await checkPropBetResult(participant, gameDate);
+  }
+
+  if (['First Half Moneyline', 'First Half Total', 'First Inning Runs', 'First Half Team Total', 
+       'Quarter Moneyline', 'Quarter Total', 'Quarter Team Total'].includes(betType)) {
+    if (['Quarter Moneyline', 'Quarter Total', 'Quarter Team Total'].includes(betType)) {
+      return await checkQuarterResult(participant, gameDate);
+    }
+    return await checkFirstHalfResult(participant, gameDate);
   }
   
   try {
@@ -786,6 +1141,8 @@ const handleTouchEnd = async () => {
         propType: '',
         line: '',
         odds: '',
+        yesNoRuns: 'Yes',
+        quarter: '1Q',
         result: 'pending'
       }
     }
@@ -1068,6 +1425,351 @@ const saveEditedParlay = async (editedParlay) => {
   }
 };
 
+// Helper function to render bet-specific fields
+const renderBetSpecificFields = (participant, id, isEditMode = false) => {
+  const updateFunc = isEditMode 
+    ? (field, value) => {
+        const updated = {...editingParlay};
+        updated.participants[id][field] = value;
+        setEditingParlay(updated);
+      }
+    : (field, value) => updateParticipant(id, field, value);
+
+  const inputStyle = { fontSize: isMobile ? '16px' : '14px' };
+
+  switch(participant.betType) {
+    case 'Spread':
+      return (
+        <>
+          <div>
+            <label className="block text-xs font-medium mb-1">Favorite/Dog</label>
+            <select
+              value={participant.favorite || 'Favorite'}
+              onChange={(e) => updateFunc('favorite', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+            >
+              <option value="Favorite">Favorite</option>
+              <option value="Dog">Dog</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Spread</label>
+            <input
+              type="text"
+              value={participant.spread || ''}
+              onChange={(e) => updateFunc('spread', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+              placeholder="e.g., 7.5"
+            />
+          </div>
+        </>
+      );
+
+    case 'Total':
+      return (
+        <>
+          <div>
+            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <select
+              value={participant.overUnder || 'Over'}
+              onChange={(e) => updateFunc('overUnder', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+            >
+              <option value="Over">Over</option>
+              <option value="Under">Under</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Total</label>
+            <input
+              type="text"
+              value={participant.total || ''}
+              onChange={(e) => updateFunc('total', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+              placeholder="e.g., 45.5"
+            />
+          </div>
+        </>
+      );
+
+    case 'First Half Total':
+      return (
+        <>
+          <div>
+            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <select
+              value={participant.overUnder || 'Over'}
+              onChange={(e) => updateFunc('overUnder', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+            >
+              <option value="Over">Over</option>
+              <option value="Under">Under</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">1H Total</label>
+            <input
+              type="text"
+              value={participant.total || ''}
+              onChange={(e) => updateFunc('total', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+              placeholder="e.g., 23.5"
+            />
+          </div>
+        </>
+      );
+
+    case 'First Half Team Total':
+      return (
+        <>
+          <div>
+            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <select
+              value={participant.overUnder || 'Over'}
+              onChange={(e) => updateFunc('overUnder', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+            >
+              <option value="Over">Over</option>
+              <option value="Under">Under</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Team Total</label>
+            <input
+              type="text"
+              value={participant.total || ''}
+              onChange={(e) => updateFunc('total', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+              placeholder="e.g., 13.5"
+            />
+          </div>
+        </>
+      );
+
+    case 'First Inning Runs':
+      return (
+        <div>
+          <label className="block text-xs font-medium mb-1">Yes/No Runs</label>
+          <select
+            value={participant.yesNoRuns || 'Yes'}
+            onChange={(e) => updateFunc('yesNoRuns', e.target.value)}
+            className="w-full px-2 py-1 border rounded text-base"
+            style={inputStyle}
+          >
+            <option value="Yes">Yes Runs (YRFI)</option>
+            <option value="No">No Runs (NRFI)</option>
+          </select>
+        </div>
+      );
+
+    case 'Quarter Moneyline':
+      return (
+        <div>
+          <label className="block text-xs font-medium mb-1">Quarter</label>
+          <select
+            value={participant.quarter || '1Q'}
+            onChange={(e) => updateFunc('quarter', e.target.value)}
+            className="w-full px-2 py-1 border rounded text-base"
+            style={inputStyle}
+          >
+            <option value="1Q">1st Quarter</option>
+            <option value="2Q">2nd Quarter</option>
+            <option value="3Q">3rd Quarter</option>
+            <option value="4Q">4th Quarter</option>
+          </select>
+        </div>
+      );
+
+    case 'Quarter Total':
+      return (
+        <>
+          <div>
+            <label className="block text-xs font-medium mb-1">Quarter</label>
+            <select
+              value={participant.quarter || '1Q'}
+              onChange={(e) => updateFunc('quarter', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+            >
+              <option value="1Q">1st Quarter</option>
+              <option value="2Q">2nd Quarter</option>
+              <option value="3Q">3rd Quarter</option>
+              <option value="4Q">4th Quarter</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <select
+              value={participant.overUnder || 'Over'}
+              onChange={(e) => updateFunc('overUnder', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+            >
+              <option value="Over">Over</option>
+              <option value="Under">Under</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Quarter Total</label>
+            <input
+              type="text"
+              value={participant.total || ''}
+              onChange={(e) => updateFunc('total', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+              placeholder="e.g., 10.5"
+            />
+          </div>
+        </>
+      );
+
+    case 'Quarter Team Total':
+      return (
+        <>
+          <div>
+            <label className="block text-xs font-medium mb-1">Quarter</label>
+            <select
+              value={participant.quarter || '1Q'}
+              onChange={(e) => updateFunc('quarter', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+            >
+              <option value="1Q">1st Quarter</option>
+              <option value="2Q">2nd Quarter</option>
+              <option value="3Q">3rd Quarter</option>
+              <option value="4Q">4th Quarter</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <select
+              value={participant.overUnder || 'Over'}
+              onChange={(e) => updateFunc('overUnder', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+            >
+              <option value="Over">Over</option>
+              <option value="Under">Under</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Team Total</label>
+            <input
+              type="text"
+              value={participant.total || ''}
+              onChange={(e) => updateFunc('total', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+              placeholder="e.g., 7.5"
+            />
+          </div>
+        </>
+      );
+
+    case 'Prop Bet':
+      return (
+        <>
+          <div className="relative">
+            <label className="block text-xs font-medium mb-1">Prop Type</label>
+            <input
+              type="text"
+              value={participant.propType || ''}
+              onChange={(e) => {
+                if (isEditMode) {
+                  updateFunc('propType', e.target.value);
+                } else {
+                  handlePropTypeInput(id, e.target.value);
+                }
+              }}
+              onFocus={(e) => !isEditMode && handlePropTypeInput(id, e.target.value)}
+              onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+              placeholder="Start typing..."
+            />
+            {!isEditMode && showSuggestions[`prop-${id}`] && suggestions.length > 0 && (
+              <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
+                {suggestions.map((suggestion, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => selectSuggestion(id, 'propType', suggestion)}
+                    className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
+                  >
+                    {suggestion}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <select
+              value={participant.overUnder || 'Over'}
+              onChange={(e) => updateFunc('overUnder', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+            >
+              <option value="Over">Over</option>
+              <option value="Under">Under</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1">Line</label>
+            <input
+              type="text"
+              value={participant.line || ''}
+              onChange={(e) => updateFunc('line', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-base"
+              style={inputStyle}
+              placeholder="e.g., 255.5"
+            />
+          </div>
+        </>
+      );
+
+    default:
+      return null;
+  }
+};
+
+  // Helper function to format bet description for display
+const formatBetDescription = (participant) => {
+  switch(participant.betType) {
+    case 'Spread':
+      return `${participant.favorite} ${participant.spread}`;
+    case 'Total':
+      return `${participant.overUnder} ${participant.total}`;
+    case 'First Half Moneyline':
+      return 'FH ML';
+    case 'First Half Total':
+      return `FH ${participant.overUnder} ${participant.total}`;
+    case 'First Half Team Total':
+      return `FH Team ${participant.overUnder} ${participant.total}`;
+    case 'First Inning Runs':
+      return participant.yesNoRuns === 'Yes' ? 'YRFI' : 'NRFI';
+    case 'Quarter Moneyline':
+      return `${participant.quarter} ML`;
+    case 'Quarter Total':
+      return `${participant.quarter} ${participant.overUnder} ${participant.total}`;
+    case 'Quarter Team Total':
+      return `${participant.quarter} Team ${participant.overUnder} ${participant.total}`;
+    case 'Prop Bet':
+      return `${participant.propType} ${participant.overUnder} ${participant.line}`;
+    case 'Moneyline':
+      return 'ML';
+    default:
+      return '';
+  }
+};
+  
 const renderEditModal = () => {
   if (!editingParlay) return null;
 
@@ -1200,14 +1902,11 @@ const renderEditModal = () => {
                       className="w-full px-2 py-1 border rounded text-base"
                       style={{ fontSize: isMobile ? '16px' : '14px' }}
                     >
-                      <option value="Spread">Spread</option>
-                      <option value="Moneyline">Moneyline</option>
-                      <option value="Total">Total</option>
-                      <option value="Prop Bet">Prop Bet</option>
+                      {betTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
                     </select>
                   </div>
                   
-                  {participant.betType !== 'Total' && (
+                  {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
                     <div>
                       <label className="block text-xs font-medium mb-1">Team/Player</label>
                       <input
@@ -1225,7 +1924,7 @@ const renderEditModal = () => {
                   )}
                 </div>
 
-                {participant.betType === 'Total' && (
+                {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
                       <label className="block text-xs font-medium mb-1">Away Team</label>
@@ -1259,124 +1958,7 @@ const renderEditModal = () => {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  {participant.betType === 'Spread' && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Favorite/Dog</label>
-                        <select
-                          value={participant.favorite || 'Favorite'}
-                          onChange={(e) => {
-                            const updated = {...editingParlay};
-                            updated.participants[id].favorite = e.target.value;
-                            setEditingParlay(updated);
-                          }}
-                          className="w-full px-2 py-1 border rounded text-base"
-                          style={{ fontSize: isMobile ? '16px' : '14px' }}
-                        >
-                          <option value="Favorite">Favorite</option>
-                          <option value="Dog">Dog</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Spread</label>
-                        <input
-                          type="text"
-                          value={participant.spread || ''}
-                          onChange={(e) => {
-                            const updated = {...editingParlay};
-                            updated.participants[id].spread = e.target.value;
-                            setEditingParlay(updated);
-                          }}
-                          className="w-full px-2 py-1 border rounded text-base"
-                          style={{ fontSize: isMobile ? '16px' : '14px' }}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {participant.betType === 'Total' && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Over/Under</label>
-                        <select
-                          value={participant.overUnder || 'Over'}
-                          onChange={(e) => {
-                            const updated = {...editingParlay};
-                            updated.participants[id].overUnder = e.target.value;
-                            setEditingParlay(updated);
-                          }}
-                          className="w-full px-2 py-1 border rounded text-base"
-                          style={{ fontSize: isMobile ? '16px' : '14px' }}
-                        >
-                          <option value="Over">Over</option>
-                          <option value="Under">Under</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Total</label>
-                        <input
-                          type="text"
-                          value={participant.total || ''}
-                          onChange={(e) => {
-                            const updated = {...editingParlay};
-                            updated.participants[id].total = e.target.value;
-                            setEditingParlay(updated);
-                          }}
-                          className="w-full px-2 py-1 border rounded text-base"
-                          style={{ fontSize: isMobile ? '16px' : '14px' }}
-                        />
-                      </div>
-                    </>
-                  )}
-
-                  {participant.betType === 'Prop Bet' && (
-                    <>
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Prop Type</label>
-                        <input
-                          type="text"
-                          value={participant.propType || ''}
-                          onChange={(e) => {
-                            const updated = {...editingParlay};
-                            updated.participants[id].propType = e.target.value;
-                            setEditingParlay(updated);
-                          }}
-                          className="w-full px-2 py-1 border rounded text-base"
-                          style={{ fontSize: isMobile ? '16px' : '14px' }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Over/Under</label>
-                        <select
-                          value={participant.overUnder || 'Over'}
-                          onChange={(e) => {
-                            const updated = {...editingParlay};
-                            updated.participants[id].overUnder = e.target.value;
-                            setEditingParlay(updated);
-                          }}
-                          className="w-full px-2 py-1 border rounded text-base"
-                          style={{ fontSize: isMobile ? '16px' : '14px' }}
-                        >
-                          <option value="Over">Over</option>
-                          <option value="Under">Under</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium mb-1">Line</label>
-                        <input
-                          type="text"
-                          value={participant.line || ''}
-                          onChange={(e) => {
-                            const updated = {...editingParlay};
-                            updated.participants[id].line = e.target.value;
-                            setEditingParlay(updated);
-                          }}
-                          className="w-full px-2 py-1 border rounded text-base"
-                          style={{ fontSize: isMobile ? '16px' : '14px' }}
-                        />
-                      </div>
-                    </>
-                  )}
+                  {renderBetSpecificFields(participant, id, true)}
 
                   <div>
                     <label className="block text-xs font-medium mb-1">Odds (Optional)</label>
@@ -1390,7 +1972,7 @@ const renderEditModal = () => {
                       }}
                       className="w-full px-2 py-1 border rounded text-base"
                       style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      placeholder="e.g., -120 (Optional)"
+                      placeholder="e.g., -120"
                     />
                   </div>
                   <div>
@@ -1400,8 +1982,8 @@ const renderEditModal = () => {
                       onChange={(e) => {
                         const updated = {...editingParlay};
                         updated.participants[id].result = e.target.value;
-                        updated.participants[id].autoUpdated = false;  // ← ADD THIS LINE
-                        updated.participants[id].manuallyOverridden = e.target.value !== 'pending';  // ← ADD THIS LINE
+                        updated.participants[id].autoUpdated = false;
+                        updated.participants[id].manuallyOverridden = e.target.value !== 'pending';
                         setEditingParlay(updated);
                       }}
                       className="w-full px-2 py-1 border rounded text-base"
@@ -1483,6 +2065,12 @@ const importFromCSV = async (csvText) => {
             // Prop fields
             propType: row[`pick${j}_propType`] || '',
             line: row[`pick${j}_line`] || '',
+            
+            // First Inning Runs field
+            yesNoRuns: row[`pick${j}_yesNoRuns`] || 'Yes',
+            
+            // Quarter field
+            quarter: row[`pick${j}_quarter`] || '1Q',
             
             // Common fields
             odds: row[`pick${j}_odds`] || '',
@@ -1749,7 +2337,7 @@ const importFromCSV = async (csvText) => {
         </select>
       </div>
       
-      {participant.betType !== 'Total' && (
+      {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
         <div className="relative">
           <label className="block text-xs font-medium mb-1">Team/Player</label>
           <input
@@ -1779,7 +2367,7 @@ const importFromCSV = async (csvText) => {
       )}
     </div>
 
-    {participant.betType === 'Total' && (
+    {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
         <div className="relative">
           <label className="block text-xs font-medium mb-1">Away Team</label>
@@ -1836,117 +2424,36 @@ const importFromCSV = async (csvText) => {
       </div>
     )}
 
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-      {participant.betType === 'Spread' && (
-        <>
-          <div>
-            <label className="block text-xs font-medium mb-1">Favorite/Dog</label>
-            <select
-              value={participant.favorite || 'Favorite'}
-              onChange={(e) => updateParticipant(id, 'favorite', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="Favorite">Favorite</option>
-              <option value="Dog">Dog</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Spread</label>
-            <input
-              type="text"
-              value={participant.spread || ''}
-              onChange={(e) => updateParticipant(id, 'spread', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-              placeholder="e.g., 7.5"
-            />
-          </div>
-        </>
-      )}
-
-      {participant.betType === 'Total' && (
-        <>
-          <div>
-            <label className="block text-xs font-medium mb-1">Over/Under</label>
-            <select
-              value={participant.overUnder || 'Over'}
-              onChange={(e) => updateParticipant(id, 'overUnder', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="Over">Over</option>
-              <option value="Under">Under</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Total</label>
-            <input
-              type="text"
-              value={participant.total || ''}
-              onChange={(e) => updateParticipant(id, 'total', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-              placeholder="e.g., 45.5"
-            />
-          </div>
-        </>
-      )}
-
-      {participant.betType === 'Prop Bet' && (
-        <>
-          <div className="relative">
-            <label className="block text-xs font-medium mb-1">Prop Type</label>
-            <input
-              type="text"
-              value={participant.propType || ''}
-              onChange={(e) => handlePropTypeInput(id, e.target.value)}
-              onFocus={(e) => handlePropTypeInput(id, e.target.value)}
-              onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-              placeholder="Start typing..."
-            />
-            {showSuggestions[`prop-${id}`] && suggestions.length > 0 && (
-              <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
-                {suggestions.map((suggestion, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => selectSuggestion(id, 'propType', suggestion)}
-                    className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-                  >
-                    {suggestion}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Over/Under</label>
-            <select
-              value={participant.overUnder || 'Over'}
-              onChange={(e) => updateParticipant(id, 'overUnder', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-            >
-              <option value="Over">Over</option>
-              <option value="Under">Under</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1">Line</label>
-            <input
-              type="text"
-              value={participant.line || ''}
-              onChange={(e) => updateParticipant(id, 'line', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={{ fontSize: isMobile ? '16px' : '14px' }}
-              placeholder="e.g., 255.5"
-            />
-          </div>
-        </>
-      )}
-
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+        {renderBetSpecificFields(participant, id, false)}
+      
+        <div>
+          <label className="block text-xs font-medium mb-1">Odds (Optional)</label>
+          <input
+            type="text"
+            value={participant.odds || ''}
+            onChange={(e) => updateParticipant(id, 'odds', e.target.value)}
+            className="w-full px-2 py-1 border rounded text-base"
+            style={{ fontSize: isMobile ? '16px' : '14px' }}
+            placeholder="e.g., -120 (Optional)"
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium mb-1">Result</label>
+          <select
+            value={participant.result}
+            onChange={(e) => updateParticipant(id, 'result', e.target.value)}
+            className="w-full px-2 py-1 border rounded text-base"
+            style={{ fontSize: isMobile ? '16px' : '14px' }}
+          >
+            <option value="pending">Pending</option>
+            <option value="win">Win</option>
+            <option value="loss">Loss</option>
+            <option value="push">Push</option>
+          </select>
+        </div>
+      </div>
+      
       <div>
         <label className="block text-xs font-medium mb-1">Odds (Optional)</label>
           <input
@@ -2760,20 +3267,23 @@ const renderAllBrolays = () => {
                     </div>
                   </div>
                   
-                  <div className="space-y-2">
-                    {Object.entries(parlay.participants).map(([pid, participant]) => (
+                  {Object.entries(parlay.participants).map(([pid, participant]) => {
+                    let teamDisplay = '';
+                    if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType)) {
+                      teamDisplay = `${participant.awayTeam} @ ${participant.homeTeam}`;
+                    } else {
+                      teamDisplay = participant.team;
+                    }
+                  
+                    // Format bet details
+                    const betDetails = formatBetDescription(participant);
+                  
+                    return (
                       <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-50 p-2 rounded gap-1">
                         <span className="flex-1">
-                          <strong>{participant.player}</strong> - {participant.sport} - {
-                            participant.betType === 'Total' ? `${participant.awayTeam} @ ${participant.homeTeam}` : participant.team
-                          } {
-                            participant.betType === 'Spread' ? `${participant.favorite} ${participant.spread}` :
-                            participant.betType === 'Total' ? `${participant.overUnder} ${participant.total}` :
-                            participant.betType === 'Prop Bet' ? `${participant.propType} ${participant.overUnder} ${participant.line}` :
-                            'Moneyline'
-                          } ({participant.betType})
+                          <strong>{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails} ({participant.betType})
                         </span>
-                        
+                          
                         <div className="flex items-center gap-2">
                           {participant.autoUpdated && (
                             <span 
