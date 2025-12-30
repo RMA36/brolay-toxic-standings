@@ -3238,43 +3238,44 @@ const renderAllBrolays = () => {
                     </div>
                   </div>
                   
-                  {Object.entries(parlay.participants).map(([pid, participant]) => {
-                    let teamDisplay = '';
-                    if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType)) {
-                      teamDisplay = `${participant.awayTeam} @ ${participant.homeTeam}`;
-                    } else {
-                      teamDisplay = participant.team;
-                    }
-                  
-                    // Format bet details
-                    const betDetails = formatBetDescription(participant);
-                  
-                    return (
-                      <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-50 p-2 rounded gap-1">
-                        <span className="flex-1">
-                          <strong>{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails} ({participant.betType})
-                        </span>
-                          
-                        <div className="flex items-center gap-2">
-                          {participant.autoUpdated && (
-                            <span 
-                              className="text-blue-600 cursor-help text-base" 
-                              title={`Auto-updated on ${new Date(participant.autoUpdatedAt).toLocaleString()}`}
-                            >
-                              🤖
-                            </span>
-                          )}
-                          
-                          <span className={`font-semibold ${
-                            participant.result === 'win' ? 'text-green-600' :
-                            participant.result === 'loss' ? 'text-red-600' :
-                            participant.result === 'push' ? 'text-yellow-600' :
-                            'text-gray-500'
-                          }`}>
-                            {participant.result.toUpperCase()}
+<div className="space-y-2">
+                    {Object.entries(parlay.participants).map(([pid, participant]) => {
+                      let teamDisplay = '';
+                      if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType)) {
+                        teamDisplay = `${participant.awayTeam} @ ${participant.homeTeam}`;
+                      } else {
+                        teamDisplay = participant.team;
+                      }
+                    
+                      // Format bet details
+                      const betDetails = formatBetDescription(participant);
+                    
+                      return (
+                        <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-50 p-2 rounded gap-1">
+                          <span className="flex-1">
+                            <strong>{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails} ({participant.betType})
                           </span>
+                            
+                          <div className="flex items-center gap-2">
+                            {participant.autoUpdated && (
+                              <span 
+                                className="text-blue-600 cursor-help text-base" 
+                                title={`Auto-updated on ${new Date(participant.autoUpdatedAt).toLocaleString()}`}
+                              >
+                                🤖
+                              </span>
+                            )}
+                            
+                            <span className={`font-semibold ${
+                              participant.result === 'win' ? 'text-green-600' :
+                              participant.result === 'loss' ? 'text-red-600' :
+                              participant.result === 'push' ? 'text-yellow-600' :
+                              'text-gray-500'
+                            }`}>
+                              {participant.result.toUpperCase()}
+                            </span>
+                          </div>
                         </div>
-                      </div>
                       );
                     })}
                   </div>
