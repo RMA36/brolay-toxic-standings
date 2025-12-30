@@ -3275,7 +3275,8 @@ const renderAllBrolays = () => {
                           </span>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
