@@ -47,6 +47,22 @@ const App = () => {
     result: '',
     autoUpdated: ''
   });
+
+    // Helper function to format date to mm/dd/yyyy for display
+    const formatDateForDisplay = (dateStr) => {
+      if (!dateStr) return '';
+      const [year, month, day] = dateStr.split('-');
+      return `${month}/${day}/${year}`;
+    };
+    
+    // Helper function to convert mm/dd/yyyy to yyyy-mm-dd for storage
+    const formatDateForStorage = (dateStr) => {
+      if (!dateStr) return '';
+      if (dateStr.includes('-')) return dateStr; // Already in storage format
+      const [month, day, year] = dateStr.split('/');
+      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    };
+  
   const [newParlay, setNewParlay] = useState({
   date: new Date().toISOString().split('T')[0],
   betAmount: 10,
@@ -3233,7 +3249,7 @@ const renderAllBrolays = () => {
                 <div key={parlay.id} className="border rounded p-4 md:p-6">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <div className="font-semibold">{parlay.date} - {parlayType}</div>
+                      <div className="font-semibold">{formatDateForDisplay(parlay.date)} - {parlayType}</div>
                       <div className="text-sm text-gray-600">
                         {participants.length} picks • ${parlay.betAmount * participants.length} Risked • 
                         ${parlay.totalPayout || 0} Total Payout • 
@@ -3515,7 +3531,7 @@ const renderAllBrolays = () => {
                 <div key={parlay.id} className="border rounded p-4 md:p-6 bg-green-50">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <div className="font-semibold">{parlay.date}</div>
+                      <div className="font-semibold">{formatDateForDisplay(parlay.date)}</div>
                       <div className="text-sm text-gray-600">
                         Placed by: {parlay.placedBy || 'Unknown'}
                       </div>
@@ -3568,7 +3584,7 @@ const renderAllBrolays = () => {
                 <div key={parlay.id} className="border rounded p-4 md:p-6">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <div className="font-semibold">{parlay.date}</div>
+                      <div className="font-semibold">{formatDateForDisplay(parlay.date)}</div>
                       <div className="text-sm text-gray-600">
                         Placed by: {parlay.placedBy || 'Unknown'}
                       </div>
@@ -3613,7 +3629,7 @@ const renderAllBrolays = () => {
         <div key={parlay.id} className="border rounded p-3 bg-gray-50">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <div className="font-semibold text-sm">{parlay.date}</div>
+              <div className="font-semibold text-sm">{formatDateForDisplay(parlay.date)}</div>
               <div className="text-xs text-gray-600">
                 {won ? `Winners paid by ${parlay.placedBy || 'Unknown'}: ${winners.map(w => w.player).join(', ')}` 
                      : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
@@ -3709,7 +3725,7 @@ const renderGrid = () => {
             <tr className="border-b-2 border-gray-300">
               <th className="text-left py-2 px-2 sticky left-0 bg-white z-10 min-w-[100px]">Date</th>
               {players.map(player => (
-                <th key={player} className="text-center py-2 px-2 min-w-[150px]">{player}</th>
+                <th key={player} className="text-center py-2 px-2 min-w-[80px] md:min-w-[150px]">{player}</th>
               ))}
             </tr>
           </thead>
@@ -3719,8 +3735,8 @@ const renderGrid = () => {
               
               return (
                 <tr key={parlay.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="py-3 px-2 font-semibold sticky left-0 bg-white">
-                    {parlay.date}
+                  <td className="py-3 px-2 font-semibold sticky left-0 bg-white text-xs md:text-sm">
+                    {formatDateForDisplay(parlay.date)}
                   </td>
                   {players.map((player) => {
                     const playerPick = Object.values(participants).find(p => p.player === player);
@@ -3744,11 +3760,19 @@ const renderGrid = () => {
                     const betDetails = formatBetDescription(playerPick);
                     
                     return (
-                      <td key={player} className={`py-3 px-2 text-center ${bgColor} text-xs`}>
-                        <div className="font-semibold">{playerPick.sport}</div>
-                        <div>{teamDisplay}</div>
-                        <div>{betDetails}</div>
-                        <div className="text-[10px] mt-1">{playerPick.betType}</div>
+                      <td key={player} className={`py-3 px-2 text-center ${bgColor} text-[10px] md:text-xs`}>
+                        {/* Desktop view - show all details */}
+                        <div className="hidden md:block">
+                          <div className="font-semibold">{playerPick.sport}</div>
+                          <div>{teamDisplay}</div>
+                          <div>{betDetails}</div>
+                          <div className="text-[10px] mt-1">{playerPick.betType}</div>
+                        </div>
+                        {/* Mobile view - compact */}
+                        <div className="md:hidden">
+                          <div className="font-semibold">{teamDisplay}</div>
+                          <div>{betDetails}</div>
+                        </div>
                       </td>
                     );
                   })}
