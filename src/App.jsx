@@ -2293,10 +2293,31 @@ const importFromCSV = async (csvText) => {
 </div>
         
         <div className="space-y-4 mb-6">
+          {(() => {
+            const participants = Object.values(newParlay.participants);
+            const pushes = participants.filter(p => p.result === 'push');
+            const losses = participants.filter(p => p.result === 'loss');
+            const wins = participants.filter(p => p.result === 'win');
+            const hasPushesAndWon = pushes.length > 0 && losses.length === 0 && wins.length > 0;
+            
+            return hasPushesAndWon && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="text-yellow-600 mt-1" size={20} />
+                  <div>
+                    <h4 className="font-semibold text-yellow-800">Push Detected on Winning Brolay</h4>
+                    <p className="text-sm text-yellow-700">
+                      {pushes.length} leg{pushes.length > 1 ? 's' : ''} pushed. Make sure to enter the <strong>adjusted payout</strong> you actually received from your sportsbook, not the original expected payout.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+          
           <div className="flex justify-between items-center">
             <h3 className="text-base md:text-lg font-semibold">Picks</h3>
           </div>
-
           {Object.entries(newParlay.participants).map(([id, participant]) => (
             <div key={id} className="border rounded p-4 md:p-6 bg-gray-50">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
@@ -3212,7 +3233,16 @@ const renderAllBrolays = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {won && <span className="text-green-600 font-semibold">WON</span>}
+                      {won && (
+                        <>
+                          <span className="text-green-600 font-semibold">WON</span>
+                          {pushes.length > 0 && (
+                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                              ⚠️ {pushes.length} Push{pushes.length > 1 ? 'es' : ''} - Adjusted Payout
+                            </span>
+                          )}
+                        </>
+                      )}
                       {!won && losers.length > 0 && (
                         <span className="text-red-600 font-semibold">
                           LOST {and1 && '(And-1)'}
@@ -3621,6 +3651,7 @@ const renderImport = () => (
         <li className="ml-4">- For Total: pick#_awayTeam, pick#_homeTeam, pick#_overUnder, pick#_total</li>
         <li className="ml-4">- For Prop: pick#_propType, pick#_overUnder, pick#_line</li>
         <li>• Results: win, loss, push, or pending</li>
+        <li>• If a brolay won but had pushes, enter the actual adjusted payout received</li>
       </ul>
     </div>
     
