@@ -61,6 +61,7 @@ const [sidebarOpen, setSidebarOpen] = useState(false);
 const [refreshing, setRefreshing] = useState(false);
 const [pullStartY, setPullStartY] = useState(0);
 const [pullDistance, setPullDistance] = useState(0);
+const [brolaysToShow, setBrolaysToShow] = useState(10);
 
 // Detect mobile device
 useEffect(() => {
@@ -1055,6 +1056,10 @@ const autoUpdatePendingPicks = async () => {
 useEffect(() => {
   if (authenticated) {
     loadParlays();
+    // Reset pagination when switching tabs
+    if (activeTab === 'allBrolays') {
+      setBrolaysToShow(10);
+    }
   }
 }, [activeTab, authenticated]);
   
@@ -2507,17 +2512,18 @@ const importFromCSV = async (csvText) => {
   );
 
 const calculateStatsForPlayer = (player, parlaysList) => {
-  const playerStats = {
-    totalPicks: 0,
-    wins: 0,
-    losses: 0,
-    moneyWon: 0,
-    moneyLost: 0,
-    and1s: 0,
-    and1Cost: 0,
-    bySport: {},
-    byBetType: {}
-  };
+    const playerStats = {
+      totalPicks: 0,
+      wins: 0,
+      losses: 0,
+      pushes: 0,
+      moneyWon: 0,
+      moneyLost: 0,
+      and1s: 0,
+      and1Cost: 0,
+      bySport: {},
+      byBetType: {}
+    };
 
   parlaysList.forEach(parlay => {
     const participants = Object.values(parlay.participants);
@@ -2532,15 +2538,15 @@ const calculateStatsForPlayer = (player, parlaysList) => {
       playerStats.totalPicks++;
 
       if (!playerStats.bySport[participant.sport]) {
-        playerStats.bySport[participant.sport] = { wins: 0, losses: 0, total: 0 };
+        playerStats.bySport[participant.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
       playerStats.bySport[participant.sport].total++;
-
+      
       if (!playerStats.byBetType[participant.betType]) {
-        playerStats.byBetType[participant.betType] = { wins: 0, losses: 0, total: 0 };
+        playerStats.byBetType[participant.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
       playerStats.byBetType[participant.betType].total++;
-
+      
       if (participant.result === 'win') {
         playerStats.wins++;
         playerStats.bySport[participant.sport].wins++;
@@ -2554,6 +2560,12 @@ const calculateStatsForPlayer = (player, parlaysList) => {
         playerStats.losses++;
         playerStats.bySport[participant.sport].losses++;
         playerStats.byBetType[participant.betType].losses++;
+
+      } else if (participant.result === 'push') {
+        playerStats.pushes++;
+        playerStats.bySport[participant.sport].pushes++;
+        playerStats.byBetType[participant.betType].pushes++;
+        }
         
         if (and1) {
           playerStats.and1s++;
@@ -2731,8 +2743,9 @@ const calculateStatsForPlayer = (player, parlaysList) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
         {players.map(player => {
           const playerStats = calculateStatsForPlayer(player, filteredParlays);
+          const adjustedWins = playerStats.wins + (playerStats.pushes * 0.5);
           const winPct = playerStats.totalPicks > 0 
-            ? ((playerStats.wins / playerStats.totalPicks) * 100).toFixed(1)
+            ? ((adjustedWins / playerStats.totalPicks) * 100).toFixed(1)
             : '0.0';
           const netMoney = playerStats.moneyWon - playerStats.moneyLost;
 
@@ -2743,7 +2756,7 @@ const calculateStatsForPlayer = (player, parlaysList) => {
               <div className="space-y-3 mb-4">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Record:</span>
-                  <span className="font-semibold">{playerStats.wins}-{playerStats.losses}</span>
+                  <span className="font-semibold">{playerStats.wins}-{playerStats.losses}-{playerStats.pushes}</span>
                 </div>
                 
                 <div className="flex justify-between items-center">
@@ -2778,7 +2791,7 @@ const calculateStatsForPlayer = (player, parlaysList) => {
                     {Object.entries(playerStats.bySport).map(([sport, data]) => (
                       <div key={sport} className="flex justify-between">
                         <span>{sport}:</span>
-                        <span>{data.wins}-{data.losses} ({data.total > 0 ? ((data.wins/data.total)*100).toFixed(0) : 0}%)</span>
+                        <span>{data.wins}-{data.losses}-{data.pushes} ({data.total > 0 ? (((data.wins + data.pushes * 0.5)/data.total)*100).toFixed(0) : 0}%)</span>
                       </div>
                     ))}
                   </div>
@@ -2790,9 +2803,9 @@ const calculateStatsForPlayer = (player, parlaysList) => {
                   <h4 className="font-semibold text-sm mb-2">By Bet Type:</h4>
                   <div className="space-y-1 text-xs">
                     {Object.entries(playerStats.byBetType).map(([type, data]) => (
-                      <div key={type} className="flex justify-between">
-                        <span>{type}:</span>
-                        <span>{data.wins}-{data.losses} ({data.total > 0 ? ((data.wins/data.total)*100).toFixed(0) : 0}%)</span>
+                      <div key={sport} className="flex justify-between">
+                        <span>{sport}:</span>
+                        <span>{data.wins}-{data.losses}-{data.pushes} ({data.total > 0 ? (((data.wins + data.pushes * 0.5)/data.total)*100).toFixed(0) : 0}%)</span>
                       </div>
                     ))}
                   </div>
@@ -3208,7 +3221,7 @@ const renderAllBrolays = () => {
           {filteredParlays.length === 0 ? (
             <p className="text-gray-500 text-center py-8">No brolays match your filters</p>
           ) : (
-            filteredParlays.map(parlay => {
+            filteredParlays.slice(0, brolaysToShow).map(parlay => {
               const participants = Object.values(parlay.participants);
               const losers = participants.filter(p => p.result === 'loss');
               const winners = participants.filter(p => p.result === 'win');
@@ -3265,6 +3278,27 @@ const renderAllBrolays = () => {
                       >
                         Delete
                       </button>
+              </div>
+                      
+                      {/* Pagination Controls */}
+                      {filteredParlays.length > brolaysToShow && (
+                        <div className="mt-4 flex gap-3 justify-center">
+                          <button
+                            onClick={() => setBrolaysToShow(prev => prev + 10)}
+                            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-base"
+                            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                          >
+                            Show More (10)
+                          </button>
+                          <button
+                            onClick={() => setBrolaysToShow(filteredParlays.length)}
+                            className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-base"
+                            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                          >
+                            Show All ({filteredParlays.length})
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                   
@@ -3664,7 +3698,76 @@ const renderImport = () => (
     </div>
   </div>
 );
- return (
+ 
+const renderGrid = () => {
+  const filteredParlays = applyFilters([...parlays]).sort((a, b) => 
+    new Date(b.date) - new Date(a.date)
+  );
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <h2 className="text-xl md:text-2xl font-bold">Brolay Grid</h2>
+      
+      <div className="bg-white rounded-lg shadow p-4 md:p-6 overflow-x-auto">
+        <table className="w-full border-collapse text-sm">
+          <thead>
+            <tr className="border-b-2 border-gray-300">
+              <th className="text-left py-2 px-2 sticky left-0 bg-white z-10 min-w-[100px]">Date</th>
+              {players.map(player => (
+                <th key={player} className="text-center py-2 px-2 min-w-[150px]">{player}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filteredParlays.map(parlay => {
+              const participants = parlay.participants || {};
+              
+              return (
+                <tr key={parlay.id} className="border-b border-gray-200 hover:bg-gray-50">
+                  <td className="py-3 px-2 font-semibold sticky left-0 bg-white">
+                    {parlay.date}
+                  </td>
+                  {players.map(player => {
+                    const playerPick = Object.values(participants).find(p => p.player === player);
+                    
+                    if (!playerPick) {
+                      return <td key={player} className="py-3 px-2 text-center bg-gray-100"></td>;
+                    }
+                    
+                    let bgColor = 'bg-gray-300'; // pending/unknown
+                    if (playerPick.result === 'win') bgColor = 'bg-green-200';
+                    else if (playerPick.result === 'loss') bgColor = 'bg-red-200';
+                    else if (playerPick.result === 'push') bgColor = 'bg-gray-400';
+                    
+                    let teamDisplay = '';
+                    if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(playerPick.betType)) {
+                      teamDisplay = `${playerPick.awayTeam} @ ${playerPick.homeTeam}`;
+                    } else {
+                      teamDisplay = playerPick.team;
+                    }
+                    
+                    const betDetails = formatBetDescription(playerPick);
+                    
+                    return (
+                      <td key={player} className={`py-3 px-2 text-center ${bgColor} text-xs`}>
+                        <div className="font-semibold">{playerPick.sport}</div>
+                        <div>{teamDisplay}</div>
+                        <div>{betDetails}</div>
+                        <div className="text-[10px] mt-1">{playerPick.betType}</div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+  
+  return (
   <div 
     className="min-h-screen bg-gray-100"
     onTouchStart={handleTouchStart}
@@ -3734,6 +3837,7 @@ const renderImport = () => (
       { id: 'individual', label: 'Individual Stats' },
       { id: 'group', label: 'Group Stats' },
       { id: 'payments', label: 'Payments' },
+      { id: 'grid', label: 'Grid' },
       { id: 'import', label: 'Import Data' }
     ].map(tab => (
       <button
@@ -3759,6 +3863,7 @@ const renderImport = () => (
       {activeTab === 'individual' && renderIndividualDashboard()}
       {activeTab === 'group' && renderGroupDashboard()}
       {activeTab === 'payments' && renderPayments()}
+      {activeTab === 'grid' && renderGrid()}
       {activeTab === 'import' && renderImport()}
     </div>
   </div>
