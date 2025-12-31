@@ -3719,7 +3719,7 @@ const renderGrid = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredParlays.map(parlay => {
+            {filteredParlays.map((parlay) => {
               const participants = parlay.participants || {};
               
               return (
@@ -3727,14 +3727,14 @@ const renderGrid = () => {
                   <td className="py-3 px-2 font-semibold sticky left-0 bg-white">
                     {parlay.date}
                   </td>
-                  {players.map(player => {
+                  {players.map((player) => {
                     const playerPick = Object.values(participants).find(p => p.player === player);
                     
                     if (!playerPick) {
                       return <td key={player} className="py-3 px-2 text-center bg-gray-100"></td>;
                     }
                     
-                    let bgColor = 'bg-gray-300'; // pending/unknown
+                    let bgColor = 'bg-gray-300';
                     if (playerPick.result === 'win') bgColor = 'bg-green-200';
                     else if (playerPick.result === 'loss') bgColor = 'bg-red-200';
                     else if (playerPick.result === 'push') bgColor = 'bg-gray-400';
@@ -3765,8 +3765,7 @@ const renderGrid = () => {
       </div>
     </div>
   );
-};
-  
+};  
 return (
   <div 
     className="min-h-screen bg-gray-100"
