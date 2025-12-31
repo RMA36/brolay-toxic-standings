@@ -3274,31 +3274,10 @@ const renderAllBrolays = () => {
                       >
                         Delete
                       </button>
-              </div>
-                      
-                      {/* Pagination Controls */}
-                      {filteredParlays.length > brolaysToShow && (
-                        <div className="mt-4 flex gap-3 justify-center">
-                          <button
-                            onClick={() => setBrolaysToShow(prev => prev + 10)}
-                            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-base"
-                            style={{ minHeight: isMobile ? '44px' : 'auto' }}
-                          >
-                            Show More (10)
-                          </button>
-                          <button
-                            onClick={() => setBrolaysToShow(filteredParlays.length)}
-                            className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-base"
-                            style={{ minHeight: isMobile ? '44px' : 'auto' }}
-                          >
-                            Show All ({filteredParlays.length})
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
                   
-<div className="space-y-2">
+                  <div className="space-y-2">
                     {Object.entries(parlay.participants).map(([pid, participant]) => {
                       let teamDisplay = '';
                       if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType)) {
@@ -3344,10 +3323,30 @@ const renderAllBrolays = () => {
             })
           )}
         </div>
+        
+        {/* Pagination Controls */}
+        {filteredParlays.length > brolaysToShow && (
+          <div className="mt-4 flex gap-3 justify-center">
+            <button
+              onClick={() => setBrolaysToShow(prev => prev + 10)}
+              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              Show More (10)
+            </button>
+            <button
+              onClick={() => setBrolaysToShow(filteredParlays.length)}
+              className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              Show All ({filteredParlays.length})
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
-};  
+};
   const renderPayments = () => {
   const unsettledParlays = parlays.filter(p => !p.settled);
   const lostParlays = unsettledParlays.filter(p => {
