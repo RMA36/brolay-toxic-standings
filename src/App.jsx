@@ -3767,7 +3767,7 @@ const renderGrid = () => {
   );
 };
   
-  return (
+return (
   <div 
     className="min-h-screen bg-gray-100"
     onTouchStart={handleTouchStart}
