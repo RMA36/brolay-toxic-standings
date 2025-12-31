@@ -2799,8 +2799,8 @@ parlaysList.forEach(parlay => {
                   <h4 className="font-semibold text-sm mb-2">By Bet Type:</h4>
                   <div className="space-y-1 text-xs">
                     {Object.entries(playerStats.byBetType).map(([type, data]) => (
-                      <div key={sport} className="flex justify-between">
-                        <span>{sport}:</span>
+                      <div key={type} className="flex justify-between">
+                        <span>{type}:</span>
                         <span>{data.wins}-{data.losses}-{data.pushes} ({data.total > 0 ? (((data.wins + data.pushes * 0.5)/data.total)*100).toFixed(0) : 0}%)</span>
                       </div>
                     ))}
