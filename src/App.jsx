@@ -2525,18 +2525,16 @@ const calculateStatsForPlayer = (player, parlaysList) => {
       byBetType: {}
     };
 
-  parlaysList.forEach(parlay => {
+parlaysList.forEach(parlay => {
     const participants = Object.values(parlay.participants);
     const losers = participants.filter(p => p.result === 'loss');
     const winners = participants.filter(p => p.result === 'win');
     const parlayWon = losers.length === 0 && winners.length > 0;
     const and1 = losers.length === 1 && winners.length === participants.length - 1;
-
     participants.forEach(participant => {
       if (participant.player !== player) return;
       
       playerStats.totalPicks++;
-
       if (!playerStats.bySport[participant.sport]) {
         playerStats.bySport[participant.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
@@ -2572,15 +2570,6 @@ const calculateStatsForPlayer = (player, parlaysList) => {
         playerStats.pushes++;
         playerStats.bySport[participant.sport].pushes++;
         playerStats.byBetType[participant.betType].pushes++;
-      }
-        
-        if (and1) {
-          playerStats.and1s++;
-          playerStats.and1Cost += parlay.betAmount * participants.length;
-          playerStats.moneyLost += parlay.betAmount * participants.length;
-        } else {
-          playerStats.moneyLost += (parlay.betAmount * participants.length) / losers.length;
-        }
       }
     });
   });
