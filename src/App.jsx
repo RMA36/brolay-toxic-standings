@@ -23,6 +23,8 @@ const App = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const PASSWORD = 'manipulation';
   
+  const SHOW_IMPORT_TAB = false; // Set to true to show Import Data tab
+  
   const [activeTab, setActiveTab] = useState('entry');
   const [csvInput, setCsvInput] = useState('');
   const [players] = useState(['Management', 'CD', '914', 'Junior', 'Jacoby']);
@@ -4031,7 +4033,7 @@ return (
       { id: 'group', label: 'Group Stats' },
       { id: 'payments', label: 'Payments' },
       { id: 'grid', label: 'Grid' },
-      { id: 'import', label: 'Import Data' }
+      ...(SHOW_IMPORT_TAB ? [{ id: 'import', label: 'Import Data' }] : [])
     ].map(tab => (
       <button
         key={tab.id}
