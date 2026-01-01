@@ -1154,6 +1154,34 @@ useEffect(() => {
   }
 };
 
+const extractTeamsFromExistingParlays = () => {
+  const newTeams = [...learnedTeams];
+  const newPropTypes = [...learnedPropTypes];
+  
+  parlays.forEach(parlay => {
+    Object.values(parlay.participants || {}).forEach(p => {
+      if (p.team && !newTeams.includes(p.team)) {
+        newTeams.push(p.team);
+      }
+      if (p.awayTeam && !newTeams.includes(p.awayTeam)) {
+        newTeams.push(p.awayTeam);
+      }
+      if (p.homeTeam && !newTeams.includes(p.homeTeam)) {
+        newTeams.push(p.homeTeam);
+      }
+      if (p.propType && !newPropTypes.includes(p.propType)) {
+        newPropTypes.push(p.propType);
+      }
+    });
+  });
+  
+  setLearnedTeams(newTeams);
+  setLearnedPropTypes(newPropTypes);
+  saveLearnedData(newTeams, newPropTypes);
+  
+  alert(`Extracted ${newTeams.length - learnedTeams.length} new teams and ${newPropTypes.length - learnedPropTypes.length} new prop types from existing parlays!`);
+};
+  
 const handleTouchStart = (e) => {
   if (!isMobile || window.scrollY > 0) return;
   setPullStartY(e.touches[0].clientY);
@@ -3819,6 +3847,14 @@ const renderImport = () => (
         style={{ minHeight: isMobile ? '44px' : 'auto' }}
       >
         {saving ? 'Importing...' : 'Import Data'}
+      </button>
+      <button
+        onClick={extractTeamsFromExistingParlays}
+        disabled={parlays.length === 0}
+        className="mt-4 ml-4 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 text-base"
+        style={{ minHeight: isMobile ? '44px' : 'auto' }}
+      >
+        Extract Teams from Existing Data
       </button>
     </div>
     
