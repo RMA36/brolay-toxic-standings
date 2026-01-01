@@ -91,7 +91,25 @@ useEffect(() => {
   return () => window.removeEventListener('resize', checkMobile);
 }, []);
   
-  const sports = ['NFL', 'NBA', 'MLB', 'NHL', 'Soccer', 'College Football', 'College Basketball', 'Other'];
+  const sports = [
+  'NFL',
+  'NBA',
+  'MLB',
+  'NHL',
+  'College Football',
+  'College Basketball',
+  'College Basketball (Women\'s)',
+  'Soccer',
+  'Soccer (Women\'s)',
+  'Tennis',
+  'Tennis (Women\'s)',
+  'WNBA',
+  'College Baseball',
+  'Golf',
+  'Rugby',
+  'UFC',
+  'Other'
+];
   const betTypes = [
   'Spread', 
   'Moneyline', 
@@ -411,6 +429,17 @@ const checkPropBetResult = async (participant, gameDate) => {
       case 'NHL': espnSport = 'hockey/nhl'; break;
       case 'College Football': espnSport = 'football/college-football'; break;
       case 'College Basketball': espnSport = 'basketball/mens-college-basketball'; break;
+      case 'College Basketball (Women\'s)': espnSport = 'basketball/womens-college-basketball'; break;
+      case 'Soccer': espnSport = 'soccer/usa.1'; break; // MLS
+      case 'Soccer (Women\'s)': espnSport = 'soccer/usa.nwsl'; break; // NWSL
+      case 'Tennis': espnSport = 'tennis/atp'; break;
+      case 'Tennis (Women\'s)': espnSport = 'tennis/wta'; break;
+      case 'WNBA': espnSport = 'basketball/wnba'; break;
+      case 'College Baseball': espnSport = 'baseball/college-baseball'; break;
+      // Golf, Rugby, and UFC don't have the same scoreboard structure on ESPN API
+      case 'Golf': return 'pending';
+      case 'Rugby': return 'pending';
+      case 'UFC': return 'pending';
       default: return 'pending';
     }
 
@@ -555,6 +584,17 @@ const checkFirstHalfResult = async (participant, gameDate) => {
       case 'NHL': espnSport = 'hockey/nhl'; break;
       case 'College Football': espnSport = 'football/college-football'; break;
       case 'College Basketball': espnSport = 'basketball/mens-college-basketball'; break;
+      case 'College Basketball (Women\'s)': espnSport = 'basketball/womens-college-basketball'; break;
+      case 'Soccer': espnSport = 'soccer/usa.1'; break; // MLS
+      case 'Soccer (Women\'s)': espnSport = 'soccer/usa.nwsl'; break; // NWSL
+      case 'Tennis': espnSport = 'tennis/atp'; break;
+      case 'Tennis (Women\'s)': espnSport = 'tennis/wta'; break;
+      case 'WNBA': espnSport = 'basketball/wnba'; break;
+      case 'College Baseball': espnSport = 'baseball/college-baseball'; break;
+      // Golf, Rugby, and UFC don't have the same scoreboard structure on ESPN API
+      case 'Golf': return 'pending';
+      case 'Rugby': return 'pending';
+      case 'UFC': return 'pending';
       default: return 'pending';
     }
 
@@ -743,7 +783,12 @@ const checkQuarterResult = async (participant, gameDate) => {
   }
   
   try {
-    let espnSport = sport === 'NFL' ? 'football/nfl' : 'football/college-football';
+    let espnSport = '';
+    switch(sport) {
+      case 'NFL': espnSport = 'football/nfl'; break;
+      case 'College Football': espnSport = 'football/college-football'; break;
+      default: return 'pending'; // Quarter bets only work for football
+    }
 
     const formattedDate = gameDate.replace(/-/g, '');
     const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
@@ -898,6 +943,17 @@ const checkGameResult = async (participant, gameDate) => {
       case 'NHL': espnSport = 'hockey/nhl'; break;
       case 'College Football': espnSport = 'football/college-football'; break;
       case 'College Basketball': espnSport = 'basketball/mens-college-basketball'; break;
+      case 'College Basketball (Women\'s)': espnSport = 'basketball/womens-college-basketball'; break;
+      case 'Soccer': espnSport = 'soccer/usa.1'; break; // MLS
+      case 'Soccer (Women\'s)': espnSport = 'soccer/usa.nwsl'; break; // NWSL
+      case 'Tennis': espnSport = 'tennis/atp'; break;
+      case 'Tennis (Women\'s)': espnSport = 'tennis/wta'; break;
+      case 'WNBA': espnSport = 'basketball/wnba'; break;
+      case 'College Baseball': espnSport = 'baseball/college-baseball'; break;
+      // Golf, Rugby, and UFC don't have the same scoreboard structure on ESPN API
+      case 'Golf': return 'pending';
+      case 'Rugby': return 'pending';
+      case 'UFC': return 'pending';
       default: return 'pending';
     }
 
