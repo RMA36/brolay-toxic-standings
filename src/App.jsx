@@ -37,16 +37,17 @@ const App = () => {
   const [autoUpdating, setAutoUpdating] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [filters, setFilters] = useState({
-    dateFrom: '',
-    dateTo: '',
-    player: '',
-    sport: '',
-    placedBy: '',
-    minPayout: '',
-    maxPayout: '',
-    result: '',
-    autoUpdated: ''
-  });
+      dateFrom: '',
+      dateTo: '',
+      player: '',
+      sport: '',
+      teamPlayer: '',  
+      placedBy: '',
+      minPayout: '',
+      maxPayout: '',
+      result: '',
+      autoUpdated: ''
+    });
 
     // Helper function to format date to mm/dd/yyyy for display
     const formatDateForDisplay = (dateStr) => {
@@ -1391,11 +1392,14 @@ const applyFilters = (parlaysList) => {
       if (!hasResult) return false;
     }
     
-    if (filters.autoUpdated) {
-      const hasAutoUpdated = Object.values(parlay.participants || {}).some(p => 
-        filters.autoUpdated === 'true' ? p.autoUpdated : !p.autoUpdated
-      );
-      if (!hasAutoUpdated) return false;
+    if (filters.teamPlayer) {
+      const hasTeamPlayer = Object.values(parlay.participants || {}).some(p => {
+        const normalizedFilter = filters.teamPlayer.toLowerCase();
+        return (p.team && p.team.toLowerCase().includes(normalizedFilter)) ||
+               (p.awayTeam && p.awayTeam.toLowerCase().includes(normalizedFilter)) ||
+               (p.homeTeam && p.homeTeam.toLowerCase().includes(normalizedFilter));
+      });
+      if (!hasTeamPlayer) return false;
     }
     return true;
   });
@@ -2178,6 +2182,30 @@ const importFromCSV = async (csvText) => {
       const parlaysCollection = collection(db, 'parlays');
       await addDoc(parlaysCollection, parlay);
     }
+    // Learn teams/players from imported data
+    const newTeams = [...learnedTeams];
+    const newPropTypes = [...learnedPropTypes];
+    
+    importedParlays.forEach(parlay => {
+      Object.values(parlay.participants).forEach(p => {
+        if (p.team && !newTeams.includes(p.team)) {
+          newTeams.push(p.team);
+        }
+        if (p.awayTeam && !newTeams.includes(p.awayTeam)) {
+          newTeams.push(p.awayTeam);
+        }
+        if (p.homeTeam && !newTeams.includes(p.homeTeam)) {
+          newTeams.push(p.homeTeam);
+        }
+        if (p.propType && !newPropTypes.includes(p.propType)) {
+          newPropTypes.push(p.propType);
+        }
+      });
+    });
+    
+    setLearnedTeams(newTeams);
+    setLearnedPropTypes(newPropTypes);
+    saveLearnedData(newTeams, newPropTypes);
     
     alert(`Successfully imported ${importedParlays.length} brolays!`);
     await loadParlays(); // Refresh the list
@@ -2797,10 +2825,27 @@ parlaysList.forEach(parlay => {
                   <option value="false">Manual Only</option>
                 </select>
               </div>
+              <div className="relative">
+                <label className="block text-sm font-medium mb-1">Team/Player</label>
+                <input
+                  type="text"
+                  value={filters.teamPlayer}
+                  onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="Search teams/players..."
+                  list="team-player-suggestions"
+                />
+                <datalist id="team-player-suggestions">
+                  {[...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])].map((team, idx) => (
+                    <option key={idx} value={team} />
+                  ))}
+                </datalist>
+              </div>
             </div>
             <button
               onClick={() => setFilters({
-                dateFrom: '', dateTo: '', player: '', sport: '', 
+                dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
                 placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
               })}
               className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
@@ -3061,10 +3106,27 @@ const renderGroupDashboard = () => {
                   <option value="false">Manual Only</option>
                 </select>
               </div>
+              <div className="relative">
+                <label className="block text-sm font-medium mb-1">Team/Player</label>
+                <input
+                  type="text"
+                  value={filters.teamPlayer}
+                  onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="Search teams/players..."
+                  list="team-player-suggestions"
+                />
+                <datalist id="team-player-suggestions">
+                  {[...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])].map((team, idx) => (
+                    <option key={idx} value={team} />
+                  ))}
+                </datalist>
+              </div>
             </div>
             <button
               onClick={() => setFilters({
-                dateFrom: '', dateTo: '', player: '', sport: '', 
+                dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
                 placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
               })}
               className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
@@ -3266,10 +3328,27 @@ const renderAllBrolays = () => {
                   <option value="false">Manual Only</option>
                 </select>
               </div>
+              <div className="relative">
+                <label className="block text-sm font-medium mb-1">Team/Player</label>
+                <input
+                  type="text"
+                  value={filters.teamPlayer}
+                  onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="Search teams/players..."
+                  list="team-player-suggestions"
+                />
+                <datalist id="team-player-suggestions">
+                  {[...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])].map((team, idx) => (
+                    <option key={idx} value={team} />
+                  ))}
+                </datalist>
+              </div>
             </div>
             <button
               onClick={() => setFilters({
-                dateFrom: '', dateTo: '', player: '', sport: '', 
+                dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
                 placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
               })}
               className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
