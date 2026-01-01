@@ -2245,8 +2245,9 @@ const importFromCSV = async (csvText) => {
           
           if (and1) {
             playerStats.and1s++;
-            const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
-            playerStats.and1Cost += netProfit;
+            // For And-1s, the cost is the potential net profit we would have won
+            const potentialNetProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+            playerStats.and1Cost += potentialNetProfit;
             playerStats.moneyLost += parlay.betAmount * participants.length;
           } else {
             playerStats.moneyLost += (parlay.betAmount * participants.length) / losers.length;
@@ -2634,7 +2635,9 @@ parlaysList.forEach(parlay => {
         
         if (and1) {
           playerStats.and1s++;
-          playerStats.and1Cost += parlay.betAmount * participants.length;
+          // For And-1s, the cost is the potential net profit we would have won
+          const potentialNetProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+          playerStats.and1Cost += potentialNetProfit;
           playerStats.moneyLost += parlay.betAmount * participants.length;
         } else {
           playerStats.moneyLost += (parlay.betAmount * participants.length) / losers.length;
