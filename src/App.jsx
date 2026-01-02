@@ -745,10 +745,6 @@ const checkFirstHalfResult = async (participant, gameDate) => {
             const awayComp = competitors.find(c => c.homeAway === 'away');
             const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
             
-            const competitors = relevantGame.competition.competitors;
-            const homeComp = competitors.find(c => c.homeAway === 'home');
-            const awayComp = competitors.find(c => c.homeAway === 'away');
-            
             let result;
             if (pickedTeamIsHome) {
               if (firstHalfHomeScore > firstHalfAwayScore) result = 'win';
@@ -909,11 +905,7 @@ const checkQuarterResult = async (participant, gameDate) => {
             const awayComp = competitors.find(c => c.homeAway === 'away');
             const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
             
-            const competitors = relevantGame.competition.competitors;
-          const homeComp = competitors.find(c => c.homeAway === 'home');
-          const awayComp = competitors.find(c => c.homeAway === 'away');
-          
-          let result;
+            let result;
           if (pickedTeamIsHome) {
             if (quarterHomeScore > quarterAwayScore) result = 'win';
             else if (quarterHomeScore < quarterAwayScore) result = 'loss';
