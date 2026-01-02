@@ -3533,7 +3533,8 @@ const renderAllBrolays = () => {
   );
 };
   const renderPayments = () => {
-  const unsettledParlays = parlays.filter(p => !p.settled);
+  const filteredParlays = applyFilters([...parlays]);
+  const unsettledParlays = filteredParlays.filter(p => !p.settled);
   const lostParlays = unsettledParlays.filter(p => {
     const participants = Object.values(p.participants);
     return participants.some(part => part.result === 'loss');
@@ -3638,9 +3639,69 @@ const renderAllBrolays = () => {
     });
   });
 
-  return (
+return (
     <div className="space-y-4 md:space-y-6">
       <h2 className="text-xl md:text-2xl font-bold">Payment Tracker</h2>
+      
+      {/* Filters - Collapsible */}
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <button
+          onClick={() => setFiltersExpanded(!filtersExpanded)}
+          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2"
+        >
+          <span>Filters</span>
+          <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
+        </button>
+        
+        {filtersExpanded && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Date From</label>
+                <input
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Date To</label>
+                <input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Placed By</label>
+                <select
+                  value={filters.placedBy}
+                  onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {players.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+            </div>
+            <button
+              onClick={() => setFilters({
+                dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
+                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
+              })}
+              className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              Clear Filters
+            </button>
+          </>
+        )}
+      </div>
       
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6">
         <div className="flex items-start gap-2">
