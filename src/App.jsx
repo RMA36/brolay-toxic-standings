@@ -480,21 +480,31 @@ const checkPropBetResult = async (participant, gameDate) => {
                                    propLower.includes('multiple td');
             
             if (isTDScorerProp) {
-              return checkTDScorerResult(playerStat, propType, overUnder, line);
+              const result = checkTDScorerResult(playerStat, propType, overUnder, line);
+              return {
+                result,
+                stats: `${playerStat} TD${playerStat !== 1 ? 's' : ''}`
+              };
             }
             
             const lineValue = parseFloat(line);
-            if (isNaN(lineValue)) return 'pending';
+            if (isNaN(lineValue)) return { result: 'pending', stats: null };
             
+            let result;
             if (overUnder === 'Over') {
-              if (playerStat > lineValue) return 'win';
-              if (playerStat < lineValue) return 'loss';
-              return 'push';
+              if (playerStat > lineValue) result = 'win';
+              else if (playerStat < lineValue) result = 'loss';
+              else result = 'push';
             } else {
-              if (playerStat < lineValue) return 'win';
-              if (playerStat > lineValue) return 'loss';
-              return 'push';
+              if (playerStat < lineValue) result = 'win';
+              else if (playerStat > lineValue) result = 'loss';
+              else result = 'push';
             }
+            
+            return {
+              result,
+              stats: `${playerStat} ${normalizePropType(propType)}`
+            };
           }
         }
       } catch (boxscoreError) {
@@ -503,11 +513,11 @@ const checkPropBetResult = async (participant, gameDate) => {
       }
     }
     
-    return 'pending';
+  return { result: 'pending', stats: null };
     
   } catch (error) {
     console.error('Error checking prop bet:', error);
-    return 'pending';
+    return { result: 'pending', stats: null };
   }
 };
 
@@ -570,10 +580,6 @@ const determineTotalResult = (overUnder, totalLine, finalTotal) => {
   }
 };
 
-// ========================================
-// ADD THESE TWO FUNCTIONS BEFORE checkGameResult (around line 600)
-// ========================================
-
 // Function to check first half and first inning results
 const checkFirstHalfResult = async (participant, gameDate) => {
   const { sport, betType, team, awayTeam, homeTeam, overUnder, total, yesNoRuns } = participant;
@@ -595,10 +601,10 @@ const checkFirstHalfResult = async (participant, gameDate) => {
       case 'WNBA': espnSport = 'basketball/wnba'; break;
       case 'College Baseball': espnSport = 'baseball/college-baseball'; break;
       // Golf, Rugby, and UFC don't have the same scoreboard structure on ESPN API
-      case 'Golf': return 'pending';
-      case 'Rugby': return 'pending';
-      case 'UFC': return 'pending';
-      default: return 'pending';
+      case 'Golf': return { result: 'pending', stats: null };
+      case 'Rugby': return { result: 'pending', stats: null };
+      case 'UFC': return { result: 'pending', stats: null };
+      default: return { result: 'pending', stats: null };
     }
 
     const formattedDate = gameDate.replace(/-/g, '');
@@ -608,7 +614,7 @@ const checkFirstHalfResult = async (participant, gameDate) => {
     const data = await response.json();
     
     if (!data.events || data.events.length === 0) {
-      return 'pending';
+      return { result: 'pending', stats: null };
     }
 
     let relevantGame = null;
@@ -644,7 +650,7 @@ const checkFirstHalfResult = async (participant, gameDate) => {
     }
 
     if (!relevantGame) {
-      return 'pending';
+      return { result: 'pending', stats: null };
     }
 
     // Get detailed game data for period scores
@@ -672,11 +678,13 @@ const checkFirstHalfResult = async (participant, gameDate) => {
             }
           }
           
-          if (yesNoRuns === 'Yes') {
-            return firstInningRuns > 0 ? 'win' : 'loss';
-          } else {
-            return firstInningRuns === 0 ? 'win' : 'loss';
-          }
+          const result = yesNoRuns === 'Yes' 
+            ? (firstInningRuns > 0 ? 'win' : 'loss')
+            : (firstInningRuns === 0 ? 'win' : 'loss');
+          return {
+            result,
+            stats: `1st Inning: ${firstInningRuns} runs`
+          };
         }
       }
       
@@ -737,20 +745,33 @@ const checkFirstHalfResult = async (participant, gameDate) => {
             const awayComp = competitors.find(c => c.homeAway === 'away');
             const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
             
+            const competitors = relevantGame.competition.competitors;
+            const homeComp = competitors.find(c => c.homeAway === 'home');
+            const awayComp = competitors.find(c => c.homeAway === 'away');
+            
+            let result;
             if (pickedTeamIsHome) {
-              if (firstHalfHomeScore > firstHalfAwayScore) return 'win';
-              if (firstHalfHomeScore < firstHalfAwayScore) return 'loss';
-              return 'push'; // Tie at half
+              if (firstHalfHomeScore > firstHalfAwayScore) result = 'win';
+              else if (firstHalfHomeScore < firstHalfAwayScore) result = 'loss';
+              else result = 'push';
             } else {
-              if (firstHalfAwayScore > firstHalfHomeScore) return 'win';
-              if (firstHalfAwayScore < firstHalfHomeScore) return 'loss';
-              return 'push'; // Tie at half
+              if (firstHalfAwayScore > firstHalfHomeScore) result = 'win';
+              else if (firstHalfAwayScore < firstHalfHomeScore) result = 'loss';
+              else result = 'push';
             }
+            return {
+              result,
+              stats: `1H: ${awayComp.team.displayName} ${firstHalfAwayScore} @ ${homeComp.team.displayName} ${firstHalfHomeScore}`
+            };
           }
           
           if (betType === 'First Half Total') {
             const firstHalfTotal = firstHalfHomeScore + firstHalfAwayScore;
-            return determineTotalResult(overUnder, total, firstHalfTotal);
+            const result = determineTotalResult(overUnder, total, firstHalfTotal);
+            return {
+              result,
+              stats: `1H Total: ${firstHalfTotal}`
+            };
           }
           
           if (betType === 'First Half Team Total') {
@@ -759,7 +780,11 @@ const checkFirstHalfResult = async (participant, gameDate) => {
             const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
             const teamTotal = pickedTeamIsHome ? firstHalfHomeScore : firstHalfAwayScore;
             
-            return determineTotalResult(overUnder, total, teamTotal);
+            const result = determineTotalResult(overUnder, total, teamTotal);
+            return {
+              result,
+              stats: `1H Team Total: ${teamTotal}`
+            };
           }
         }
       }
@@ -768,11 +793,11 @@ const checkFirstHalfResult = async (participant, gameDate) => {
       console.error('Error fetching game details:', detailError);
     }
     
-    return 'pending';
+    return { result: 'pending', stats: null };
     
   } catch (error) {
     console.error('Error checking first half result:', error);
-    return 'pending';
+    return { result: 'pending', stats: null };
   }
 };
 
@@ -782,7 +807,7 @@ const checkQuarterResult = async (participant, gameDate) => {
   
   // Only works for football
   if (sport !== 'NFL' && sport !== 'College Football') {
-    return 'pending';
+    return { result: 'pending', stats: null };;
   }
   
   try {
@@ -790,7 +815,7 @@ const checkQuarterResult = async (participant, gameDate) => {
     switch(sport) {
       case 'NFL': espnSport = 'football/nfl'; break;
       case 'College Football': espnSport = 'football/college-football'; break;
-      default: return 'pending'; // Quarter bets only work for football
+      default: return { result: 'pending', stats: null };; // Quarter bets only work for football
     }
 
     const formattedDate = gameDate.replace(/-/g, '');
@@ -800,7 +825,7 @@ const checkQuarterResult = async (participant, gameDate) => {
     const data = await response.json();
     
     if (!data.events || data.events.length === 0) {
-      return 'pending';
+      return { result: 'pending', stats: null };;
     }
 
     let relevantGame = null;
@@ -836,7 +861,7 @@ const checkQuarterResult = async (participant, gameDate) => {
     }
 
     if (!relevantGame) {
-      return 'pending';
+      return { result: 'pending', stats: null };;
     }
 
     // Get detailed game data for period scores
@@ -872,53 +897,70 @@ const checkQuarterResult = async (participant, gameDate) => {
               quarterHomeScore = parseInt(homeStats.stats[quarterIndex]) || 0;
               quarterAwayScore = parseInt(awayStats.stats[quarterIndex]) || 0;
             } else {
-              return 'pending'; // Quarter data not available
+              return { result: 'pending', stats: null };; // Quarter data not available
             }
           }
         }
         
         // Determine result based on bet type
         if (betType === 'Quarter Moneyline') {
-          const competitors = relevantGame.competition.competitors;
+            const competitors = relevantGame.competition.competitors;
+            const homeComp = competitors.find(c => c.homeAway === 'home');
+            const awayComp = competitors.find(c => c.homeAway === 'away');
+            const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
+            
+            const competitors = relevantGame.competition.competitors;
           const homeComp = competitors.find(c => c.homeAway === 'home');
           const awayComp = competitors.find(c => c.homeAway === 'away');
-          const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
           
+          let result;
           if (pickedTeamIsHome) {
-            if (quarterHomeScore > quarterAwayScore) return 'win';
-            if (quarterHomeScore < quarterAwayScore) return 'loss';
-            return 'push'; // Tie in quarter
+            if (quarterHomeScore > quarterAwayScore) result = 'win';
+            else if (quarterHomeScore < quarterAwayScore) result = 'loss';
+            else result = 'push';
           } else {
-            if (quarterAwayScore > quarterHomeScore) return 'win';
-            if (quarterAwayScore < quarterHomeScore) return 'loss';
-            return 'push'; // Tie in quarter
+            if (quarterAwayScore > quarterHomeScore) result = 'win';
+            else if (quarterAwayScore < quarterHomeScore) result = 'loss';
+            else result = 'push';
           }
-        }
+          return {
+            result,
+            stats: `${quarter}: ${awayComp.team.displayName} ${quarterAwayScore} @ ${homeComp.team.displayName} ${quarterHomeScore}`
+          };
+          }
         
         if (betType === 'Quarter Total') {
-          const quarterTotal = quarterHomeScore + quarterAwayScore;
-          return determineTotalResult(overUnder, total, quarterTotal);
-        }
+            const quarterTotal = quarterHomeScore + quarterAwayScore;
+            const result = determineTotalResult(overUnder, total, quarterTotal);
+            return {
+              result,
+              stats: `${quarter} Total: ${quarterTotal}`
+            };
+          }
         
         if (betType === 'Quarter Team Total') {
-          const competitors = relevantGame.competition.competitors;
-          const homeComp = competitors.find(c => c.homeAway === 'home');
-          const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
-          const teamTotal = pickedTeamIsHome ? quarterHomeScore : quarterAwayScore;
-          
-          return determineTotalResult(overUnder, total, teamTotal);
-        }
+            const competitors = relevantGame.competition.competitors;
+            const homeComp = competitors.find(c => c.homeAway === 'home');
+            const pickedTeamIsHome = matchTeamName(team, homeComp.team.displayName);
+            const teamTotal = pickedTeamIsHome ? quarterHomeScore : quarterAwayScore;
+            
+            const result = determineTotalResult(overUnder, total, teamTotal);
+            return {
+              result,
+              stats: `${quarter} Team Total: ${teamTotal}`
+            };
+          }
       }
       
     } catch (detailError) {
       console.error('Error fetching game details:', detailError);
     }
     
-    return 'pending';
+    return { result: 'pending', stats: null };;
     
   } catch (error) {
     console.error('Error checking quarter result:', error);
-    return 'pending';
+    return { result: 'pending', stats: null };;
   }
 };
   
@@ -1008,14 +1050,26 @@ const checkGameResult = async (participant, gameDate) => {
     const awayScore = parseInt(awayComp.score);
 
     if (betType === 'Spread') {
-      return determineSpreadResult(team, favorite, spread, homeComp, awayComp, homeScore, awayScore);
+      const result = determineSpreadResult(team, favorite, spread, homeComp, awayComp, homeScore, awayScore);
+      return {
+        result,
+        stats: `${awayComp.team.displayName} ${awayScore} @ ${homeComp.team.displayName} ${homeScore}`
+      };
     } else if (betType === 'Moneyline') {
-      return determineMoneylineResult(team, homeComp, awayComp);
+      const result = determineMoneylineResult(team, homeComp, awayComp);
+      return {
+        result,
+        stats: `${awayComp.team.displayName} ${awayScore} @ ${homeComp.team.displayName} ${homeScore}`
+      };
     } else if (betType === 'Total') {
-      return determineTotalResult(overUnder, total, homeScore + awayScore);
+      const result = determineTotalResult(overUnder, total, homeScore + awayScore);
+      return {
+        result,
+        stats: `Total: ${homeScore + awayScore}`
+      };
     }
-    
-    return 'pending';
+        
+        return { result: 'pending', stats: null };
     
   } catch (error) {
     console.error('Error fetching game data:', error);
@@ -1040,13 +1094,14 @@ const autoUpdatePendingPicks = async () => {
       for (const [participantId, participant] of Object.entries(parlay.participants)) {
         if (participant.result !== 'pending') continue;
 
-        try {
-          const result = await checkGameResult(participant, parlay.date);
+      try {
+          const resultData = await checkGameResult(participant, parlay.date);
           
-          if (result && result !== 'pending') {
+          if (resultData && resultData.result && resultData.result !== 'pending') {
             updatedParticipants[participantId] = {
               ...participant,
-              result: result,
+              result: resultData.result,
+              actualStats: resultData.stats,
               autoUpdated: true,
               autoUpdatedAt: new Date().toISOString()
             };
@@ -3478,6 +3533,11 @@ const renderAllBrolays = () => {
                         <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-50 p-2 rounded gap-1">
                           <span className="flex-1">
                             <strong>{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails} ({participant.betType})
+                            {participant.actualStats && (
+                              <span className="ml-2 text-blue-600 font-semibold">
+                                [{participant.actualStats}]
+                              </span>
+                            )}
                           </span>
                             
                           <div className="flex items-center gap-2">
