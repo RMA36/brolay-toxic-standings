@@ -4240,26 +4240,77 @@ const renderGrid = () => {
   const topCombos = [...combosWithMin10].sort((a, b) => b.winPct - a.winPct).slice(0, 5);
   const worstCombos = [...combosWithMin10].sort((a, b) => a.winPct - b.winPct).slice(0, 5);
   
-  // Most Picked Teams/Players
-  const teamCounts = {};
-  filteredParlays.forEach(parlay => {
-    Object.values(parlay.participants).forEach(p => {
-      if (p.team) {
-        teamCounts[p.team] = (teamCounts[p.team] || 0) + 1;
+// Most Picked Teams/Players
+const teamCounts = {};
+filteredParlays.forEach(parlay => {
+  Object.values(parlay.participants).forEach(p => {
+    if (p.team) {
+      teamCounts[p.team] = (teamCounts[p.team] || 0) + 1;
+    }
+    if (p.awayTeam) {
+      teamCounts[p.awayTeam] = (teamCounts[p.awayTeam] || 0) + 1;
+    }
+    if (p.homeTeam) {
+      teamCounts[p.homeTeam] = (teamCounts[p.homeTeam] || 0) + 1;
+    }
+  });
+});
+
+const topTeams = Object.entries(teamCounts)
+  .map(([team, count]) => ({ team, count }))
+  .sort((a, b) => b.count - a.count)
+  .slice(0, 5);
+
+// Player/Team Combinations
+const playerTeamCombos = {};
+filteredParlays.forEach(parlay => {
+  Object.values(parlay.participants).forEach(p => {
+    if (!p.player || p.result === 'pending') return;
+    
+    const teams = [];
+    if (p.team) teams.push(p.team);
+    if (p.awayTeam) teams.push(p.awayTeam);
+    if (p.homeTeam) teams.push(p.homeTeam);
+    
+    teams.forEach(team => {
+      const key = `${p.player}-${team}`;
+      if (!playerTeamCombos[key]) {
+        playerTeamCombos[key] = {
+          player: p.player,
+          team: team,
+          wins: 0,
+          losses: 0,
+          total: 0
+        };
       }
-      if (p.awayTeam) {
-        teamCounts[p.awayTeam] = (teamCounts[p.awayTeam] || 0) + 1;
-      }
-      if (p.homeTeam) {
-        teamCounts[p.homeTeam] = (teamCounts[p.homeTeam] || 0) + 1;
-      }
+      
+      playerTeamCombos[key].total++;
+      if (p.result === 'win') playerTeamCombos[key].wins++;
+      else if (p.result === 'loss') playerTeamCombos[key].losses++;
     });
   });
-  
-  const topTeams = Object.entries(teamCounts)
-    .map(([team, count]) => ({ team, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
+});
+
+// Most picked player/team combos
+const topPlayerTeamCombos = Object.values(playerTeamCombos)
+  .sort((a, b) => b.total - a.total)
+  .slice(0, 5);
+
+// Best/worst player/team combos (min 5 picks)
+const playerTeamCombosWithMin5 = Object.values(playerTeamCombos)
+  .filter(combo => combo.total >= 5)
+  .map(combo => ({
+    ...combo,
+    winPct: (combo.wins / combo.total) * 100
+  }));
+
+const topPlayerTeamWinPct = [...playerTeamCombosWithMin5]
+  .sort((a, b) => b.winPct - a.winPct)
+  .slice(0, 5);
+
+const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
+  .sort((a, b) => a.winPct - b.winPct)
+  .slice(0, 5);
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -4419,7 +4470,7 @@ const renderGrid = () => {
 
       {/* Most Picked Teams */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <h3 className="text-lg md:text-xl font-bold mb-4">🎯 Top 10 Most Picked Teams/Players</h3>
+        <h3 className="text-lg md:text-xl font-bold mb-4">🎯 Top 5 Most Picked Teams/Players</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {topTeams.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded">
@@ -4430,6 +4481,74 @@ const renderGrid = () => {
               <span className="text-lg font-bold text-blue-600">{item.count} picks</span>
             </div>
           ))}
+        </div>
+      </div>
+      
+      {/* Most Picked Player/Team Combos */}
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-lg md:text-xl font-bold mb-4">🤝 Top 5 Most Picked Player/Team Combos</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {topPlayerTeamCombos.map((item, idx) => (
+            <div key={idx} className="p-3 bg-gray-50 rounded">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
+                  <span className="font-semibold">{item.player} + {item.team}</span>
+                </div>
+                <span className="text-lg font-bold text-blue-600">{item.total}</span>
+              </div>
+              <div className="text-xs text-gray-600 ml-8">
+                {item.wins}-{item.losses} ({item.total > 0 ? ((item.wins / item.total) * 100).toFixed(1) : 0}%)
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Best/Worst Player/Team Win Percentages */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-600">🌟 Top 5 Player/Team Win %</h3>
+          <p className="text-sm text-gray-600 mb-4">Minimum 5 picks</p>
+          {topPlayerTeamWinPct.length > 0 ? (
+            <div className="space-y-2">
+              {topPlayerTeamWinPct.map((combo, idx) => (
+                <div key={idx} className="p-3 bg-green-50 rounded">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold">{combo.player} + {combo.team}</span>
+                    <span className="text-lg font-bold text-green-600">{combo.winPct.toFixed(1)}%</span>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {combo.wins}-{combo.losses} ({combo.total} picks)
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">Not enough data yet</p>
+          )}
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-600">💀 Worst 5 Player/Team Win %</h3>
+          <p className="text-sm text-gray-600 mb-4">Minimum 5 picks</p>
+          {worstPlayerTeamWinPct.length > 0 ? (
+            <div className="space-y-2">
+              {worstPlayerTeamWinPct.map((combo, idx) => (
+                <div key={idx} className="p-3 bg-red-50 rounded">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold">{combo.player} + {combo.team}</span>
+                    <span className="text-lg font-bold text-red-600">{combo.winPct.toFixed(1)}%</span>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {combo.wins}-{combo.losses} ({combo.total} picks)
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">Not enough data yet</p>
+          )}
         </div>
       </div>
     </div>
