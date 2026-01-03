@@ -4280,6 +4280,7 @@ filteredParlays.forEach(parlay => {
           team: team,
           wins: 0,
           losses: 0,
+          pushes: 0,
           total: 0
         };
       }
@@ -4287,10 +4288,10 @@ filteredParlays.forEach(parlay => {
       playerTeamCombos[key].total++;
       if (p.result === 'win') playerTeamCombos[key].wins++;
       else if (p.result === 'loss') playerTeamCombos[key].losses++;
+      else if (p.result === 'push') playerTeamCombos[key].pushes++;
     });
   });
 });
-
 // Most picked player/team combos
 const topPlayerTeamCombos = Object.values(playerTeamCombos)
   .sort((a, b) => b.total - a.total)
@@ -4483,27 +4484,26 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           ))}
         </div>
       </div>
-      
       {/* Most Picked Player/Team Combos */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <h3 className="text-lg md:text-xl font-bold mb-4">🤝 Top 5 Most Picked Player/Team Combos</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {topPlayerTeamCombos.map((item, idx) => (
-            <div key={idx} className="p-3 bg-gray-50 rounded">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
-                  <span className="font-semibold">{item.player} + {item.team}</span>
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4">🤝 Top 5 Most Picked Player/Team Combos</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {topPlayerTeamCombos.map((item, idx) => (
+              <div key={idx} className="p-3 bg-gray-50 rounded">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
+                    <span className="font-semibold">{item.player} + {item.team}</span>
+                  </div>
+                  <span className="text-lg font-bold text-blue-600">{item.total}</span>
                 </div>
-                <span className="text-lg font-bold text-blue-600">{item.total}</span>
+                <div className="text-xs text-gray-600 ml-8">
+                  {item.wins}-{item.losses}{item.pushes > 0 ? `-${item.pushes}` : ''} ({item.total > 0 ? ((item.wins / item.total) * 100).toFixed(1) : 0}%)
+                </div>
               </div>
-              <div className="text-xs text-gray-600 ml-8">
-                {item.wins}-{item.losses} ({item.total > 0 ? ((item.wins / item.total) * 100).toFixed(1) : 0}%)
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
       
       {/* Best/Worst Player/Team Win Percentages */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
