@@ -4075,7 +4075,368 @@ const renderGrid = () => {
     </div>
   );
 };  
-return (
+
+  const renderRankings = () => {
+  const filteredParlays = applyFilters([...parlays]);
+  
+  // Calculate Sole Survivors
+  const soleSurvivors = {};
+  players.forEach(player => { soleSurvivors[player] = 0; });
+  
+  filteredParlays.forEach(parlay => {
+    const participants = Object.values(parlay.participants);
+    const winners = participants.filter(p => p.result === 'win');
+    const losers = participants.filter(p => p.result === 'loss');
+    
+    if (winners.length === 1 && losers.length > 0) {
+      const survivor = winners[0].player;
+      if (survivor) soleSurvivors[survivor]++;
+    }
+  });
+  
+  // Calculate Hot/Cold Streaks
+  const getStreaks = () => {
+    const playerPicks = {};
+    players.forEach(player => { playerPicks[player] = []; });
+    
+    // Get all picks chronologically
+    const sortedParlays = [...filteredParlays].sort((a, b) => new Date(a.date) - new Date(b.date));
+    sortedParlays.forEach(parlay => {
+      Object.values(parlay.participants).forEach(p => {
+        if (p.player && p.result !== 'pending') {
+          playerPicks[p.player].push({
+            result: p.result,
+            date: parlay.date,
+            sport: p.sport,
+            team: p.team || `${p.awayTeam} @ ${p.homeTeam}`
+          });
+        }
+      });
+    });
+    
+    // Calculate current and all-time streaks
+    const currentStreaks = { hot: [], cold: [] };
+    const allTimeStreaks = { hot: [], cold: [] };
+    
+    players.forEach(player => {
+      const picks = playerPicks[player];
+      if (picks.length === 0) return;
+      
+      // Current streak
+      let currentStreak = 0;
+      let currentType = null;
+      
+      for (let i = picks.length - 1; i >= 0; i--) {
+        const isWin = picks[i].result === 'win';
+        const isPush = picks[i].result === 'push';
+        
+        if (isPush) continue; // Skip pushes
+        
+        if (currentType === null) {
+          currentType = isWin ? 'hot' : 'cold';
+          currentStreak = 1;
+        } else if ((currentType === 'hot' && isWin) || (currentType === 'cold' && !isWin)) {
+          currentStreak++;
+        } else {
+          break;
+        }
+      }
+      
+      if (currentStreak > 0) {
+        currentStreaks[currentType].push({
+          player,
+          count: currentStreak,
+          lastDate: picks[picks.length - 1].date
+        });
+      }
+      
+      // All-time streaks
+      let streak = 0;
+      let streakType = null;
+      let streakStart = null;
+      let streakEnd = null;
+      
+      picks.forEach((pick, idx) => {
+        const isWin = pick.result === 'win';
+        const isPush = pick.result === 'push';
+        
+        if (isPush) return; // Skip pushes
+        
+        if (streakType === null || ((streakType === 'hot' && isWin) || (streakType === 'cold' && !isWin))) {
+          if (streakType === null) {
+            streakType = isWin ? 'hot' : 'cold';
+            streakStart = pick.date;
+          }
+          streak++;
+          streakEnd = pick.date;
+        } else {
+          if (streak >= 3) {
+            allTimeStreaks[streakType].push({
+              player,
+              count: streak,
+              startDate: streakStart,
+              endDate: streakEnd
+            });
+          }
+          streakType = isWin ? 'hot' : 'cold';
+          streak = 1;
+          streakStart = pick.date;
+          streakEnd = pick.date;
+        }
+        
+        // Handle last streak
+        if (idx === picks.length - 1 && streak >= 3) {
+          allTimeStreaks[streakType].push({
+            player,
+            count: streak,
+            startDate: streakStart,
+            endDate: streakEnd
+          });
+        }
+      });
+    });
+    
+    // Sort streaks
+    currentStreaks.hot.sort((a, b) => b.count - a.count);
+    currentStreaks.cold.sort((a, b) => b.count - a.count);
+    allTimeStreaks.hot.sort((a, b) => b.count - a.count);
+    allTimeStreaks.cold.sort((a, b) => b.count - a.count);
+    
+    return { currentStreaks, allTimeStreaks };
+  };
+  
+  const { currentStreaks, allTimeStreaks } = getStreaks();
+  
+  // Calculate Player/Sport Combinations
+  const playerSportCombos = {};
+  filteredParlays.forEach(parlay => {
+    Object.values(parlay.participants).forEach(p => {
+      if (!p.player || !p.sport || p.result === 'pending') return;
+      
+      const key = `${p.player}-${p.sport}`;
+      if (!playerSportCombos[key]) {
+        playerSportCombos[key] = {
+          player: p.player,
+          sport: p.sport,
+          wins: 0,
+          losses: 0,
+          total: 0
+        };
+      }
+      
+      playerSportCombos[key].total++;
+      if (p.result === 'win') playerSportCombos[key].wins++;
+      else if (p.result === 'loss') playerSportCombos[key].losses++;
+    });
+  });
+  
+  const combosWithMin10 = Object.values(playerSportCombos)
+    .filter(combo => combo.total >= 10)
+    .map(combo => ({
+      ...combo,
+      winPct: (combo.wins / combo.total) * 100
+    }));
+  
+  const topCombos = [...combosWithMin10].sort((a, b) => b.winPct - a.winPct).slice(0, 5);
+  const worstCombos = [...combosWithMin10].sort((a, b) => a.winPct - b.winPct).slice(0, 5);
+  
+  // Most Picked Teams/Players
+  const teamCounts = {};
+  filteredParlays.forEach(parlay => {
+    Object.values(parlay.participants).forEach(p => {
+      if (p.team) {
+        teamCounts[p.team] = (teamCounts[p.team] || 0) + 1;
+      }
+      if (p.awayTeam) {
+        teamCounts[p.awayTeam] = (teamCounts[p.awayTeam] || 0) + 1;
+      }
+      if (p.homeTeam) {
+        teamCounts[p.homeTeam] = (teamCounts[p.homeTeam] || 0) + 1;
+      }
+    });
+  });
+  
+  const topTeams = Object.entries(teamCounts)
+    .map(([team, count]) => ({ team, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <h2 className="text-xl md:text-2xl font-bold">🏆 Rankings & Records</h2>
+      
+      {/* Sole Survivors */}
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-lg md:text-xl font-bold mb-4">💪 Sole Survivors</h3>
+        <p className="text-sm text-gray-600 mb-4">Only winner when everyone else lost</p>
+        <div className="space-y-2">
+          {Object.entries(soleSurvivors)
+            .sort(([, a], [, b]) => b - a)
+            .map(([player, count], idx) => (
+              <div key={player} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold text-gray-400">#{idx + 1}</span>
+                  <span className="font-semibold">{player}</span>
+                </div>
+                <span className="text-xl font-bold text-blue-600">{count}</span>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* Current Streaks */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-600">🔥 Current Hot Streak</h3>
+          {currentStreaks.hot.length > 0 ? (
+            <div className="space-y-2">
+              {currentStreaks.hot.slice(0, 3).map((streak, idx) => (
+                <div key={idx} className="p-3 bg-green-50 rounded">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">{streak.player}</span>
+                    <span className="text-xl font-bold text-green-600">{streak.count} wins</span>
+                  </div>
+                  <div className="text-xs text-gray-600">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">No active hot streaks</p>
+          )}
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-600">❄️ Current Cold Streak</h3>
+          {currentStreaks.cold.length > 0 ? (
+            <div className="space-y-2">
+              {currentStreaks.cold.slice(0, 3).map((streak, idx) => (
+                <div key={idx} className="p-3 bg-red-50 rounded">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">{streak.player}</span>
+                    <span className="text-xl font-bold text-red-600">{streak.count} losses</span>
+                  </div>
+                  <div className="text-xs text-gray-600">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">No active cold streaks</p>
+          )}
+        </div>
+      </div>
+
+      {/* All-Time Streaks */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-600">📈 Top 5 Hot Streaks (All-Time)</h3>
+          {allTimeStreaks.hot.slice(0, 5).length > 0 ? (
+            <div className="space-y-2">
+              {allTimeStreaks.hot.slice(0, 5).map((streak, idx) => (
+                <div key={idx} className="p-3 bg-green-50 rounded">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold">{streak.player}</span>
+                    <span className="text-lg font-bold text-green-600">{streak.count} wins</span>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {formatDateForDisplay(streak.startDate)} - {formatDateForDisplay(streak.endDate)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">No streaks of 3+ yet</p>
+          )}
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-600">📉 Top 5 Cold Streaks (All-Time)</h3>
+          {allTimeStreaks.cold.slice(0, 5).length > 0 ? (
+            <div className="space-y-2">
+              {allTimeStreaks.cold.slice(0, 5).map((streak, idx) => (
+                <div key={idx} className="p-3 bg-red-50 rounded">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold">{streak.player}</span>
+                    <span className="text-lg font-bold text-red-600">{streak.count} losses</span>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {formatDateForDisplay(streak.startDate)} - {formatDateForDisplay(streak.endDate)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">No streaks of 3+ yet</p>
+          )}
+        </div>
+      </div>
+
+      {/* Player/Sport Combinations */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-600">⭐ Top 5 Player/Sport Combos</h3>
+          <p className="text-sm text-gray-600 mb-4">Minimum 10 picks</p>
+          {topCombos.length > 0 ? (
+            <div className="space-y-2">
+              {topCombos.map((combo, idx) => (
+                <div key={idx} className="p-3 bg-green-50 rounded">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold">{combo.player} - {combo.sport}</span>
+                    <span className="text-lg font-bold text-green-600">{combo.winPct.toFixed(1)}%</span>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {combo.wins}-{combo.losses} ({combo.total} picks)
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">Not enough data yet</p>
+          )}
+        </div>
+        
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-600">💩 Worst 5 Player/Sport Combos</h3>
+          <p className="text-sm text-gray-600 mb-4">Minimum 10 picks</p>
+          {worstCombos.length > 0 ? (
+            <div className="space-y-2">
+              {worstCombos.map((combo, idx) => (
+                <div key={idx} className="p-3 bg-red-50 rounded">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="font-semibold">{combo.player} - {combo.sport}</span>
+                    <span className="text-lg font-bold text-red-600">{combo.winPct.toFixed(1)}%</span>
+                  </div>
+                  <div className="text-xs text-gray-600">
+                    {combo.wins}-{combo.losses} ({combo.total} picks)
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500 text-center py-4">Not enough data yet</p>
+          )}
+        </div>
+      </div>
+
+      {/* Most Picked Teams */}
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-lg md:text-xl font-bold mb-4">🎯 Top 10 Most Picked Teams/Players</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {topTeams.map((item, idx) => (
+            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+              <div className="flex items-center gap-3">
+                <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
+                <span className="font-semibold">{item.team}</span>
+              </div>
+              <span className="text-lg font-bold text-blue-600">{item.count} picks</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+  return (
   <div 
     className="min-h-screen bg-gray-100"
     onTouchStart={handleTouchStart}
@@ -4139,15 +4500,16 @@ return (
     : 'container mx-auto p-4 md:p-6'
 }`}>
   <div className={isMobile ? 'pt-20 px-4' : 'mb-6 flex gap-2 overflow-x-auto'}>
-    {[
-      { id: 'entry', label: 'New Brolay' },
-      { id: 'allBrolays', label: 'All Brolays' },
-      { id: 'individual', label: 'Individual Stats' },
-      { id: 'group', label: 'Group Stats' },
-      { id: 'payments', label: 'Payments' },
-      { id: 'grid', label: 'Grid' },
-      ...(SHOW_IMPORT_TAB ? [{ id: 'import', label: 'Import Data' }] : [])
-    ].map(tab => (
+  {[
+    { id: 'entry', label: 'New Brolay' },
+    { id: 'allBrolays', label: 'All Brolays' },
+    { id: 'individual', label: 'Individual Stats' },
+    { id: 'group', label: 'Group Stats' },
+    { id: 'payments', label: 'Payments' },
+    { id: 'rankings', label: 'Rankings' },
+    { id: 'grid', label: 'Grid' },
+    ...(SHOW_IMPORT_TAB ? [{ id: 'import', label: 'Import Data' }] : [])
+  ].map(tab => (
       <button
         key={tab.id}
         onClick={() => {
@@ -4165,15 +4527,16 @@ return (
     ))}
   </div>
 </div>
-    <div className="container mx-auto p-4 md:p-6">
-      {activeTab === 'entry' && renderEntry()}
-      {activeTab === 'allBrolays' && renderAllBrolays()}
-      {activeTab === 'individual' && renderIndividualDashboard()}
-      {activeTab === 'group' && renderGroupDashboard()}
-      {activeTab === 'payments' && renderPayments()}
-      {activeTab === 'grid' && renderGrid()}
-      {activeTab === 'import' && renderImport()}
-    </div>
+  <div className="container mx-auto p-4 md:p-6">
+    {activeTab === 'entry' && renderEntry()}
+    {activeTab === 'allBrolays' && renderAllBrolays()}
+    {activeTab === 'individual' && renderIndividualDashboard()}
+    {activeTab === 'group' && renderGroupDashboard()}
+    {activeTab === 'payments' && renderPayments()}
+    {activeTab === 'rankings' && renderRankings()}
+    {activeTab === 'grid' && renderGrid()}
+    {activeTab === 'import' && renderImport()}
+  </div>
   </div>
 );
 };
