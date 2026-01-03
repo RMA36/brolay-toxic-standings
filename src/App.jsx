@@ -4519,7 +4519,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
                     <span className="text-lg font-bold text-green-600">{combo.winPct.toFixed(1)}%</span>
                   </div>
                   <div className="text-xs text-gray-600">
-                    {combo.wins}-{combo.losses} ({combo.total} picks)
+                    {combo.wins}-{combo.losses}{combo.pushes > 0 ? `-${combo.pushes}` : ''} ({combo.total} picks)
                   </div>
                 </div>
               ))}
@@ -4541,7 +4541,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
                     <span className="text-lg font-bold text-red-600">{combo.winPct.toFixed(1)}%</span>
                   </div>
                   <div className="text-xs text-gray-600">
-                    {combo.wins}-{combo.losses} ({combo.total} picks)
+                    {combo.wins}-{combo.losses}{combo.pushes > 0 ? `-${combo.pushes}` : ''} ({combo.total} picks)
                   </div>
                 </div>
               ))}
