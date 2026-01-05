@@ -5279,67 +5279,98 @@ const filteredPicks = allPicks.filter(pick => {
     new Date(b.parlayDate) - new Date(a.parlayDate)
   );
 
-  const handleSavePickEdit = async () => {
-    if (!editingPick) return;
+const handleSavePickEdit = async () => {
+  if (!editingPick) return;
+  
+  try {
+    setSaving(true);
     
-    try {
-      setSaving(true);
+    // Find the parlay this pick belongs to
+    const parlay = parlays.find(p => p.id === editingPick.parlayId);
+    if (!parlay) {
+      console.error('Parlay not found for ID:', editingPick.parlayId);
+      alert('Parlay not found');
+      return;
+    }
+
+    console.log('Found parlay:', parlay);
+    console.log('Editing participant:', editingPick.participantId);
+    console.log('Current participant data:', parlay.participants[editingPick.participantId]);
+
+    // Get the original participant to preserve any fields we're not editing
+    const originalParticipant = parlay.participants[editingPick.participantId];
+    
+    // Update the specific participant, preserving all original fields
+    const updatedParticipants = { ...parlay.participants };
+    updatedParticipants[editingPick.participantId] = {
+      ...originalParticipant, // Start with original to preserve any extra fields
+      player: editingPick.player,
+      sport: editingPick.sport,
+      team: editingPick.team || '',
+      awayTeam: editingPick.awayTeam || '',
+      homeTeam: editingPick.homeTeam || '',
+      betType: editingPick.betType,
+      favorite: editingPick.favorite || 'Favorite',
+      spread: editingPick.spread || '',
+      total: editingPick.total || '',
+      overUnder: editingPick.overUnder || 'Over',
+      propType: editingPick.propType || '',
+      line: editingPick.line || '',
+      odds: editingPick.odds || '',
+      yesNoRuns: editingPick.yesNoRuns || 'Yes',
+      quarter: editingPick.quarter || '1Q',
+      result: editingPick.result,
+      actualStats: editingPick.actualStats || null,
+      autoUpdated: editingPick.autoUpdated || false,
+      manuallyOverridden: true // Mark as manually edited
+    };
+
+    console.log('Updated participant data:', updatedParticipants[editingPick.participantId]);
+
+    // Update in Firebase
+    if (parlay.firestoreId) {
+      console.log('Updating Firebase document:', parlay.firestoreId);
+      const parlayDoc = doc(db, 'parlays', parlay.firestoreId);
       
-      // Find the parlay this pick belongs to
-      const parlay = parlays.find(p => p.id === editingPick.parlayId);
-      if (!parlay) {
-        alert('Parlay not found');
-        return;
-      }
-
-      // Update the specific participant
-      const updatedParticipants = { ...parlay.participants };
-      updatedParticipants[editingPick.participantId] = {
-        player: editingPick.player,
-        sport: editingPick.sport,
-        team: editingPick.team,
-        awayTeam: editingPick.awayTeam,
-        homeTeam: editingPick.homeTeam,
-        betType: editingPick.betType,
-        favorite: editingPick.favorite,
-        spread: editingPick.spread,
-        total: editingPick.total,
-        overUnder: editingPick.overUnder,
-        propType: editingPick.propType,
-        line: editingPick.line,
-        odds: editingPick.odds,
-        yesNoRuns: editingPick.yesNoRuns,
-        quarter: editingPick.quarter,
-        result: editingPick.result,
-        actualStats: editingPick.actualStats,
-        autoUpdated: editingPick.autoUpdated || false
-      };
-
-      // Update in Firebase
-      if (parlay.firestoreId) {
-        const parlayDoc = doc(db, 'parlays', parlay.firestoreId);
+      try {
         await updateDoc(parlayDoc, {
           participants: updatedParticipants
         });
+        console.log('Firebase update successful');
+      } catch (fbError) {
+        console.error('Firebase update error:', fbError);
+        console.error('Error code:', fbError.code);
+        console.error('Error message:', fbError.message);
+        throw fbError;
       }
-
-      // Update local state
-      const updatedParlays = parlays.map(p => 
-        p.id === editingPick.parlayId 
-          ? { ...p, participants: updatedParticipants }
-          : p
-      );
-      setParlays(updatedParlays);
-      
-      setEditingPick(null);
-      alert('Pick updated successfully!');
-    } catch (error) {
-      console.error('Error updating pick:', error);
-      alert('Failed to update pick. Please try again.');
-    } finally {
-      setSaving(false);
+    } else {
+      console.error('No Firestore ID found for parlay');
+      alert('Cannot update: Parlay has no Firestore ID');
+      return;
     }
-  };
+
+    // Update local state
+    const updatedParlays = parlays.map(p => 
+      p.id === editingPick.parlayId 
+        ? { ...p, participants: updatedParticipants }
+        : p
+    );
+    setParlays(updatedParlays);
+    
+    setEditingPick(null);
+    alert('Pick updated successfully!');
+  } catch (error) {
+    console.error('Error updating pick:', error);
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    alert(`Failed to update pick: ${error.message || 'Unknown error'}. Check console for details.`);
+  } finally {
+    setSaving(false);
+  }
+};
 
   return (
     <div className="space-y-4 md:space-y-6">
