@@ -1834,6 +1834,7 @@ const submitParlay = async () => {
     placedBy: '',
     settled: false
   });
+};
 
 const applyFilters = (parlaysList) => {
   return parlaysList.filter(parlay => {
