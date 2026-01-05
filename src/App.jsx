@@ -1576,13 +1576,14 @@ const saveEditedParlay = async (editedParlay) => {
     const cleanedParlay = {
       ...editedParlay,
       participants: Object.fromEntries(
-        Object.entries(editedParlay.participants).map(([id, participant]) => [
-          id,
-          {
-            ...participant,
-            actualStats: participant.result === 'pending' ? null : participant.actualStats
+        Object.entries(editedParlay.participants).map(([id, participant]) => {
+          if (participant.result === 'pending') {
+            // Remove actualStats entirely for pending picks
+            const { actualStats, ...rest } = participant;
+            return [id, rest];
           }
-        ])
+          return [id, participant];
+        })
       )
     };
     
@@ -1592,10 +1593,12 @@ const saveEditedParlay = async (editedParlay) => {
     );
     setParlays(updatedParlays);
     
-    // Update in Firebase
+    // Update in Firebase - completely replace the participants object
     if (cleanedParlay.firestoreId) {
       const parlayDoc = doc(db, 'parlays', cleanedParlay.firestoreId);
-      await updateDoc(parlayDoc, cleanedParlay);
+      await updateDoc(parlayDoc, {
+        participants: cleanedParlay.participants
+      });
     }
     
     setEditingParlay(null);
@@ -1606,7 +1609,6 @@ const saveEditedParlay = async (editedParlay) => {
     setSaving(false);
   }
 };
-
 // Helper function to render bet-specific fields
 const renderBetSpecificFields = (participant, id, isEditMode = false) => {
   const updateFunc = isEditMode 
