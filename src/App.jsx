@@ -2527,6 +2527,96 @@ const importFromCSV = async (csvText) => {
     lowerQuery.includes(type.toLowerCase())
   );
 
+// Check if searching by day of week
+const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+const isDayOfWeek = daysOfWeek.some(day => lowerQuery.includes(day));
+
+if (isDayOfWeek) {
+  results.matchedCategory = 'dayOfWeek';
+  
+  const matchedDay = daysOfWeek.find(day => lowerQuery.includes(day));
+  const dayIndex = daysOfWeek.indexOf(matchedDay);
+  
+  // Collect all picks on this day of week
+  const matchingPicks = [];
+  parlays.forEach(parlay => {
+    const date = new Date(parlay.date + 'T00:00:00');
+    const pickDayIndex = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    
+    // Convert to our array indexing (Monday = 0)
+    const adjustedDayIndex = pickDayIndex === 0 ? 6 : pickDayIndex - 1;
+    
+    if (adjustedDayIndex === dayIndex) {
+      Object.entries(parlay.participants).forEach(([id, pick]) => {
+        matchingPicks.push({
+          ...pick,
+          parlayDate: parlay.date,
+          parlayId: parlay.id,
+          participantId: id
+        });
+      });
+    }
+  });
+
+  const wins = matchingPicks.filter(p => p.result === 'win').length;
+  const losses = matchingPicks.filter(p => p.result === 'loss').length;
+  const pushes = matchingPicks.filter(p => p.result === 'push').length;
+  const pending = matchingPicks.filter(p => p.result === 'pending').length;
+  const total = matchingPicks.length;
+
+  // By player
+  const byPlayer = {};
+  matchingPicks.forEach(pick => {
+    if (!byPlayer[pick.player]) {
+      byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+    }
+    byPlayer[pick.player].total++;
+    if (pick.result === 'win') byPlayer[pick.player].wins++;
+    else if (pick.result === 'loss') byPlayer[pick.player].losses++;
+    else if (pick.result === 'push') byPlayer[pick.player].pushes++;
+  });
+
+  // By sport
+  const bySport = {};
+  matchingPicks.forEach(pick => {
+    if (!bySport[pick.sport]) {
+      bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+    }
+    bySport[pick.sport].total++;
+    if (pick.result === 'win') bySport[pick.sport].wins++;
+    else if (pick.result === 'loss') bySport[pick.sport].losses++;
+    else if (pick.result === 'push') bySport[pick.sport].pushes++;
+  });
+
+  // By bet type
+  const byBetType = {};
+  matchingPicks.forEach(pick => {
+    if (!byBetType[pick.betType]) {
+      byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+    }
+    byBetType[pick.betType].total++;
+    if (pick.result === 'win') byBetType[pick.betType].wins++;
+    else if (pick.result === 'loss') byBetType[pick.betType].losses++;
+    else if (pick.result === 'push') byBetType[pick.betType].pushes++;
+  });
+
+  results.data = {
+    dayOfWeek: matchedDay.charAt(0).toUpperCase() + matchedDay.slice(1),
+    total,
+    wins,
+    losses,
+    pushes,
+    pending,
+    winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
+    byPlayer,
+    bySport,
+    byBetType,
+    recentPicks: matchingPicks.slice(-10).reverse()
+  };
+  
+  return results;
+}
+    
   // Determine primary search category
   if (isPropType) {
     results.matchedCategory = 'propType';
@@ -5092,9 +5182,9 @@ const renderSearch = () => {
             {[
               'Anytime Touchdown Scorer record',
               'Spread bets stats',
-              'Chiefs record',
+              'Thursday picks',
               'Management NFL stats',
-              'Lakers picks'
+              'Vanderbilt picks'
             ].map(example => (
               <button
                 key={example}
@@ -5242,6 +5332,71 @@ const renderSearch = () => {
             </>
           )}
 
+{searchResults.matchedCategory === 'dayOfWeek' && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Total Picks</div>
+                  <div className="text-2xl font-bold text-blue-600">{searchResults.data.total}</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Wins</div>
+                  <div className="text-2xl font-bold text-green-600">{searchResults.data.wins}</div>
+                </div>
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Losses</div>
+                  <div className="text-2xl font-bold text-red-600">{searchResults.data.losses}</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Win %</div>
+                  <div className="text-2xl font-bold text-purple-600">{searchResults.data.winPct}%</div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3">📊 By Big Guy</h4>
+                <div className="space-y-2">
+                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => (
+                    <div key={player} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <span className="font-semibold">{player}</span>
+                      <span className="text-sm">
+                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3">🏈 By Sport</h4>
+                <div className="space-y-2">
+                  {Object.entries(searchResults.data.bySport).map(([sport, stats]) => (
+                    <div key={sport} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <span className="font-semibold">{sport}</span>
+                      <span className="text-sm">
+                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3">🎲 By Bet Type</h4>
+                <div className="space-y-2">
+                  {Object.entries(searchResults.data.byBetType).map(([betType, stats]) => (
+                    <div key={betType} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <span className="font-semibold">{betType}</span>
+                      <span className="text-sm">
+                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+          
           {searchResults.matchedCategory === 'player' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -5283,34 +5438,28 @@ const renderSearch = () => {
             <div>
               <h4 className="font-semibold text-lg mb-3">📅 Recent Picks</h4>
               <div className="space-y-2">
-                {searchResults.data.recentPicks.map((pick, idx) => {
-                  const date = new Date(pick.parlayDate + 'T00:00:00');
-                  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
-                  const formattedDate = formatDateForDisplay(pick.parlayDate);
-                  
-                  return (
-                    <div key={idx} className="p-3 bg-gray-50 rounded text-sm">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className="font-semibold">{dayOfWeek}, {formattedDate}</span>
-                        <span className={`font-semibold ${
-                          pick.result === 'win' ? 'text-green-600' :
-                          pick.result === 'loss' ? 'text-red-600' :
-                          pick.result === 'push' ? 'text-yellow-600' :
-                          'text-gray-500'
-                        }`}>
-                          {pick.result.toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="text-gray-700">
-                        {pick.player} - {pick.sport} - {pick.team || `${pick.awayTeam} @ ${pick.homeTeam}`}
-                        {pick.betType === 'Prop Bet' && ` - ${pick.propType} ${pick.overUnder} ${pick.line}`}
-                      </div>
-                      {pick.actualStats && (
-                        <div className="text-blue-600 mt-1">[{pick.actualStats}]</div>
-                      )}
+                {searchResults.data.recentPicks.map((pick, idx) => (
+                  <div key={idx} className="p-3 bg-gray-50 rounded text-sm">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-semibold">{formatDateForDisplay(pick.parlayDate)}</span>
+                      <span className={`font-semibold ${
+                        pick.result === 'win' ? 'text-green-600' :
+                        pick.result === 'loss' ? 'text-red-600' :
+                        pick.result === 'push' ? 'text-yellow-600' :
+                        'text-gray-500'
+                      }`}>
+                        {pick.result.toUpperCase()}
+                      </span>
                     </div>
-                  );
-                })}
+                    <div className="text-gray-700">
+                      {pick.player} - {pick.sport} - {pick.team || `${pick.awayTeam} @ ${pick.homeTeam}`}
+                      {pick.betType === 'Prop Bet' && ` - ${pick.propType} ${pick.overUnder} ${pick.line}`}
+                    </div>
+                    {pick.actualStats && (
+                      <div className="text-blue-600 mt-1">[{pick.actualStats}]</div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}
