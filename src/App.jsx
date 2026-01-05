@@ -1488,7 +1488,7 @@ const applyFilters = (parlaysList) => {
   });
 };
     
-  const updateParlayResult = async (parlayId, participantId, newResult) => {
+const updateParlayResult = async (parlayId, participantId, newResult) => {
     const updatedParlays = parlays.map(parlay => {
       if (parlay.id === parlayId) {
         return {
@@ -1498,6 +1498,7 @@ const applyFilters = (parlaysList) => {
             [participantId]: {
               ...parlay.participants[participantId],
               result: newResult,
+              actualStats: newResult === 'pending' ? null : parlay.participants[participantId].actualStats,
               autoUpdated: false,
               manuallyOverridden: newResult !== 'pending'
             }
