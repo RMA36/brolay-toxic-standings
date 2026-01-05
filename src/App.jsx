@@ -1418,10 +1418,11 @@ const selectSuggestion = (id, field, value) => {
   }
   
   const parlayWithId = {
-    ...newParlay,
-    id: Date.now(),
-    totalParticipants: participantCount
-  };
+  ...newParlay,
+  id: Date.now(),
+  totalParticipants: participantCount,
+  dayOfWeek: getDayOfWeek(newParlay.date)
+};
   
   // Learn from new entries
   const newTeams = [...learnedTeams];
@@ -1960,7 +1961,13 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
       return null;
   }
 };
-
+  
+  // Helper function to get day of week from date string
+const getDayOfWeek = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
+  return date.toLocaleDateString('en-US', { weekday: 'long' });
+};
   // Helper function to format bet description for display
 const formatBetDescription = (participant) => {
   switch(participant.betType) {
@@ -2576,6 +2583,19 @@ if (matchedProp) {
         else if (pick.result === 'push') byPlayer[pick.player].pushes++;
       });
 
+      // By day of week
+      const byDayOfWeek = {};
+      matchingPicks.forEach(pick => {
+        const day = pick.parlayDayOfWeek || getDayOfWeek(pick.parlayDate);
+        if (!byDayOfWeek[day]) {
+          byDayOfWeek[day] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        }
+        byDayOfWeek[day].total++;
+        if (pick.result === 'win') byDayOfWeek[day].wins++;
+        else if (pick.result === 'loss') byDayOfWeek[day].losses++;
+        else if (pick.result === 'push') byDayOfWeek[day].pushes++;
+      });
+  
       // Most common players picked
       const playerCounts = {};
       matchingPicks.forEach(pick => {
@@ -4442,6 +4462,38 @@ const renderImport = () => (
         style={{ minHeight: isMobile ? '44px' : 'auto' }}
       >
         Extract Teams from Existing Data
+      </button>
+      <button
+        onClick={async () => {
+          if (window.confirm('Add day of week to all existing brolays? This will update all records in the database.')) {
+            setSaving(true);
+            try {
+              let updatedCount = 0;
+              for (const parlay of parlays) {
+                if (!parlay.dayOfWeek && parlay.date) {
+                  const dayOfWeek = getDayOfWeek(parlay.date);
+                  if (parlay.firestoreId) {
+                    const parlayDoc = doc(db, 'parlays', parlay.firestoreId);
+                    await updateDoc(parlayDoc, { dayOfWeek });
+                    updatedCount++;
+                  }
+                }
+              }
+              await loadParlays();
+              alert(`Successfully added day of week to ${updatedCount} brolay(s)!`);
+            } catch (error) {
+              console.error('Error backfilling day of week:', error);
+              alert('Error updating brolays. Please try again.');
+            } finally {
+              setSaving(false);
+            }
+          }
+        }}
+        disabled={parlays.length === 0 || saving}
+        className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 text-base"
+        style={{ minHeight: isMobile ? '44px' : 'auto' }}
+      >
+        Backfill Day of Week
       </button>
     </div>
     
