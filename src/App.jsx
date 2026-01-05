@@ -2205,6 +2205,21 @@ const renderEditModal = () => {
                       <option value="push">Push</option>
                     </select>
                   </div>
+                  <div>
+                    <label className="block text-xs font-medium mb-1">Actual Stats (Optional)</label>
+                    <input
+                      type="text"
+                      value={participant.actualStats || ''}
+                      onChange={(e) => {
+                        const updated = {...editingParlay};
+                        updated.participants[id].actualStats = e.target.value || null;
+                        setEditingParlay(updated);
+                      }}
+                      className="w-full px-2 py-1 border rounded text-base"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                      placeholder="e.g., 212 passing yards"
+                    />
+                  </div>
                 </div>
               </div>
             ))}
