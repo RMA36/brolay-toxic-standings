@@ -3853,9 +3853,17 @@ const renderGroupDashboard = () => {
 };
 
 const renderAllBrolays = () => {
-  const filteredParlays = applyFilters([...parlays]).sort((a, b) => 
-    new Date(b.date) - new Date(a.date)
-  );
+  const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
+    const dateCompare = new Date(b.date) - new Date(a.date);
+    if (dateCompare !== 0) return dateCompare;
+    // For same-day brolays, use sortOrder if available
+    if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+      return b.sortOrder - a.sortOrder; // Note: reversed for descending order
+    }
+    const aKey = a.firestoreId || a.id;
+    const bKey = b.firestoreId || b.id;
+    return String(bKey).localeCompare(String(aKey)); // Note: reversed for descending order
+  });
 
   const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
     const participants = Object.values(parlay.participants || {});
@@ -4179,7 +4187,16 @@ const renderAllBrolays = () => {
   );
 };
   const renderPayments = () => {
-  const filteredParlays = applyFilters([...parlays]);
+  const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
+    const dateCompare = new Date(a.date) - new Date(b.date);
+    if (dateCompare !== 0) return dateCompare;
+    if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+      return a.sortOrder - b.sortOrder;
+    }
+    const aKey = a.firestoreId || a.id;
+    const bKey = b.firestoreId || b.id;
+    return String(aKey).localeCompare(String(bKey));
+  });
   const unsettledParlays = filteredParlays.filter(p => !p.settled);
   const lostParlays = unsettledParlays.filter(p => {
     const participants = Object.values(p.participants);
@@ -4595,9 +4612,16 @@ const renderImport = () => (
 );
  
 const renderGrid = () => {
-  const filteredParlays = applyFilters([...parlays]).sort((a, b) => 
-    new Date(b.date) - new Date(a.date)
-  );
+  const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
+    const dateCompare = new Date(b.date) - new Date(a.date);
+    if (dateCompare !== 0) return dateCompare;
+    if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+      return b.sortOrder - a.sortOrder;
+    }
+    const aKey = a.firestoreId || a.id;
+    const bKey = b.firestoreId || b.id;
+    return String(bKey).localeCompare(String(aKey));
+  });
 
   return (
     <div className="space-y-4 md:space-y-6">
