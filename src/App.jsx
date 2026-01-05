@@ -1677,7 +1677,7 @@ const selectSuggestion = (id, field, value) => {
     setNewParlay({ ...newParlay, participants: updated });
   };
 
-  const submitParlay = async () => {
+const submitParlay = async () => {
   const participantCount = Object.keys(newParlay.participants).length;
   if (participantCount < 3) {
     alert('Minimum 3 participants required');
@@ -1689,13 +1689,6 @@ const selectSuggestion = (id, field, value) => {
     alert('Please select a player for all picks');
     return;
   }
-  
-  const parlayWithId = {
-  ...newParlay,
-  id: Date.now(),
-  totalParticipants: participantCount,
-  dayOfWeek: getDayOfWeek(newParlay.date)
-};
   
 // Auto-fetch odds for ALL picks without odds from The Odds API (FanDuel primary, DraftKings secondary)
   setSaving(true);
