@@ -2799,8 +2799,84 @@ if (matchedProp) {
   return results.matchedCategory ? results : null;
 };
 
-  const renderEntry = () => (
+const renderEntry = () => {
+  // Calculate who is currently out
+  const getPlayerOut = () => {
+    // Get all brolays sorted by date (most recent first)
+    const sortedParlays = [...parlays].sort((a, b) => {
+      const dateCompare = new Date(b.date) - new Date(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      const aKey = a.firestoreId || a.id;
+      const bKey = b.firestoreId || b.id;
+      return String(bKey).localeCompare(String(aKey));
+    });
+
+    // Look for the most recent 4-person brolay that either:
+    // 1. Was an And-1 (1 loss, rest wins)
+    // 2. Was a winning 4-person brolay
+    for (const parlay of sortedParlays) {
+      const participants = Object.values(parlay.participants || {});
+      
+      // Skip if not 4 people
+      if (participants.length !== 4) continue;
+      
+      const losers = participants.filter(p => p.result === 'loss');
+      const winners = participants.filter(p => p.result === 'win');
+      const pushes = participants.filter(p => p.result === 'push');
+      
+      // Check for And-1 (1 loss, rest wins/pushes)
+      const isAnd1 = losers.length === 1 && winners.length === participants.length - 1;
+      if (isAnd1) {
+        const loserPlayer = losers[0].player;
+        return {
+          player: loserPlayer,
+          reason: 'And-1',
+          date: parlay.date,
+          parlayId: parlay.id
+        };
+      }
+      
+      // Check for winning 4-person brolay (no losses, at least one win)
+      const isWinning = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
+      if (isWinning) {
+        // Find who was NOT in this brolay
+        const participantPlayers = participants.map(p => p.player);
+        const playerOut = players.find(p => !participantPlayers.includes(p));
+        return {
+          player: playerOut,
+          reason: '4-person win',
+          date: parlay.date,
+          parlayId: parlay.id
+        };
+      }
+    }
+    
+    return null;
+  };
+
+  const playerOutInfo = getPlayerOut();
+
+  return (
     <div className="space-y-4 md:space-y-6">
+      {/* Who's Out Panel */}
+      {playerOutInfo && (
+        <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 md:p-6">
+          <div className="flex items-center gap-3 mb-2">
+            <AlertCircle className="text-red-600" size={24} />
+            <h3 className="text-lg md:text-xl font-bold text-red-900">Who's Out</h3>
+          </div>
+          <div className="text-base md:text-lg">
+            <span className="font-bold text-red-700">{playerOutInfo.player}</span> is currently out
+          </div>
+          <div className="text-sm text-red-700 mt-1">
+            Reason: {playerOutInfo.reason} on {formatDateForDisplay(playerOutInfo.date)}
+          </div>
+          <div className="text-xs text-red-600 mt-2">
+            Next 4-man brolay should not include {playerOutInfo.player}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
         <h2 className="text-xl md:text-2xl font-bold mb-4">New Brolay Entry</h2>
         
