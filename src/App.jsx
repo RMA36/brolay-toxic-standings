@@ -3160,6 +3160,7 @@ const renderEntry = () => {
       </div>
     </div>
   );
+};
 
 const calculateStatsForPlayer = (player, parlaysList) => {
     const playerStats = {
