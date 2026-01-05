@@ -1569,16 +1569,30 @@ const saveEditedParlay = async (editedParlay) => {
   try {
     setSaving(true);
     
+    // Clear actualStats for any picks that were set back to pending
+    const cleanedParlay = {
+      ...editedParlay,
+      participants: Object.fromEntries(
+        Object.entries(editedParlay.participants).map(([id, participant]) => [
+          id,
+          {
+            ...participant,
+            actualStats: participant.result === 'pending' ? null : participant.actualStats
+          }
+        ])
+      )
+    };
+    
     // Update in local state
     const updatedParlays = parlays.map(p => 
-      p.id === editedParlay.id ? editedParlay : p
+      p.id === cleanedParlay.id ? cleanedParlay : p
     );
     setParlays(updatedParlays);
     
     // Update in Firebase
-    if (editedParlay.firestoreId) {
-      const parlayDoc = doc(db, 'parlays', editedParlay.firestoreId);
-      await updateDoc(parlayDoc, editedParlay);
+    if (cleanedParlay.firestoreId) {
+      const parlayDoc = doc(db, 'parlays', cleanedParlay.firestoreId);
+      await updateDoc(parlayDoc, cleanedParlay);
     }
     
     setEditingParlay(null);
@@ -2150,6 +2164,10 @@ const renderEditModal = () => {
                         updated.participants[id].result = e.target.value;
                         updated.participants[id].autoUpdated = false;
                         updated.participants[id].manuallyOverridden = e.target.value !== 'pending';
+                        // Clear actualStats if setting to pending
+                        if (e.target.value === 'pending') {
+                          updated.participants[id].actualStats = null;
+                        }
                         setEditingParlay(updated);
                       }}
                       className="w-full px-2 py-1 border rounded text-base"
