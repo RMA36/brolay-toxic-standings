@@ -22,6 +22,8 @@ const App = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
   const PASSWORD = 'manipulation';
+
+  const THE_ODDS_API_KEY = '42cd1e5f5a4033ada2a492c738f33014';
   
   const SHOW_IMPORT_TAB = false; // Set to true to show Import Data tab
   const SHOW_SETTINGS_TAB = false; // Set to true to show Settings tab
@@ -977,6 +979,277 @@ const checkQuarterResult = async (participant, gameDate) => {
     return { result: 'pending', stats: null };;
   }
 };
+
+const fetchOddsFromTheOddsAPI = async (participant, gameDate, eventsData = null) => {
+  const { sport, betType, team, awayTeam, homeTeam, propType, overUnder, line, favorite } = participant;
+  
+  if (!THE_ODDS_API_KEY || THE_ODDS_API_KEY === 'YOUR_API_KEY_HERE') {
+    console.warn('The Odds API key not configured');
+    return null;
+  }
+  
+  try {
+    // Comprehensive sport mapping
+    const sportMap = {
+      'NFL': 'americanfootball_nfl',
+      'NBA': 'basketball_nba',
+      'MLB': 'baseball_mlb',
+      'NHL': 'icehockey_nhl',
+      'College Football': 'americanfootball_ncaaf',
+      'College Basketball': 'basketball_ncaab',
+      'College Basketball (Women\'s)': 'basketball_wncaab',
+      'WNBA': 'basketball_wnba',
+      'Soccer': 'soccer_usa_mls',
+      'Soccer (Women\'s)': 'soccer_usa_nwsl',
+      'College Baseball': 'baseball_ncaa'
+    };
+    
+    const oddsApiSport = sportMap[sport];
+    if (!oddsApiSport) {
+      console.log(`Sport ${sport} not supported by The Odds API`);
+      return null;
+    }
+    
+    // Use pre-fetched events if available, otherwise fetch them
+    if (!eventsData) {
+      const gameDateObj = new Date(gameDate + 'T00:00:00');
+      const commenceTimeFrom = gameDateObj.toISOString();
+      const gameDateNext = new Date(gameDateObj);
+      gameDateNext.setDate(gameDateNext.getDate() + 1);
+      const commenceTimeTo = gameDateNext.toISOString();
+      
+      const eventsUrl = `https://api.the-odds-api.com/v4/sports/${oddsApiSport}/events?apiKey=${THE_ODDS_API_KEY}&commenceTimeFrom=${commenceTimeFrom}&commenceTimeTo=${commenceTimeTo}`;
+      
+      console.log(`Fetching events for ${sport} on ${gameDate}`);
+      const eventsResponse = await fetch(eventsUrl);
+      eventsData = await eventsResponse.json();
+    }
+    
+    if (!eventsData || eventsData.length === 0) {
+      console.log('No events found for this date');
+      return null;
+    }
+    
+    // Find the matching game
+    let matchingEvent = null;
+    for (const event of eventsData) {
+      if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total') {
+        // Match by both teams
+        if (matchTeamName(awayTeam, event.away_team) && matchTeamName(homeTeam, event.home_team)) {
+          matchingEvent = event;
+          break;
+        }
+      } else {
+        // Match by single team
+        if (matchTeamName(team, event.home_team) || matchTeamName(team, event.away_team)) {
+          matchingEvent = event;
+          break;
+        }
+      }
+    }
+    
+    if (!matchingEvent) {
+      console.log('No matching game found');
+      return null;
+    }
+    
+    console.log(`Found matching event: ${matchingEvent.away_team} @ ${matchingEvent.home_team}`);
+    
+    // Determine which markets to fetch based on bet type
+    let markets = [];
+    if (betType === 'Spread') {
+      markets = ['spreads'];
+    } else if (betType === 'Moneyline' || betType === 'First Half Moneyline' || betType === 'Quarter Moneyline') {
+      markets = ['h2h'];
+    } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'Quarter Total') {
+      markets = ['totals'];
+    } else if (betType === 'Prop Bet') {
+      // Comprehensive prop type mapping
+      const propTypeMap = {
+        // NFL Props
+        'passing yards': 'player_pass_yds',
+        'passing attempts': 'player_pass_attempts',
+        'passing completions': 'player_pass_completions',
+        'passing touchdowns': 'player_pass_tds',
+        'interceptions thrown': 'player_pass_interceptions',
+        'rushing yards': 'player_rush_yds',
+        'rushing attempts': 'player_rush_attempts',
+        'rushing touchdowns': 'player_rush_tds',
+        'receiving yards': 'player_reception_yds',
+        'receptions': 'player_receptions',
+        'receiving touchdowns': 'player_reception_tds',
+        'rushing & receiving yards': 'player_rush_receive_yds',
+        'anytime touchdown scorer': 'player_anytime_td',
+        'first touchdown scorer': 'player_first_td',
+        'last touchdown scorer': 'player_last_td',
+        
+        // NBA Props
+        'points': 'player_points',
+        'rebounds': 'player_rebounds',
+        'assists': 'player_assists',
+        'three pointers made': 'player_threes',
+        'steals': 'player_steals',
+        'blocks': 'player_blocks',
+        'turnovers': 'player_turnovers',
+        'points + rebounds': 'player_points_rebounds',
+        'points + assists': 'player_points_assists',
+        'rebounds + assists': 'player_rebounds_assists',
+        'points + rebounds + assists': 'player_points_rebounds_assists',
+        
+        // MLB Props
+        'strikeouts': 'player_strikeouts',
+        'pitcher strikeouts': 'pitcher_strikeouts',
+        'hits': 'player_hits',
+        'total bases': 'player_total_bases',
+        'home runs': 'player_home_runs',
+        'rbis': 'player_rbis',
+        'runs': 'player_runs_scored',
+        'stolen bases': 'player_stolen_bases',
+        'hits allowed': 'pitcher_hits_allowed',
+        'walks allowed': 'pitcher_walks',
+        'earned runs allowed': 'pitcher_earned_runs',
+        
+        // NHL Props
+        'goals': 'player_goals',
+        'shots on goal': 'player_shots_on_goal',
+        'saves': 'goalie_saves',
+        'goals against': 'goalie_goals_against'
+      };
+      
+      const normalizedPropType = normalizePropType(propType);
+      const oddsApiMarket = propTypeMap[normalizedPropType];
+      
+      if (!oddsApiMarket) {
+        console.log(`Prop type "${propType}" (normalized: "${normalizedPropType}") not available in The Odds API`);
+        return null;
+      }
+      
+      markets = [oddsApiMarket];
+    } else {
+      console.log(`Bet type ${betType} not yet supported`);
+      return null;
+    }
+    
+    // Fetch odds for the specific event and markets (FanDuel primary, DraftKings secondary)
+    const oddsUrl = `https://api.the-odds-api.com/v4/sports/${oddsApiSport}/events/${matchingEvent.id}/odds?apiKey=${THE_ODDS_API_KEY}&regions=us&markets=${markets.join(',')}&oddsFormat=american&bookmakers=fanduel,draftkings`;
+    
+    console.log(`Fetching odds for markets: ${markets.join(', ')}`);
+    const oddsResponse = await fetch(oddsUrl);
+    const oddsData = await oddsResponse.json();
+    
+    if (!oddsData.bookmakers || oddsData.bookmakers.length === 0) {
+      console.log('No bookmaker odds available');
+      return null;
+    }
+    
+    // Try FanDuel first, then DraftKings as fallback
+    let bookmaker = oddsData.bookmakers.find(b => b.key === 'fanduel');
+    let bookmakerName = 'FanDuel';
+    
+    if (!bookmaker || !bookmaker.markets) {
+      console.log('FanDuel not available, trying DraftKings...');
+      bookmaker = oddsData.bookmakers.find(b => b.key === 'draftkings');
+      bookmakerName = 'DraftKings';
+      
+      if (!bookmaker || !bookmaker.markets) {
+        console.log('Neither FanDuel nor DraftKings available');
+        return null;
+      }
+    }
+    
+    console.log(`Using ${bookmakerName} odds`);
+    
+    // Process based on bet type
+    if (betType === 'Spread') {
+      const spreadMarket = bookmaker.markets.find(m => m.key === 'spreads');
+      if (!spreadMarket) return null;
+      
+      const pickedTeamIsHome = matchTeamName(team, matchingEvent.home_team);
+      const pickedTeamName = pickedTeamIsHome ? matchingEvent.home_team : matchingEvent.away_team;
+      
+      const outcome = spreadMarket.outcomes.find(o => o.name === pickedTeamName);
+      if (!outcome) return null;
+      
+      // Verify spread matches (within 0.5 points)
+      const pickSpread = parseFloat(line);
+      const oddsSpread = Math.abs(parseFloat(outcome.point));
+      
+      if (Math.abs(pickSpread - oddsSpread) <= 0.5) {
+        console.log(`Found spread odds: ${outcome.price} from ${bookmakerName}`);
+        return { odds: outcome.price, bookmaker: bookmakerName };
+      }
+      
+    } else if (betType === 'Moneyline' || betType === 'First Half Moneyline' || betType === 'Quarter Moneyline') {
+      const moneylineMarket = bookmaker.markets.find(m => m.key === 'h2h');
+      if (!moneylineMarket) return null;
+      
+      const pickedTeamIsHome = matchTeamName(team, matchingEvent.home_team);
+      const pickedTeamName = pickedTeamIsHome ? matchingEvent.home_team : matchingEvent.away_team;
+      
+      const outcome = moneylineMarket.outcomes.find(o => o.name === pickedTeamName);
+      if (outcome) {
+        console.log(`Found moneyline odds: ${outcome.price} from ${bookmakerName}`);
+        return { odds: outcome.price, bookmaker: bookmakerName };
+      }
+      
+    } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'Quarter Total') {
+      const totalsMarket = bookmaker.markets.find(m => m.key === 'totals');
+      if (!totalsMarket) return null;
+      
+      const outcome = totalsMarket.outcomes.find(o => o.name === overUnder);
+      if (!outcome) return null;
+      
+      // Verify total matches (within 0.5 points)
+      const pickTotal = parseFloat(line);
+      const oddsTotal = parseFloat(outcome.point);
+      
+      if (Math.abs(pickTotal - oddsTotal) <= 0.5) {
+        console.log(`Found total odds: ${outcome.price} from ${bookmakerName}`);
+        return { odds: outcome.price, bookmaker: bookmakerName };
+      }
+      
+    } else if (betType === 'Prop Bet') {
+      const market = bookmaker.markets[0]; // We only requested one market
+      if (!market || !market.outcomes) return null;
+      
+      const playerName = participant.team; // For props, player name is in 'team' field
+      
+      // Search for matching player
+      for (const outcome of market.outcomes) {
+        if (!outcome.description) continue;
+        
+        // Fuzzy match player name
+        const outcomePlayerName = outcome.description.toLowerCase();
+        const searchPlayerName = playerName.toLowerCase();
+        
+        if (outcomePlayerName.includes(searchPlayerName) || searchPlayerName.includes(outcomePlayerName)) {
+          // Check if line matches
+          const outcomeLine = parseFloat(outcome.point);
+          const pickLine = parseFloat(line);
+          
+          if (Math.abs(outcomeLine - pickLine) <= 0.5) {
+            // Match over/under direction
+            if ((overUnder === 'Over' && outcome.name === 'Over') ||
+                (overUnder === 'Under' && outcome.name === 'Under')) {
+              console.log(`Found prop odds: ${outcome.price} for ${playerName} ${propType} from ${bookmakerName}`);
+              return { odds: outcome.price, bookmaker: bookmakerName };
+            }
+          }
+        }
+      }
+    }
+    
+    console.log('No matching odds found');
+    return null;
+    
+  } catch (error) {
+    console.error('Error fetching odds from The Odds API:', error);
+    if (error.message && error.message.includes('401')) {
+      console.error('API Key may be invalid or expired');
+    }
+    return null;
+  }
+};
   
 const checkGameResult = async (participant, gameDate) => {
   const { sport, betType, team, awayTeam, homeTeam, favorite, spread, overUnder, total } = participant;
@@ -1424,11 +1697,100 @@ const selectSuggestion = (id, field, value) => {
   dayOfWeek: getDayOfWeek(newParlay.date)
 };
   
+// Auto-fetch odds for ALL picks without odds from The Odds API (FanDuel primary, DraftKings secondary)
+  setSaving(true);
+  const participantsWithOdds = {};
+  let oddsFetchedCount = 0;
+  let oddsFailedCount = 0;
+  
+  // Pre-fetch all events for all sports needed (do this once, not per pick)
+  const sportsNeeded = new Set();
+  Object.values(newParlay.participants).forEach(p => {
+    if (!p.odds) sportsNeeded.add(p.sport);
+  });
+  
+  const eventsBySport = {};
+  const sportMap = {
+    'NFL': 'americanfootball_nfl',
+    'NBA': 'basketball_nba',
+    'MLB': 'baseball_mlb',
+    'NHL': 'icehockey_nhl',
+    'College Football': 'americanfootball_ncaaf',
+    'College Basketball': 'basketball_ncaab',
+    'College Basketball (Women\'s)': 'basketball_wncaab',
+    'WNBA': 'basketball_wnba',
+    'Soccer': 'soccer_usa_mls',
+    'Soccer (Women\'s)': 'soccer_usa_nwsl',
+    'College Baseball': 'baseball_ncaa'
+  };
+  
+  for (const sport of sportsNeeded) {
+    const oddsApiSport = sportMap[sport];
+    if (!oddsApiSport) continue;
+    
+    try {
+      const gameDateObj = new Date(newParlay.date + 'T00:00:00');
+      const commenceTimeFrom = gameDateObj.toISOString();
+      const gameDateNext = new Date(gameDateObj);
+      gameDateNext.setDate(gameDateNext.getDate() + 1);
+      const commenceTimeTo = gameDateNext.toISOString();
+      
+      const eventsUrl = `https://api.the-odds-api.com/v4/sports/${oddsApiSport}/events?apiKey=${THE_ODDS_API_KEY}&commenceTimeFrom=${commenceTimeFrom}&commenceTimeTo=${commenceTimeTo}`;
+      
+      console.log(`Pre-fetching events for ${sport}`);
+      const eventsResponse = await fetch(eventsUrl);
+      const eventsData = await eventsResponse.json();
+      
+      eventsBySport[sport] = eventsData || [];
+    } catch (error) {
+      console.error(`Error fetching events for ${sport}:`, error);
+      eventsBySport[sport] = [];
+    }
+  }
+  
+  // Now fetch odds for each pick, using the pre-fetched events
+  for (const [id, participant] of Object.entries(newParlay.participants)) {
+    if (!participant.odds) {
+      try {
+        const result = await fetchOddsFromTheOddsAPI(participant, newParlay.date, eventsBySport[participant.sport]);
+        
+        if (result) {
+          const odds = result.odds;
+          const bookmaker = result.bookmaker;
+          
+          participantsWithOdds[id] = {
+            ...participant,
+            odds: typeof odds === 'string' ? odds : (odds > 0 ? `+${odds}` : `${odds}`),
+            oddsSource: bookmaker
+          };
+          oddsFetchedCount++;
+        } else {
+          participantsWithOdds[id] = participant;
+          oddsFailedCount++;
+        }
+      } catch (error) {
+        console.error(`Error fetching odds for pick ${id}:`, error);
+        participantsWithOdds[id] = participant;
+        oddsFailedCount++;
+      }
+    } else {
+      participantsWithOdds[id] = participant;
+    }
+  }
+  
+  const parlayWithId = {
+    ...newParlay,
+    participants: participantsWithOdds,
+    id: Date.now(),
+    totalParticipants: participantCount,
+    dayOfWeek: getDayOfWeek(newParlay.date)
+  };
+  
   // Learn from new entries
   const newTeams = [...learnedTeams];
   const newPropTypes = [...learnedPropTypes];
   
-  Object.values(newParlay.participants).forEach(p => {
+  Object.values(parlayWithId.participants).forEach(p => {
     if (p.team && !newTeams.includes(p.team)) {
       newTeams.push(p.team);
     }
@@ -1448,20 +1810,37 @@ const selectSuggestion = (id, field, value) => {
     
     const updatedParlays = [...parlays, { ...parlayWithId, firestoreId: docRef.id }];
     setParlays(updatedParlays);
+    
+    // Show success message with odds info
+    let message = 'Brolay saved successfully!';
+    if (oddsFetchedCount > 0) {
+      message += ` Fetched odds for ${oddsFetchedCount} pick(s).`;
+    }
+    if (oddsFailedCount > 0) {
+      message += ` Could not find odds for ${oddsFailedCount} pick(s) - enter manually if needed.`;
+    }
+    alert(message);
   } catch (error) {
     console.error('Error adding parlay:', error);
     alert('Failed to save parlay. Please try again.');
+  } finally {
+    setSaving(false);
   }
     
   setNewParlay({
-    date: new Date().toISOString().split('T')[0],
+    date: (() => {
+      const etDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+      const year = etDate.getFullYear();
+      const month = String(etDate.getMonth() + 1).padStart(2, '0');
+      const day = String(etDate.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    })(),
     betAmount: 10,
     totalPayout: 0,
     participants: {},
     placedBy: '',
     settled: false
   });
-};
 
 const applyFilters = (parlaysList) => {
   return parlaysList.filter(parlay => {
@@ -2201,8 +2580,11 @@ const renderEditModal = () => {
                       }}
                       className="w-full px-2 py-1 border rounded text-base"
                       style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      placeholder="e.g., -120"
+                      placeholder="e.g., -120 (Optional)"
                     />
+                    {participant.oddsSource && (
+                      <div className="text-xs text-gray-500 mt-1">Source: {participant.oddsSource}</div>
+                    )}
                   </div>
                   <div>
                     <label className="block text-xs font-medium mb-1">Result</label>
@@ -4126,7 +4508,13 @@ const renderAllBrolays = () => {
                       return (
                         <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-50 p-2 rounded gap-1">
                           <span className="flex-1">
-                            <strong>{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails} ({participant.betType})
+                            <strong>{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails}
+                            {participant.odds && (
+                              <span className="ml-2 text-purple-600 font-semibold">
+                                {participant.odds}
+                                {participant.oddsSource && <span className="text-xs text-gray-500"> ({participant.oddsSource})</span>}
+                              </span>
+                            )}
                             {participant.actualStats && (
                               <span className="ml-2 text-blue-600 font-semibold">
                                 [{participant.actualStats}]
