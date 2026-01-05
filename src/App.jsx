@@ -4463,38 +4463,6 @@ const renderImport = () => (
       >
         Extract Teams from Existing Data
       </button>
-      <button
-        onClick={async () => {
-          if (window.confirm('Add day of week to all existing brolays? This will update all records in the database.')) {
-            setSaving(true);
-            try {
-              let updatedCount = 0;
-              for (const parlay of parlays) {
-                if (!parlay.dayOfWeek && parlay.date) {
-                  const dayOfWeek = getDayOfWeek(parlay.date);
-                  if (parlay.firestoreId) {
-                    const parlayDoc = doc(db, 'parlays', parlay.firestoreId);
-                    await updateDoc(parlayDoc, { dayOfWeek });
-                    updatedCount++;
-                  }
-                }
-              }
-              await loadParlays();
-              alert(`Successfully added day of week to ${updatedCount} brolay(s)!`);
-            } catch (error) {
-              console.error('Error backfilling day of week:', error);
-              alert('Error updating brolays. Please try again.');
-            } finally {
-              setSaving(false);
-            }
-          }
-        }}
-        disabled={parlays.length === 0 || saving}
-        className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 text-base"
-        style={{ minHeight: isMobile ? '44px' : 'auto' }}
-      >
-        Backfill Day of Week
-      </button>
     </div>
     
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 md:p-6">
@@ -6039,25 +6007,57 @@ const renderSettings = () => {
       </div>
 
       {/* Danger Zone */}
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6">
-        <h3 className="text-lg font-bold text-red-900 mb-4">⚠️ Danger Zone</h3>
-        <div className="flex flex-col md:flex-row gap-4">
-          <button
-            onClick={handleClearAllLearnedData}
-            className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 text-base"
-            style={{ minHeight: isMobile ? '44px' : 'auto' }}
-          >
-            Clear All Learned Data
-          </button>
-          <button
-            onClick={extractTeamsFromExistingParlays}
-            disabled={parlays.length === 0}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 text-base"
-            style={{ minHeight: isMobile ? '44px' : 'auto' }}
-          >
-            Re-extract From Existing Brolays
-          </button>
-        </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6">
+          <h3 className="text-lg font-bold text-red-900 mb-4">⚠️ Danger Zone</h3>
+          <div className="flex flex-col md:flex-row gap-4">
+            <button
+              onClick={handleClearAllLearnedData}
+              className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              Clear All Learned Data
+            </button>
+            <button
+              onClick={extractTeamsFromExistingParlays}
+              disabled={parlays.length === 0}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              Re-extract From Existing Brolays
+            </button>
+            <button
+              onClick={async () => {
+                if (window.confirm('Add day of week to all existing brolays? This will update all records in the database.')) {
+                  setSaving(true);
+                  try {
+                    let updatedCount = 0;
+                    for (const parlay of parlays) {
+                      if (!parlay.dayOfWeek && parlay.date) {
+                        const dayOfWeek = getDayOfWeek(parlay.date);
+                        if (parlay.firestoreId) {
+                          const parlayDoc = doc(db, 'parlays', parlay.firestoreId);
+                          await updateDoc(parlayDoc, { dayOfWeek });
+                          updatedCount++;
+                        }
+                      }
+                    }
+                    await loadParlays();
+                    alert(`Successfully added day of week to ${updatedCount} brolay(s)!`);
+                  } catch (error) {
+                    console.error('Error backfilling day of week:', error);
+                    alert('Error updating brolays. Please try again.');
+                  } finally {
+                    setSaving(false);
+                  }
+                }
+              }}
+              disabled={parlays.length === 0 || saving}
+              className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              Backfill Day of Week
+            </button>
+          </div>
         <p className="text-sm text-red-800 mt-3">
           Clear all will remove all learned teams and prop types. Re-extract will scan all your brolays and rebuild the learned data.
         </p>
