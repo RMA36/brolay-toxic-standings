@@ -1096,8 +1096,11 @@ const autoUpdatePendingPicks = async () => {
           const resultData = await checkGameResult(participant, parlay.date);
           
           if (resultData && resultData.result && resultData.result !== 'pending') {
+            // Create a clean participant object without old actualStats
+            const { actualStats: oldStats, ...cleanParticipant } = participant;
+            
             updatedParticipants[participantId] = {
-              ...participant,
+              ...cleanParticipant,
               result: resultData.result,
               actualStats: resultData.stats,
               autoUpdated: true,
