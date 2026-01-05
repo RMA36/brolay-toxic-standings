@@ -2611,7 +2611,9 @@ if (isDayOfWeek) {
     byPlayer,
     bySport,
     byBetType,
-    recentPicks: matchingPicks.slice(-10).reverse()
+    recentPicks: matchingPicks
+      .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+      .slice(0, 10)
   };
   
   return results;
@@ -2707,7 +2709,9 @@ if (matchedProp) {
         winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
         byPlayer,
         topPlayers,
-        recentPicks: matchingPicks.slice(-10).reverse()
+        recentPicks: matchingPicks
+          .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+          .slice(0, 10)
       };
     }
   } else if (isBetType) {
@@ -2755,7 +2759,9 @@ if (matchedProp) {
         pushes,
         winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
         byPlayer,
-        recentPicks: matchingPicks.slice(-10).reverse()
+        recentPicks: matchingPicks
+          .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+          .slice(0, 10)
       };
     }
   } else if (isSport) {
@@ -2803,7 +2809,9 @@ if (matchedProp) {
         pushes,
         winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
         byPlayer,
-        recentPicks: matchingPicks.slice(-10).reverse()
+        recentPicks: matchingPicks
+          .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+          .slice(0, 10)
       };
     }
   } else if (isTeam) {
@@ -2853,7 +2861,9 @@ if (matchedProp) {
         pushes,
         winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
         byPlayer,
-        recentPicks: matchingPicks.slice(-10).reverse()
+        recentPicks: matchingPicks
+          .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+          .slice(0, 10)
       };
     }
   } else if (isPlayer) {
@@ -2901,7 +2911,9 @@ if (matchedProp) {
         pushes,
         winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
         bySport,
-        recentPicks: matchingPicks.slice(-10).reverse()
+        recentPicks: matchingPicks
+          .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+          .slice(0, 10)
       };
     }
   }
