@@ -5283,28 +5283,34 @@ const renderSearch = () => {
             <div>
               <h4 className="font-semibold text-lg mb-3">📅 Recent Picks</h4>
               <div className="space-y-2">
-                {searchResults.data.recentPicks.map((pick, idx) => (
-                  <div key={idx} className="p-3 bg-gray-50 rounded text-sm">
-                    <div className="flex justify-between items-start mb-1">
-                      <span className="font-semibold">{formatDateForDisplay(pick.parlayDate)}</span>
-                      <span className={`font-semibold ${
-                        pick.result === 'win' ? 'text-green-600' :
-                        pick.result === 'loss' ? 'text-red-600' :
-                        pick.result === 'push' ? 'text-yellow-600' :
-                        'text-gray-500'
-                      }`}>
-                        {pick.result.toUpperCase()}
-                      </span>
+                {searchResults.data.recentPicks.map((pick, idx) => {
+                  const date = new Date(pick.parlayDate + 'T00:00:00');
+                  const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+                  const formattedDate = formatDateForDisplay(pick.parlayDate);
+                  
+                  return (
+                    <div key={idx} className="p-3 bg-gray-50 rounded text-sm">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="font-semibold">{dayOfWeek}, {formattedDate}</span>
+                        <span className={`font-semibold ${
+                          pick.result === 'win' ? 'text-green-600' :
+                          pick.result === 'loss' ? 'text-red-600' :
+                          pick.result === 'push' ? 'text-yellow-600' :
+                          'text-gray-500'
+                        }`}>
+                          {pick.result.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="text-gray-700">
+                        {pick.player} - {pick.sport} - {pick.team || `${pick.awayTeam} @ ${pick.homeTeam}`}
+                        {pick.betType === 'Prop Bet' && ` - ${pick.propType} ${pick.overUnder} ${pick.line}`}
+                      </div>
+                      {pick.actualStats && (
+                        <div className="text-blue-600 mt-1">[{pick.actualStats}]</div>
+                      )}
                     </div>
-                    <div className="text-gray-700">
-                      {pick.player} - {pick.sport} - {pick.team || `${pick.awayTeam} @ ${pick.homeTeam}`}
-                      {pick.betType === 'Prop Bet' && ` - ${pick.propType} ${pick.overUnder} ${pick.line}`}
-                    </div>
-                    {pick.actualStats && (
-                      <div className="text-blue-600 mt-1">[{pick.actualStats}]</div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
