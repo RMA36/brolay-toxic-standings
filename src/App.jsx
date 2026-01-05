@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PlusCircle, TrendingUp, Users, Award, AlertCircle, Loader, Menu, X, RefreshCw } from 'lucide-react';
 
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, deleteField } from 'firebase/firestore';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -1572,13 +1572,17 @@ const saveEditedParlay = async (editedParlay) => {
   try {
     setSaving(true);
     
-    // Clear actualStats for any picks that were set back to pending
+    // Identify which participants need actualStats deleted
+    const participantsToClean = Object.entries(editedParlay.participants)
+      .filter(([id, participant]) => participant.result === 'pending')
+      .map(([id]) => id);
+    
+    // Clear actualStats for pending picks in local state
     const cleanedParlay = {
       ...editedParlay,
       participants: Object.fromEntries(
         Object.entries(editedParlay.participants).map(([id, participant]) => {
           if (participant.result === 'pending') {
-            // Remove actualStats entirely for pending picks
             const { actualStats, ...rest } = participant;
             return [id, rest];
           }
@@ -1593,12 +1597,28 @@ const saveEditedParlay = async (editedParlay) => {
     );
     setParlays(updatedParlays);
     
-    // Update in Firebase - completely replace the participants object
+    // Update in Firebase
     if (cleanedParlay.firestoreId) {
       const parlayDoc = doc(db, 'parlays', cleanedParlay.firestoreId);
-      await updateDoc(parlayDoc, {
-        participants: cleanedParlay.participants
+      
+      // Build update object that explicitly deletes actualStats fields
+      const updateObject = {};
+      
+      // For participants being set to pending, delete their actualStats
+      participantsToClean.forEach(participantId => {
+        updateObject[`participants.${participantId}.actualStats`] = deleteField();
+        updateObject[`participants.${participantId}.result`] = 'pending';
+        updateObject[`participants.${participantId}.autoUpdated`] = false;
       });
+      
+      // For other participants, just update normally
+      Object.entries(cleanedParlay.participants).forEach(([id, participant]) => {
+        if (!participantsToClean.includes(id)) {
+          updateObject[`participants.${id}`] = participant;
+        }
+      });
+      
+      await updateDoc(parlayDoc, updateObject);
     }
     
     setEditingParlay(null);
@@ -1609,7 +1629,8 @@ const saveEditedParlay = async (editedParlay) => {
     setSaving(false);
   }
 };
-// Helper function to render bet-specific fields
+  
+  // Helper function to render bet-specific fields
 const renderBetSpecificFields = (participant, id, isEditMode = false) => {
   const updateFunc = isEditMode 
     ? (field, value) => {
