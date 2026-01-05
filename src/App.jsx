@@ -67,13 +67,19 @@ const App = () => {
     };
   
     const [newParlay, setNewParlay] = useState({
-    date: new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })).toISOString().split('T')[0],
-    betAmount: 10,
-    totalPayout: 0,
-    participants: {},
-    placedBy: '',
-    settled: false
-  });
+  date: (() => {
+    const etDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const year = etDate.getFullYear();
+    const month = String(etDate.getMonth() + 1).padStart(2, '0');
+    const day = String(etDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  })(),
+  betAmount: 10,
+  totalPayout: 0,
+  participants: {},
+  placedBy: '',
+  settled: false
+});
 // Mobile-specific states
 const [isMobile, setIsMobile] = useState(false);
 const [sidebarOpen, setSidebarOpen] = useState(false);
