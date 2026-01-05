@@ -4693,15 +4693,18 @@ const renderGrid = () => {
     const playerPicks = {};
     players.forEach(player => { playerPicks[player] = []; });
     
-    // Get all picks chronologically - sort by date first, then by firestoreId or id for same-day brolays
-    const sortedParlays = [...filteredParlays].sort((a, b) => {
-      const dateCompare = new Date(a.date) - new Date(b.date);
-      if (dateCompare !== 0) return dateCompare;
-      // If dates are the same, use firestoreId (Firestore maintains creation order) or fall back to id
-      const aKey = a.firestoreId || a.id;
-      const bKey = b.firestoreId || b.id;
-      return String(aKey).localeCompare(String(bKey));
-    });
+    // Get all picks chronologically - sort by date first, then by sortOrder/firestoreId/id for same-day brolays
+      const sortedParlays = [...filteredParlays].sort((a, b) => {
+        const dateCompare = new Date(a.date) - new Date(b.date);
+        if (dateCompare !== 0) return dateCompare;
+        // If dates are the same, use sortOrder if available, otherwise fall back to firestoreId/id
+        if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+          return a.sortOrder - b.sortOrder;
+        }
+        const aKey = a.firestoreId || a.id;
+        const bKey = b.firestoreId || b.id;
+        return String(aKey).localeCompare(String(bKey));
+      });
     
     sortedParlays.forEach(parlay => {
       Object.values(parlay.participants).forEach(p => {
