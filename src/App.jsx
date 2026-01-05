@@ -4493,14 +4493,23 @@ const renderGrid = () => {
     const playerPicks = {};
     players.forEach(player => { playerPicks[player] = []; });
     
-    // Get all picks chronologically
-    const sortedParlays = [...filteredParlays].sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Get all picks chronologically - sort by date first, then by firestoreId or id for same-day brolays
+    const sortedParlays = [...filteredParlays].sort((a, b) => {
+      const dateCompare = new Date(a.date) - new Date(b.date);
+      if (dateCompare !== 0) return dateCompare;
+      // If dates are the same, use firestoreId (Firestore maintains creation order) or fall back to id
+      const aKey = a.firestoreId || a.id;
+      const bKey = b.firestoreId || b.id;
+      return String(aKey).localeCompare(String(bKey));
+    });
+    
     sortedParlays.forEach(parlay => {
       Object.values(parlay.participants).forEach(p => {
         if (p.player && p.result !== 'pending') {
           playerPicks[p.player].push({
             result: p.result,
             date: parlay.date,
+            parlayId: parlay.id, // Track which brolay this came from
             sport: p.sport,
             team: p.team || `${p.awayTeam} @ ${p.homeTeam}`
           });
