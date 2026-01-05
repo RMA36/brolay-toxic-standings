@@ -6013,7 +6013,7 @@ const renderSettings = () => {
   { id: 'grid', label: 'Grid' },
   ...(SHOW_SETTINGS_TAB ? [{ id: 'settings', label: 'Settings' }] : []),
   ...(SHOW_IMPORT_TAB ? [{ id: 'import', label: 'Import Data' }] : [])
-].map(tab => ((
+].map(tab => (
       <button
         key={tab.id}
         onClick={() => {
