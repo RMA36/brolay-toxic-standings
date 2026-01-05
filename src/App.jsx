@@ -24,6 +24,7 @@ const App = () => {
   const PASSWORD = 'manipulation';
   
   const SHOW_IMPORT_TAB = false; // Set to true to show Import Data tab
+  const SHOW_SETTINGS_TAB = false; // Set to true to show Settings tab
   
   const [activeTab, setActiveTab] = useState('entry');
   const [csvInput, setCsvInput] = useState('');
@@ -6010,9 +6011,9 @@ const renderSettings = () => {
   { id: 'payments', label: 'Payments' },
   { id: 'rankings', label: 'Rankings' },
   { id: 'grid', label: 'Grid' },
-  { id: 'settings', label: 'Settings' },
+  ...(SHOW_SETTINGS_TAB ? [{ id: 'settings', label: 'Settings' }] : []),
   ...(SHOW_IMPORT_TAB ? [{ id: 'import', label: 'Import Data' }] : [])
-].map(tab => (
+].map(tab => ((
       <button
         key={tab.id}
         onClick={() => {
