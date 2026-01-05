@@ -471,10 +471,21 @@ const checkPropBetResult = async (participant, gameDate) => {
 
       const gameId = event.id;
       const boxscoreUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/summary?event=${gameId}`;
-      
       try {
         const boxscoreResponse = await fetch(boxscoreUrl);
         const boxscoreData = await boxscoreResponse.json();
+        
+        // Double-check the boxscore itself shows the game is final
+        if (boxscoreData.header?.competitions?.[0]?.status?.type?.completed !== true) {
+          console.log(`Boxscore for game ${gameId} not showing as completed, skipping`);
+          continue;
+        }
+        
+        const boxscoreStatus = boxscoreData.header?.competitions?.[0]?.status?.type?.name?.toLowerCase();
+        if (boxscoreStatus !== 'final' && boxscoreStatus !== 'status_final') {
+          console.log(`Boxscore for game ${gameId} status is ${boxscoreStatus}, not final, skipping`);
+          continue;
+        }
         
         if (boxscoreData.boxscore) {
           const playerStat = extractPlayerStat(boxscoreData.boxscore, playerName, propType, sport);
