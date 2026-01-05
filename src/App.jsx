@@ -24,7 +24,7 @@ const App = () => {
   const PASSWORD = 'manipulation';
   
   const SHOW_IMPORT_TAB = false; // Set to true to show Import Data tab
-  const SHOW_SETTINGS_TAB = true; // Set to true to show Settings tab
+  const SHOW_SETTINGS_TAB = false; // Set to true to show Settings tab
   
   const [activeTab, setActiveTab] = useState('entry');
   const [csvInput, setCsvInput] = useState('');
