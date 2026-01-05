@@ -180,9 +180,7 @@ const commonPropTypes = [
   'Rushing Yards',
   'Receiving Yards',
   'Rushing & Receiving Yards',
-  'Total Touchdowns',
   'Passing Touchdowns',
-  'Rushing Touchdowns',
   'Receptions',
   'Points',
   'Rebounds',
@@ -5816,6 +5814,118 @@ const handleSavePickEdit = async () => {
     </div>
   );
 };
+
+const renderSettings = () => {
+  const handleRemovePropType = (propType) => {
+    if (window.confirm(`Remove "${propType}" from learned prop types?`)) {
+      const updatedPropTypes = learnedPropTypes.filter(p => p !== propType);
+      setLearnedPropTypes(updatedPropTypes);
+      saveLearnedData(learnedTeams, updatedPropTypes);
+      alert(`"${propType}" removed successfully!`);
+    }
+  };
+
+  const handleRemoveTeam = (team) => {
+    if (window.confirm(`Remove "${team}" from learned teams?`)) {
+      const updatedTeams = learnedTeams.filter(t => t !== team);
+      setLearnedTeams(updatedTeams);
+      saveLearnedData(updatedTeams, learnedPropTypes);
+      alert(`"${team}" removed successfully!`);
+    }
+  };
+
+  const handleClearAllLearnedData = () => {
+    if (window.confirm('Clear ALL learned teams and prop types? This cannot be undone.')) {
+      setLearnedTeams([]);
+      setLearnedPropTypes([]);
+      saveLearnedData([], []);
+      alert('All learned data cleared!');
+    }
+  };
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <h2 className="text-xl md:text-2xl font-bold">⚙️ Settings</h2>
+      
+      {/* Learned Prop Types */}
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-lg md:text-xl font-bold mb-4">Learned Prop Types ({learnedPropTypes.length})</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          These are prop types that have been learned from your betting history. You can remove any that were entered incorrectly.
+        </p>
+        
+        {learnedPropTypes.length === 0 ? (
+          <p className="text-gray-500 text-center py-4">No learned prop types yet</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {learnedPropTypes.sort().map((propType, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
+                <span className="text-sm">{propType}</span>
+                <button
+                  onClick={() => handleRemovePropType(propType)}
+                  className="ml-3 text-red-600 hover:text-red-800 text-sm font-semibold"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Learned Teams */}
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <h3 className="text-lg md:text-xl font-bold mb-4">Learned Teams ({learnedTeams.length})</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          These are teams that have been learned from your betting history. You can remove any that were entered incorrectly.
+        </p>
+        
+        {learnedTeams.length === 0 ? (
+          <p className="text-gray-500 text-center py-4">No learned teams yet</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {learnedTeams.sort().map((team, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
+                <span className="text-sm">{team}</span>
+                <button
+                  onClick={() => handleRemoveTeam(team)}
+                  className="ml-3 text-red-600 hover:text-red-800 text-sm font-semibold"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Danger Zone */}
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6">
+        <h3 className="text-lg font-bold text-red-900 mb-4">⚠️ Danger Zone</h3>
+        <div className="flex flex-col md:flex-row gap-4">
+          <button
+            onClick={handleClearAllLearnedData}
+            className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 text-base"
+            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          >
+            Clear All Learned Data
+          </button>
+          <button
+            onClick={extractTeamsFromExistingParlays}
+            disabled={parlays.length === 0}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 text-base"
+            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          >
+            Re-extract From Existing Brolays
+          </button>
+        </div>
+        <p className="text-sm text-red-800 mt-3">
+          Clear all will remove all learned teams and prop types. Re-extract will scan all your brolays and rebuild the learned data.
+        </p>
+      </div>
+    </div>
+  );
+};
   
   return (
   <div 
@@ -5891,6 +6001,7 @@ const handleSavePickEdit = async () => {
   { id: 'payments', label: 'Payments' },
   { id: 'rankings', label: 'Rankings' },
   { id: 'grid', label: 'Grid' },
+  { id: 'settings', label: 'Settings' },
   ...(SHOW_IMPORT_TAB ? [{ id: 'import', label: 'Import Data' }] : [])
 ].map(tab => (
       <button
@@ -5911,17 +6022,18 @@ const handleSavePickEdit = async () => {
   </div>
 </div>
   <div className="container mx-auto p-4 md:p-6">
-  {activeTab === 'entry' && renderEntry()}
-  {activeTab === 'search' && renderSearch()}
-  {activeTab === 'allBrolays' && renderAllBrolays()}
-  {activeTab === 'allPicks' && renderAllPicks()}
-  {activeTab === 'individual' && renderIndividualDashboard()}
-  {activeTab === 'group' && renderGroupDashboard()}
-  {activeTab === 'payments' && renderPayments()}
-  {activeTab === 'rankings' && renderRankings()}
-  {activeTab === 'grid' && renderGrid()}
-  {activeTab === 'import' && renderImport()}
-</div>
+    {activeTab === 'entry' && renderEntry()}
+    {activeTab === 'search' && renderSearch()}
+    {activeTab === 'allBrolays' && renderAllBrolays()}
+    {activeTab === 'allPicks' && renderAllPicks()}
+    {activeTab === 'individual' && renderIndividualDashboard()}
+    {activeTab === 'group' && renderGroupDashboard()}
+    {activeTab === 'payments' && renderPayments()}
+    {activeTab === 'rankings' && renderRankings()}
+    {activeTab === 'grid' && renderGrid()}
+    {activeTab === 'settings' && renderSettings()}
+    {activeTab === 'import' && renderImport()}
+  </div>
   </div>
 );
 };
