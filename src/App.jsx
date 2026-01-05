@@ -43,17 +43,19 @@ const App = () => {
   const [editingPick, setEditingPick] = useState(null);
   const [picksToShow, setPicksToShow] = useState(20); 
   const [filters, setFilters] = useState({
-      dateFrom: '',
-      dateTo: '',
-      player: '',
-      sport: '',
-      teamPlayer: '',  
-      placedBy: '',
-      minPayout: '',
-      maxPayout: '',
-      result: '',
-      autoUpdated: ''
-    });
+    dateFrom: '',
+    dateTo: '',
+    player: '',
+    sport: '',
+    teamPlayer: '',  
+    placedBy: '',
+    minPayout: '',
+    maxPayout: '',
+    result: '',
+    autoUpdated: '',
+    betType: '',
+    propType: ''
+  });
 
     // Helper function to format date to mm/dd/yyyy for display
     const formatDateForDisplay = (dateStr) => {
@@ -5234,26 +5236,43 @@ const renderAllPicks = () => {
   });
 
   // Apply filters
-  const filteredPicks = allPicks.filter(pick => {
-    if (filters.dateFrom && pick.parlayDate < filters.dateFrom) return false;
-    if (filters.dateTo && pick.parlayDate > filters.dateTo) return false;
-    if (filters.player && pick.player !== filters.player) return false;
-    if (filters.sport && pick.sport !== filters.sport) return false;
-    if (filters.placedBy && pick.parlayPlacedBy !== filters.placedBy) return false;
-    if (filters.result && pick.result !== filters.result) return false;
-    if (filters.autoUpdated === 'true' && !pick.autoUpdated) return false;
-    if (filters.autoUpdated === 'false' && pick.autoUpdated) return false;
+const filteredPicks = allPicks.filter(pick => {
+  if (filters.dateFrom && pick.parlayDate < filters.dateFrom) return false;
+  if (filters.dateTo && pick.parlayDate > filters.dateTo) return false;
+  if (filters.player && pick.player !== filters.player) return false;
+  if (filters.sport && pick.sport !== filters.sport) return false;
+  if (filters.placedBy && pick.parlayPlacedBy !== filters.placedBy) return false;
+  if (filters.result && pick.result !== filters.result) return false;
+  if (filters.autoUpdated === 'true' && !pick.autoUpdated) return false;
+  if (filters.autoUpdated === 'false' && pick.autoUpdated) return false;
+  
+  // Bet Type filter
+  if (filters.betType && pick.betType !== filters.betType) return false;
+  
+  // Prop Type filter (only applies to Prop Bets)
+  if (filters.propType) {
+    if (pick.betType !== 'Prop Bet') return false;
+    if (!pick.propType) return false;
     
-    if (filters.teamPlayer) {
-      const normalizedFilter = filters.teamPlayer.toLowerCase();
-      const hasTeamPlayer = (pick.team && pick.team.toLowerCase().includes(normalizedFilter)) ||
-                            (pick.awayTeam && pick.awayTeam.toLowerCase().includes(normalizedFilter)) ||
-                            (pick.homeTeam && pick.homeTeam.toLowerCase().includes(normalizedFilter));
-      if (!hasTeamPlayer) return false;
+    const normalizedPickProp = normalizePropType(pick.propType);
+    const normalizedFilterProp = normalizePropType(filters.propType);
+    
+    if (!normalizedPickProp.includes(normalizedFilterProp) && 
+        !normalizedFilterProp.includes(normalizedPickProp)) {
+      return false;
     }
-    
-    return true;
-  });
+  }
+  
+  if (filters.teamPlayer) {
+    const normalizedFilter = filters.teamPlayer.toLowerCase();
+    const hasTeamPlayer = (pick.team && pick.team.toLowerCase().includes(normalizedFilter)) ||
+                          (pick.awayTeam && pick.awayTeam.toLowerCase().includes(normalizedFilter)) ||
+                          (pick.homeTeam && pick.homeTeam.toLowerCase().includes(normalizedFilter));
+    if (!hasTeamPlayer) return false;
+  }
+  
+  return true;
+});
 
   // Sort by date descending
   const sortedPicks = filteredPicks.sort((a, b) => 
@@ -5434,11 +5453,41 @@ const renderAllPicks = () => {
                   placeholder="Search teams/players..."
                 />
               </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Bet Type</label>
+                <select
+                  value={filters.betType || ''}
+                  onChange={(e) => setFilters({...filters, betType: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {betTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Prop Type</label>
+                <input
+                  type="text"
+                  value={filters.propType || ''}
+                  onChange={(e) => setFilters({...filters, propType: e.target.value})}
+                  className="w-full px-3 py-2 border rounded text-base"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="e.g., Passing Touchdowns"
+                  list="prop-type-filter-suggestions"
+                />
+                <datalist id="prop-type-filter-suggestions">
+                  {[...new Set([...commonPropTypes, ...learnedPropTypes])].map((prop, idx) => (
+                    <option key={idx} value={prop} />
+                  ))}
+                </datalist>
+              </div>
             </div>
             <button
               onClick={() => setFilters({
                 dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
-                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
+                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
+                betType: '', propType: ''
               })}
               className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
               style={{ minHeight: isMobile ? '44px' : 'auto' }}
