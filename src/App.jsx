@@ -38,6 +38,8 @@ const App = () => {
   const [editingParlay, setEditingParlay] = useState(null);
   const [autoUpdating, setAutoUpdating] = useState(false);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
   const [filters, setFilters] = useState({
       dateFrom: '',
       dateTo: '',
@@ -2481,6 +2483,316 @@ const importFromCSV = async (csvText) => {
     );
   }
 
+  const analyzeSearchQuery = (query) => {
+  if (!query || query.trim().length < 3) {
+    return null;
+  }
+
+  const lowerQuery = query.toLowerCase();
+  const results = {
+    query: query,
+    matchedCategory: null,
+    data: {}
+  };
+
+  // Detect what they're searching for
+  const isPropType = commonPropTypes.some(prop => 
+    lowerQuery.includes(prop.toLowerCase())
+  ) || lowerQuery.includes('prop') || lowerQuery.includes('touchdown') || 
+     lowerQuery.includes('yards') || lowerQuery.includes('points');
+
+  const isSport = sports.some(sport => 
+    lowerQuery.includes(sport.toLowerCase())
+  );
+
+  const isPlayer = players.some(player => 
+    lowerQuery.includes(player.toLowerCase())
+  );
+
+  const isTeam = [...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])].some(team =>
+    lowerQuery.includes(team.toLowerCase())
+  );
+
+  const isBetType = betTypes.some(type => 
+    lowerQuery.includes(type.toLowerCase())
+  );
+
+  // Determine primary search category
+  if (isPropType) {
+    results.matchedCategory = 'propType';
+    
+    // Find the specific prop type
+    let matchedProp = commonPropTypes.find(prop => 
+      lowerQuery.includes(prop.toLowerCase())
+    );
+    
+    if (!matchedProp && lowerQuery.includes('touchdown')) {
+      matchedProp = 'Anytime Touchdown Scorer';
+    }
+
+    if (matchedProp) {
+      const normalizedProp = normalizePropType(matchedProp);
+      
+      // Collect all picks matching this prop type
+      const matchingPicks = [];
+      parlays.forEach(parlay => {
+        Object.entries(parlay.participants).forEach(([id, pick]) => {
+          if (pick.betType === 'Prop Bet' && pick.propType) {
+            const pickPropNormalized = normalizePropType(pick.propType);
+            if (pickPropNormalized === normalizedProp || 
+                (normalizedProp.includes('touchdown') && pickPropNormalized.includes('touchdown'))) {
+              matchingPicks.push({
+                ...pick,
+                parlayDate: parlay.date,
+                parlayId: parlay.id
+              });
+            }
+          }
+        });
+      });
+
+      // Calculate stats
+      const wins = matchingPicks.filter(p => p.result === 'win').length;
+      const losses = matchingPicks.filter(p => p.result === 'loss').length;
+      const pushes = matchingPicks.filter(p => p.result === 'push').length;
+      const pending = matchingPicks.filter(p => p.result === 'pending').length;
+      const total = matchingPicks.length;
+
+      // By player
+      const byPlayer = {};
+      matchingPicks.forEach(pick => {
+        if (!byPlayer[pick.player]) {
+          byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        }
+        byPlayer[pick.player].total++;
+        if (pick.result === 'win') byPlayer[pick.player].wins++;
+        else if (pick.result === 'loss') byPlayer[pick.player].losses++;
+        else if (pick.result === 'push') byPlayer[pick.player].pushes++;
+      });
+
+      // Most common players picked
+      const playerCounts = {};
+      matchingPicks.forEach(pick => {
+        const playerName = pick.team || 'Unknown';
+        playerCounts[playerName] = (playerCounts[playerName] || 0) + 1;
+      });
+      const topPlayers = Object.entries(playerCounts)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 5)
+        .map(([player, count]) => ({ player, count }));
+
+      results.data = {
+        propType: matchedProp,
+        total,
+        wins,
+        losses,
+        pushes,
+        pending,
+        winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
+        byPlayer,
+        topPlayers,
+        recentPicks: matchingPicks.slice(-10).reverse()
+      };
+    }
+  } else if (isBetType) {
+    results.matchedCategory = 'betType';
+    
+    const matchedBetType = betTypes.find(type => 
+      lowerQuery.includes(type.toLowerCase())
+    );
+
+    if (matchedBetType) {
+      const matchingPicks = [];
+      parlays.forEach(parlay => {
+        Object.entries(parlay.participants).forEach(([id, pick]) => {
+          if (pick.betType === matchedBetType) {
+            matchingPicks.push({
+              ...pick,
+              parlayDate: parlay.date,
+              parlayId: parlay.id
+            });
+          }
+        });
+      });
+
+      const wins = matchingPicks.filter(p => p.result === 'win').length;
+      const losses = matchingPicks.filter(p => p.result === 'loss').length;
+      const pushes = matchingPicks.filter(p => p.result === 'push').length;
+      const total = matchingPicks.length;
+
+      const byPlayer = {};
+      matchingPicks.forEach(pick => {
+        if (!byPlayer[pick.player]) {
+          byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        }
+        byPlayer[pick.player].total++;
+        if (pick.result === 'win') byPlayer[pick.player].wins++;
+        else if (pick.result === 'loss') byPlayer[pick.player].losses++;
+        else if (pick.result === 'push') byPlayer[pick.player].pushes++;
+      });
+
+      results.data = {
+        betType: matchedBetType,
+        total,
+        wins,
+        losses,
+        pushes,
+        winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
+        byPlayer,
+        recentPicks: matchingPicks.slice(-10).reverse()
+      };
+    }
+  } else if (isSport) {
+    results.matchedCategory = 'sport';
+    
+    const matchedSport = sports.find(sport => 
+      lowerQuery.includes(sport.toLowerCase())
+    );
+
+    if (matchedSport) {
+      const matchingPicks = [];
+      parlays.forEach(parlay => {
+        Object.entries(parlay.participants).forEach(([id, pick]) => {
+          if (pick.sport === matchedSport) {
+            matchingPicks.push({
+              ...pick,
+              parlayDate: parlay.date,
+              parlayId: parlay.id
+            });
+          }
+        });
+      });
+
+      const wins = matchingPicks.filter(p => p.result === 'win').length;
+      const losses = matchingPicks.filter(p => p.result === 'loss').length;
+      const pushes = matchingPicks.filter(p => p.result === 'push').length;
+      const total = matchingPicks.length;
+
+      const byPlayer = {};
+      matchingPicks.forEach(pick => {
+        if (!byPlayer[pick.player]) {
+          byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        }
+        byPlayer[pick.player].total++;
+        if (pick.result === 'win') byPlayer[pick.player].wins++;
+        else if (pick.result === 'loss') byPlayer[pick.player].losses++;
+        else if (pick.result === 'push') byPlayer[pick.player].pushes++;
+      });
+
+      results.data = {
+        sport: matchedSport,
+        total,
+        wins,
+        losses,
+        pushes,
+        winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
+        byPlayer,
+        recentPicks: matchingPicks.slice(-10).reverse()
+      };
+    }
+  } else if (isTeam) {
+    results.matchedCategory = 'team';
+    
+    const allTeams = [...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])];
+    const matchedTeam = allTeams.find(team =>
+      lowerQuery.includes(team.toLowerCase())
+    );
+
+    if (matchedTeam) {
+      const matchingPicks = [];
+      parlays.forEach(parlay => {
+        Object.entries(parlay.participants).forEach(([id, pick]) => {
+          if (pick.team === matchedTeam || pick.awayTeam === matchedTeam || 
+              pick.homeTeam === matchedTeam) {
+            matchingPicks.push({
+              ...pick,
+              parlayDate: parlay.date,
+              parlayId: parlay.id
+            });
+          }
+        });
+      });
+
+      const wins = matchingPicks.filter(p => p.result === 'win').length;
+      const losses = matchingPicks.filter(p => p.result === 'loss').length;
+      const pushes = matchingPicks.filter(p => p.result === 'push').length;
+      const total = matchingPicks.length;
+
+      const byPlayer = {};
+      matchingPicks.forEach(pick => {
+        if (!byPlayer[pick.player]) {
+          byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        }
+        byPlayer[pick.player].total++;
+        if (pick.result === 'win') byPlayer[pick.player].wins++;
+        else if (pick.result === 'loss') byPlayer[pick.player].losses++;
+        else if (pick.result === 'push') byPlayer[pick.player].pushes++;
+      });
+
+      results.data = {
+        team: matchedTeam,
+        total,
+        wins,
+        losses,
+        pushes,
+        winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
+        byPlayer,
+        recentPicks: matchingPicks.slice(-10).reverse()
+      };
+    }
+  } else if (isPlayer) {
+    results.matchedCategory = 'player';
+    
+    const matchedPlayer = players.find(player => 
+      lowerQuery.includes(player.toLowerCase())
+    );
+
+    if (matchedPlayer) {
+      const matchingPicks = [];
+      parlays.forEach(parlay => {
+        Object.entries(parlay.participants).forEach(([id, pick]) => {
+          if (pick.player === matchedPlayer) {
+            matchingPicks.push({
+              ...pick,
+              parlayDate: parlay.date,
+              parlayId: parlay.id
+            });
+          }
+        });
+      });
+
+      const wins = matchingPicks.filter(p => p.result === 'win').length;
+      const losses = matchingPicks.filter(p => p.result === 'loss').length;
+      const pushes = matchingPicks.filter(p => p.result === 'push').length;
+      const total = matchingPicks.length;
+
+      const bySport = {};
+      matchingPicks.forEach(pick => {
+        if (!bySport[pick.sport]) {
+          bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        }
+        bySport[pick.sport].total++;
+        if (pick.result === 'win') bySport[pick.sport].wins++;
+        else if (pick.result === 'loss') bySport[pick.sport].losses++;
+        else if (pick.result === 'push') bySport[pick.sport].pushes++;
+      });
+
+      results.data = {
+        player: matchedPlayer,
+        total,
+        wins,
+        losses,
+        pushes,
+        winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
+        bySport,
+        recentPicks: matchingPicks.slice(-10).reverse()
+      };
+    }
+  }
+
+  return results.matchedCategory ? results : null;
+};
+
   const renderEntry = () => (
     <div className="space-y-4 md:space-y-6">
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
@@ -4632,6 +4944,272 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
   );
 };
 
+const renderSearch = () => {
+  const handleSearch = () => {
+    const results = analyzeSearchQuery(searchQuery);
+    setSearchResults(results);
+  };
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <h2 className="text-xl md:text-2xl font-bold">🔍 Intelligent Search</h2>
+      
+      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder='Try: "Anytime Touchdown Scorer record" or "Chiefs record" or "Management NBA stats"'
+            className="flex-1 px-4 py-3 border rounded-lg text-base"
+            style={{ fontSize: isMobile ? '16px' : '14px' }}
+          />
+          <button
+            onClick={handleSearch}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-base"
+            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          >
+            Search
+          </button>
+        </div>
+        
+        <div className="mt-3 text-sm text-gray-600">
+          <p className="font-semibold mb-2">Examples:</p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              'Anytime Touchdown Scorer record',
+              'Spread bets stats',
+              'Chiefs record',
+              'Management NFL stats',
+              'Lakers picks'
+            ].map(example => (
+              <button
+                key={example}
+                onClick={() => {
+                  setSearchQuery(example);
+                  setSearchResults(analyzeSearchQuery(example));
+                }}
+                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs"
+              >
+                {example}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {searchResults && (
+        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+          <h3 className="text-lg md:text-xl font-bold mb-4">
+            Results for: "{searchResults.query}"
+          </h3>
+
+          {searchResults.matchedCategory === 'propType' && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Total Picks</div>
+                  <div className="text-2xl font-bold text-blue-600">{searchResults.data.total}</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Wins</div>
+                  <div className="text-2xl font-bold text-green-600">{searchResults.data.wins}</div>
+                </div>
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Losses</div>
+                  <div className="text-2xl font-bold text-red-600">{searchResults.data.losses}</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Win %</div>
+                  <div className="text-2xl font-bold text-purple-600">{searchResults.data.winPct}%</div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3">📊 By Big Guy</h4>
+                <div className="space-y-2">
+                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => (
+                    <div key={player} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <span className="font-semibold">{player}</span>
+                      <span className="text-sm">
+                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {searchResults.data.topPlayers.length > 0 && (
+                <div className="mb-6">
+                  <h4 className="font-semibold text-lg mb-3">🎯 Most Common Players Picked</h4>
+                  <div className="space-y-2">
+                    {searchResults.data.topPlayers.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                        <span className="font-semibold">{item.player}</span>
+                        <span className="text-sm">{item.count} picks</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {(searchResults.matchedCategory === 'betType' || searchResults.matchedCategory === 'sport') && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Total Picks</div>
+                  <div className="text-2xl font-bold text-blue-600">{searchResults.data.total}</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Wins</div>
+                  <div className="text-2xl font-bold text-green-600">{searchResults.data.wins}</div>
+                </div>
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Losses</div>
+                  <div className="text-2xl font-bold text-red-600">{searchResults.data.losses}</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Win %</div>
+                  <div className="text-2xl font-bold text-purple-600">{searchResults.data.winPct}%</div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3">📊 By Big Guy</h4>
+                <div className="space-y-2">
+                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => (
+                    <div key={player} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <span className="font-semibold">{player}</span>
+                      <span className="text-sm">
+                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {searchResults.matchedCategory === 'team' && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Total Picks</div>
+                  <div className="text-2xl font-bold text-blue-600">{searchResults.data.total}</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Wins</div>
+                  <div className="text-2xl font-bold text-green-600">{searchResults.data.wins}</div>
+                </div>
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Losses</div>
+                  <div className="text-2xl font-bold text-red-600">{searchResults.data.losses}</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Win %</div>
+                  <div className="text-2xl font-bold text-purple-600">{searchResults.data.winPct}%</div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3">📊 Who Picks {searchResults.data.team}?</h4>
+                <div className="space-y-2">
+                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => (
+                    <div key={player} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <span className="font-semibold">{player}</span>
+                      <span className="text-sm">
+                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {searchResults.matchedCategory === 'player' && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Total Picks</div>
+                  <div className="text-2xl font-bold text-blue-600">{searchResults.data.total}</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Wins</div>
+                  <div className="text-2xl font-bold text-green-600">{searchResults.data.wins}</div>
+                </div>
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Losses</div>
+                  <div className="text-2xl font-bold text-red-600">{searchResults.data.losses}</div>
+                </div>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Win %</div>
+                  <div className="text-2xl font-bold text-purple-600">{searchResults.data.winPct}%</div>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3">📊 By Sport</h4>
+                <div className="space-y-2">
+                  {Object.entries(searchResults.data.bySport).map(([sport, stats]) => (
+                    <div key={sport} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                      <span className="font-semibold">{sport}</span>
+                      <span className="text-sm">
+                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {searchResults.data.recentPicks && searchResults.data.recentPicks.length > 0 && (
+            <div>
+              <h4 className="font-semibold text-lg mb-3">📅 Recent Picks</h4>
+              <div className="space-y-2">
+                {searchResults.data.recentPicks.map((pick, idx) => (
+                  <div key={idx} className="p-3 bg-gray-50 rounded text-sm">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-semibold">{formatDateForDisplay(pick.parlayDate)}</span>
+                      <span className={`font-semibold ${
+                        pick.result === 'win' ? 'text-green-600' :
+                        pick.result === 'loss' ? 'text-red-600' :
+                        pick.result === 'push' ? 'text-yellow-600' :
+                        'text-gray-500'
+                      }`}>
+                        {pick.result.toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="text-gray-700">
+                      {pick.player} - {pick.sport} - {pick.team || `${pick.awayTeam} @ ${pick.homeTeam}`}
+                      {pick.betType === 'Prop Bet' && ` - ${pick.propType} ${pick.overUnder} ${pick.line}`}
+                    </div>
+                    {pick.actualStats && (
+                      <div className="text-blue-600 mt-1">[{pick.actualStats}]</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {searchResults === null && searchQuery.trim().length >= 3 && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6">
+          <p className="text-yellow-800">
+            No results found for "{searchQuery}". Try searching for a specific prop type, team, player, sport, or bet type.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
+  
   return (
   <div 
     className="min-h-screen bg-gray-100"
@@ -4696,16 +5274,17 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
     : 'container mx-auto p-4 md:p-6'
 }`}>
   <div className={isMobile ? 'pt-20 px-4' : 'mb-6 flex gap-2 overflow-x-auto'}>
-  {[
-    { id: 'entry', label: 'New Brolay' },
-    { id: 'allBrolays', label: 'All Brolays' },
-    { id: 'individual', label: 'Individual Stats' },
-    { id: 'group', label: 'Group Stats' },
-    { id: 'payments', label: 'Payments' },
-    { id: 'rankings', label: 'Rankings' },
-    { id: 'grid', label: 'Grid' },
-    ...(SHOW_IMPORT_TAB ? [{ id: 'import', label: 'Import Data' }] : [])
-  ].map(tab => (
+{[
+  { id: 'entry', label: 'New Brolay' },
+  { id: 'search', label: 'Search' },
+  { id: 'allBrolays', label: 'All Brolays' },
+  { id: 'individual', label: 'Individual Stats' },
+  { id: 'group', label: 'Group Stats' },
+  { id: 'payments', label: 'Payments' },
+  { id: 'rankings', label: 'Rankings' },
+  { id: 'grid', label: 'Grid' },
+  ...(SHOW_IMPORT_TAB ? [{ id: 'import', label: 'Import Data' }] : [])
+].map(tab => (
       <button
         key={tab.id}
         onClick={() => {
@@ -4724,15 +5303,16 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
   </div>
 </div>
   <div className="container mx-auto p-4 md:p-6">
-    {activeTab === 'entry' && renderEntry()}
-    {activeTab === 'allBrolays' && renderAllBrolays()}
-    {activeTab === 'individual' && renderIndividualDashboard()}
-    {activeTab === 'group' && renderGroupDashboard()}
-    {activeTab === 'payments' && renderPayments()}
-    {activeTab === 'rankings' && renderRankings()}
-    {activeTab === 'grid' && renderGrid()}
-    {activeTab === 'import' && renderImport()}
-  </div>
+  {activeTab === 'entry' && renderEntry()}
+  {activeTab === 'search' && renderSearch()}
+  {activeTab === 'allBrolays' && renderAllBrolays()}
+  {activeTab === 'individual' && renderIndividualDashboard()}
+  {activeTab === 'group' && renderGroupDashboard()}
+  {activeTab === 'payments' && renderPayments()}
+  {activeTab === 'rankings' && renderRankings()}
+  {activeTab === 'grid' && renderGrid()}
+  {activeTab === 'import' && renderImport()}
+</div>
   </div>
 );
 };
