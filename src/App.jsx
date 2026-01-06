@@ -4406,11 +4406,71 @@ const renderAllBrolays = () => {
     return count + participants.filter(p => p.result === 'pending').length;
   }, 0);
 
+  // Calculate dynamic color scale thresholds based on all settled brolays
+  const calculateDynamicThresholds = () => {
+    const allProfits = [];
+    const allLosses = [];
+    
+    parlays.forEach(parlay => {
+      const participants = Object.values(parlay.participants);
+      const losers = participants.filter(p => p.result === 'loss');
+      const winners = participants.filter(p => p.result === 'win');
+      const pushes = participants.filter(p => p.result === 'push');
+      const won = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
+      
+      if (won) {
+        const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+        if (netProfit > 0) allProfits.push(netProfit);
+      } else if (losers.length > 0) {
+        const totalRisk = parlay.betAmount * participants.length;
+        allLosses.push(-totalRisk);
+      }
+    });
+    
+    // Sort to find percentiles
+    allProfits.sort((a, b) => a - b);
+    allLosses.sort((a, b) => a - b);
+    
+    // Calculate profit thresholds (20th, 40th, 60th, 80th percentiles)
+    const getPercentile = (arr, percentile) => {
+      if (arr.length === 0) return 0;
+      const index = Math.floor(arr.length * percentile);
+      return arr[Math.min(index, arr.length - 1)];
+    };
+    
+    return {
+      profit: {
+        tiny: getPercentile(allProfits, 0.2) || 150,
+        small: getPercentile(allProfits, 0.4) || 300,
+        medium: getPercentile(allProfits, 0.6) || 500,
+        big: getPercentile(allProfits, 0.8) || 800,
+        huge: getPercentile(allProfits, 0.95) || 1000
+      },
+      loss: {
+        tiny: getPercentile(allLosses, 0.2) || -40,
+        small: getPercentile(allLosses, 0.4) || -60,
+        medium: getPercentile(allLosses, 0.6) || -90,
+        big: getPercentile(allLosses, 0.8) || -130,
+        huge: getPercentile(allLosses, 0.95) || -200
+      }
+    };
+  };
+  
+  const thresholds = calculateDynamicThresholds();
+
   // Calendar data
   const currentMonth = calendarMonth.getMonth();
   const currentYear = calendarMonth.getFullYear();
   const calendarDays = getCalendarDays(currentMonth, currentYear);
   const monthName = calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  
+  // Get today's date in Eastern Time
+  const getTodayET = () => {
+    const now = new Date();
+    const etDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    return etDate.toDateString();
+  };
+  const todayET = getTodayET();
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -4485,7 +4545,7 @@ const renderAllBrolays = () => {
               const dayBrolays = getBrolaysForDate(dateStr);
               const hasBrolays = dayBrolays.length > 0;
               const isSelected = selectedCalendarDate === dateStr;
-              const isToday = new Date().toDateString() === new Date(dateStr).toDateString();
+              const isToday = todayET === new Date(dateStr + 'T00:00:00').toDateString();
               
               // Calculate day's financial performance
               let dayNetProfit = 0;
@@ -4513,72 +4573,54 @@ const renderAllBrolays = () => {
                 }
               });
               
-              // Determine color based on profit/loss (calibrated to historical data)
+              // Determine color based on profit/loss using DYNAMIC thresholds
               let bgColorClass = 'bg-gray-800';
               let borderColorClass = 'border-gray-700';
               let hoverBorderClass = 'hover:border-yellow-500/50';
               
               if (hasBrolays && dayNetProfit !== 0) {
                 if (dayNetProfit > 0) {
-                  // Green gradient based on profit amount
-                  // Huge win: $1,000+ (rare jackpots like $4,791, $1,280, $1,279)
-                  if (dayNetProfit >= 1000) {
+                  // Green gradient based on dynamic profit thresholds
+                  if (dayNetProfit >= thresholds.profit.huge) {
                     bgColorClass = 'bg-gradient-to-br from-green-400 via-emerald-500 to-green-600 shadow-lg shadow-green-500/30';
                     borderColorClass = 'border-green-300';
                     hoverBorderClass = 'hover:border-green-200';
-                  }
-                  // Big win: $600-$999 (great days like $811, $876, $976)
-                  else if (dayNetProfit >= 600) {
+                  } else if (dayNetProfit >= thresholds.profit.big) {
                     bgColorClass = 'bg-gradient-to-br from-green-500 to-emerald-700';
                     borderColorClass = 'border-green-400';
                     hoverBorderClass = 'hover:border-green-300';
-                  }
-                  // Medium win: $350-$599 (solid wins like $420, $400, $391)
-                  else if (dayNetProfit >= 350) {
+                  } else if (dayNetProfit >= thresholds.profit.medium) {
                     bgColorClass = 'bg-gradient-to-br from-green-600 to-green-800';
                     borderColorClass = 'border-green-500';
                     hoverBorderClass = 'hover:border-green-400';
-                  }
-                  // Small win: $180-$349 (typical good days)
-                  else if (dayNetProfit >= 180) {
+                  } else if (dayNetProfit >= thresholds.profit.small) {
                     bgColorClass = 'bg-gradient-to-br from-green-700 to-green-900';
                     borderColorClass = 'border-green-600';
                     hoverBorderClass = 'hover:border-green-500';
-                  }
-                  // Tiny win: $1-$179 (barely profitable)
-                  else {
+                  } else {
                     bgColorClass = 'bg-gradient-to-br from-green-800 to-gray-800';
                     borderColorClass = 'border-green-700';
                     hoverBorderClass = 'hover:border-green-600';
                   }
                 } else {
-                  // Red gradient based on loss amount
-                  // Huge loss: -$200+ (disaster days like -$230)
-                  if (dayNetProfit <= -200) {
+                  // Red gradient based on dynamic loss thresholds
+                  if (dayNetProfit <= thresholds.loss.huge) {
                     bgColorClass = 'bg-gradient-to-br from-red-500 via-rose-600 to-red-700 shadow-lg shadow-red-500/30';
                     borderColorClass = 'border-red-400';
                     hoverBorderClass = 'hover:border-red-300';
-                  }
-                  // Big loss: -$130 to -$199 (really bad days)
-                  else if (dayNetProfit <= -130) {
+                  } else if (dayNetProfit <= thresholds.loss.big) {
                     bgColorClass = 'bg-gradient-to-br from-red-600 to-red-800';
                     borderColorClass = 'border-red-500';
                     hoverBorderClass = 'hover:border-red-400';
-                  }
-                  // Medium loss: -$80 to -$129 (bad days, very common)
-                  else if (dayNetProfit <= -80) {
+                  } else if (dayNetProfit <= thresholds.loss.medium) {
                     bgColorClass = 'bg-gradient-to-br from-red-700 to-red-900';
                     borderColorClass = 'border-red-600';
                     hoverBorderClass = 'hover:border-red-500';
-                  }
-                  // Small loss: -$50 to -$79 (typical losing day)
-                  else if (dayNetProfit <= -50) {
+                  } else if (dayNetProfit <= thresholds.loss.small) {
                     bgColorClass = 'bg-gradient-to-br from-red-800 to-gray-800';
                     borderColorClass = 'border-red-700';
                     hoverBorderClass = 'hover:border-red-600';
-                  }
-                  // Tiny loss: -$1 to -$49 (minimal damage)
-                  else {
+                  } else {
                     bgColorClass = 'bg-gradient-to-br from-red-900 to-gray-800';
                     borderColorClass = 'border-red-800';
                     hoverBorderClass = 'hover:border-red-700';
@@ -4590,16 +4632,10 @@ const renderAllBrolays = () => {
                 borderColorClass = 'border-gray-600';
               }
               
-              // Emoji indicator
+              // Emoji indicator - ONLY show skull for And-1s
               let emoji = '';
-              if (dayWins > 0 && dayLosses === 0) {
-                emoji = '🏆'; // All wins
-              } else if (dayAnd1s > 0) {
+              if (dayAnd1s > 0) {
                 emoji = '💀'; // Had and-1(s)
-              } else if (dayNetProfit > 0) {
-                emoji = '💰'; // Net positive
-              } else if (dayNetProfit < 0) {
-                emoji = '😬'; // Net negative
               }
               
               return (
@@ -4612,9 +4648,9 @@ const renderAllBrolays = () => {
                       : `${bgColorClass} ${borderColorClass} ${hoverBorderClass} hover:scale-105`
                   } ${isToday ? 'ring-2 ring-blue-500' : ''} relative overflow-hidden`}
                 >
-                  {/* Emoji indicator at top */}
+                  {/* Emoji indicator at top - only And-1 skull */}
                   {emoji && (
-                    <div className="absolute top-0.5 right-0.5 text-xs">
+                    <div className="absolute top-0.5 right-0.5 text-xs md:text-sm">
                       {emoji}
                     </div>
                   )}
@@ -4625,7 +4661,8 @@ const renderAllBrolays = () => {
                     {day}
                   </div>
                   
-                  {hasBrolays && (
+                  {/* Desktop: Show all details */}
+                  {hasBrolays && !isMobile && (
                     <div className="text-center mt-1">
                       <div className="text-xs text-gray-200 font-semibold">
                         {dayBrolays.length} {dayBrolays.length === 1 ? 'brolay' : 'brolays'}
@@ -4645,6 +4682,11 @@ const renderAllBrolays = () => {
                         </div>
                       )}
                     </div>
+                  )}
+                  
+                  {/* Mobile: Just show small dot indicator if has brolays */}
+                  {hasBrolays && isMobile && (
+                    <div className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-yellow-400"></div>
                   )}
                 </button>
               );
