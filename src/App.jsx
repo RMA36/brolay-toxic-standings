@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, TrendingUp, Users, Award, AlertCircle, Loader, Menu, X, RefreshCw } from 'lucide-react';
 
+import { 
+  findMoneyMaker, 
+  findDangerZone, 
+  formatComboDescription, 
+  getCurrentDayOfWeek,
+  getCurrentSportsInSeason,
+  getSeasonalTip 
+} from './insightsHelper';
+
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, deleteField } from 'firebase/firestore';
 
@@ -5573,11 +5582,19 @@ const renderSearch = () => {
     setSearchResults(results);
   };
 
+  // Calculate dynamic insights
+  const moneyMaker = findMoneyMaker(parlays, players);
+  const dangerZone = findDangerZone(parlays, players);
+  const currentDay = getCurrentDayOfWeek();
+  const currentSports = getCurrentSportsInSeason();
+  const seasonalTip = getSeasonalTip();
+
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold">🔍 Intelligent Search</h2>
+      <h2 className="text-xl md:text-2xl font-bold text-yellow-400">🔍 Insights & Deep Dive</h2>
       
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      {/* Search Bar */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <div className="flex gap-3">
           <input
             type="text"
@@ -5585,25 +5602,36 @@ const renderSearch = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             placeholder='Try: "Anytime Touchdown Scorer record" or "Chiefs record" or "Management NBA stats"'
-            className="flex-1 px-4 py-3 border rounded-lg text-base"
+            className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white text-base focus:border-yellow-500 focus:outline-none"
             style={{ fontSize: isMobile ? '16px' : '14px' }}
           />
           <button
             onClick={handleSearch}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-base"
+            className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-lg font-semibold hover:shadow-lg transform hover:scale-105 transition text-base"
             style={{ minHeight: isMobile ? '44px' : 'auto' }}
           >
             Search
           </button>
         </div>
         
+        {/* Current Context Info */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <div className="bg-gray-900/50 rounded-full px-3 py-1 text-xs text-gray-400 border border-gray-700">
+            📅 Today: {currentDay}
+          </div>
+          <div className="bg-gray-900/50 rounded-full px-3 py-1 text-xs text-gray-400 border border-gray-700">
+            🏆 In Season: {currentSports.slice(0, 3).join(', ')}
+            {currentSports.length > 3 && ` +${currentSports.length - 3} more`}
+          </div>
+        </div>
+        
         <div className="mt-3 text-sm text-gray-600">
-          <p className="font-semibold mb-2">Examples:</p>
+          <p className="font-semibold mb-2 text-gray-400">Examples:</p>
           <div className="flex flex-wrap gap-2">
             {[
               'Anytime Touchdown Scorer record',
               'Spread bets stats',
-              'Thursday picks',
+              `${currentDay} picks`,
               'Management NFL stats',
               'Vanderbilt picks'
             ].map(example => (
@@ -5613,7 +5641,7 @@ const renderSearch = () => {
                   setSearchQuery(example);
                   setSearchResults(analyzeSearchQuery(example));
                 }}
-                className="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded text-xs"
+                className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-300 hover:text-yellow-400 transition border border-gray-700"
               >
                 {example}
               </button>
@@ -5622,6 +5650,93 @@ const renderSearch = () => {
         </div>
       </div>
 
+{/* Dynamic Featured Insights - Only show if no search results */}
+      {!searchResults && (
+        <div className="space-y-4">
+          {/* Seasonal Tip Banner */}
+          <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 rounded-xl p-4 border border-blue-500/30">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">💡</span>
+              <div>
+                <div className="font-semibold text-blue-400 text-sm">Today's Tip</div>
+                <div className="text-white">{seasonalTip}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Money Maker & Danger Zone Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Money Maker */}
+            {moneyMaker ? (
+              <div className="bg-gradient-to-br from-green-900/30 to-gray-800 rounded-xl p-5 border border-green-500/30 transform hover:scale-105 transition shadow-xl">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-green-400 font-bold text-lg">💰 Money Maker Alert</h3>
+                    <p className="text-gray-400 text-sm">Highest win rate combo right now</p>
+                  </div>
+                  <span className="text-2xl">🚀</span>
+                </div>
+                <p className="text-white text-lg mb-2">{formatComboDescription(moneyMaker)}</p>
+                <div className="flex gap-4 text-sm">
+                  <span className="text-green-400 font-bold">{moneyMaker.winRate.toFixed(1)}% win rate</span>
+                  <span className="text-gray-400">{moneyMaker.totalPicks} picks</span>
+                </div>
+                <div className="mt-3 text-xs text-gray-400">
+                  {moneyMaker.wins}-{moneyMaker.losses} record
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-5 border border-gray-700">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-yellow-400 font-bold text-lg">💰 Money Maker Alert</h3>
+                    <p className="text-gray-400 text-sm">Looking for patterns...</p>
+                  </div>
+                  <span className="text-2xl">🔍</span>
+                </div>
+                <p className="text-gray-400 text-sm">
+                  Need more data for {currentSports[0]} on {currentDay}s. Keep betting to unlock insights!
+                </p>
+              </div>
+            )}
+            
+            {/* Danger Zone */}
+            {dangerZone ? (
+              <div className="bg-gradient-to-br from-red-900/30 to-gray-800 rounded-xl p-5 border border-red-500/30 transform hover:scale-105 transition shadow-xl">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-red-400 font-bold text-lg">⚠️ Danger Zone</h3>
+                    <p className="text-gray-400 text-sm">Avoid this combo</p>
+                  </div>
+                  <span className="text-2xl">🚨</span>
+                </div>
+                <p className="text-white text-lg mb-2">{formatComboDescription(dangerZone)}</p>
+                <div className="flex gap-4 text-sm">
+                  <span className="text-red-400 font-bold">{dangerZone.winRate.toFixed(1)}% win rate</span>
+                  <span className="text-gray-400">{dangerZone.totalPicks} picks</span>
+                </div>
+                <div className="mt-3 text-xs text-gray-400">
+                  {dangerZone.wins}-{dangerZone.losses} record
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-5 border border-gray-700">
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <h3 className="text-red-400 font-bold text-lg">⚠️ Danger Zone</h3>
+                    <p className="text-gray-400 text-sm">Looking for warning signs...</p>
+                  </div>
+                  <span className="text-2xl">🔍</span>
+                </div>
+                <p className="text-gray-400 text-sm">
+                  No concerning patterns detected yet. Keep tracking!
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+      
       {searchResults && (
         <div className="bg-white rounded-lg shadow p-4 md:p-6">
           <h3 className="text-lg md:text-xl font-bold mb-4">
