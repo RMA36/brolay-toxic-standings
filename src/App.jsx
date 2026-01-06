@@ -4207,51 +4207,6 @@ return (
         </button>
       </div>
 
-      {/* Comparison View */}
-      {comparisonMode && selectedForComparison.size > 0 && (
-        <div className="bg-gradient-to-br from-purple-900/30 to-gray-800 rounded-xl shadow-xl p-4 md:p-6 border border-purple-500/30">
-          <h3 className="text-lg font-bold text-purple-400 mb-4">
-            Comparing {selectedForComparison.size} Player{selectedForComparison.size !== 1 ? 's' : ''}
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from(selectedForComparison).map(player => {
-              const playerStats = calculateStatsForPlayer(player, filteredParlays);
-              const adjustedWins = playerStats.wins + (playerStats.pushes * 0.5);
-              const winPct = playerStats.totalPicks > 0 
-                ? ((adjustedWins / playerStats.totalPicks) * 100).toFixed(1)
-                : '0.0';
-              const netMoney = playerStats.moneyWon - playerStats.moneyLost;
-
-              return (
-                <div key={player} className="bg-gray-900/50 rounded-lg p-4 border border-purple-500/30">
-                  <h4 className="text-lg font-bold text-white mb-3">{player}</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Record:</span>
-                      <span className="text-white font-semibold">{playerStats.wins}-{playerStats.losses}-{playerStats.pushes}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Win %:</span>
-                      <span className="text-white font-semibold">{winPct}%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Net Money:</span>
-                      <span className={`font-semibold ${netMoney >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        ${netMoney.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">And-1s:</span>
-                      <span className="text-red-400 font-semibold">{playerStats.and1s}</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Leaderboard */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">🏆 Leaderboard</h3>
@@ -4436,6 +4391,282 @@ return (
             })}
         </div>
       </div>
+
+      {/* Comparison Table - Below Leaderboard */}
+      {comparisonMode && selectedForComparison.size >= 2 && (
+        <div className="bg-gradient-to-br from-purple-900/30 to-gray-800 rounded-xl shadow-xl p-4 md:p-6 border border-purple-500/30">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-bold text-purple-400">
+              📊 Comparing {selectedForComparison.size} Players
+            </h3>
+            <button
+              onClick={() => setSelectedForComparison(new Set())}
+              className="text-sm text-gray-400 hover:text-red-400 transition"
+            >
+              Clear Selection
+            </button>
+          </div>
+          
+          {(() => {
+            // Calculate stats for all selected players
+            const comparisonData = Array.from(selectedForComparison).map(player => {
+              const stats = calculateStatsForPlayer(player, filteredParlays);
+              const adjustedWins = stats.wins + (stats.pushes * 0.5);
+              const winPct = stats.totalPicks > 0 
+                ? ((adjustedWins / stats.totalPicks) * 100)
+                : 0;
+              const netMoney = stats.moneyWon - stats.moneyLost;
+              
+              return {
+                player,
+                record: `${stats.wins}-${stats.losses}-${stats.pushes}`,
+                winPct,
+                netMoney,
+                and1s: stats.and1s,
+                and1Cost: stats.and1Cost,
+                bySport: stats.bySport,
+                byBetType: stats.byBetType
+              };
+            });
+
+            // Find common sports (where all players have 10+ bets)
+            const commonSports = {};
+            Object.keys(comparisonData[0]?.bySport || {}).forEach(sport => {
+              const allHaveEnough = comparisonData.every(p => 
+                p.bySport[sport] && p.bySport[sport].total >= 10
+              );
+              if (allHaveEnough) {
+                commonSports[sport] = true;
+              }
+            });
+
+            // Find common bet types (where all players have 10+ bets)
+            const commonBetTypes = {};
+            Object.keys(comparisonData[0]?.byBetType || {}).forEach(betType => {
+              const allHaveEnough = comparisonData.every(p => 
+                p.byBetType[betType] && p.byBetType[betType].total >= 10
+              );
+              if (allHaveEnough) {
+                commonBetTypes[betType] = true;
+              }
+            });
+
+            // Helper to determine winner for a metric
+            const getWinner = (metric, higherIsBetter = true) => {
+              const values = comparisonData.map(p => p[metric]);
+              const bestValue = higherIsBetter ? Math.max(...values) : Math.min(...values);
+              return values.indexOf(bestValue);
+            };
+
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b-2 border-purple-500/30">
+                      <th className="text-left py-3 px-4 text-gray-300 font-semibold sticky left-0 bg-gradient-to-r from-purple-900/30 to-gray-800">
+                        Metric
+                      </th>
+                      {comparisonData.map((data, idx) => (
+                        <th key={idx} className="text-center py-3 px-4 text-purple-400 font-bold">
+                          {data.player}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Overall Stats */}
+                    <tr className="border-b border-gray-700">
+                      <td className="py-3 px-4 text-gray-400 font-medium sticky left-0 bg-gradient-to-r from-purple-900/30 to-gray-800">
+                        Record
+                      </td>
+                      {comparisonData.map((data, idx) => (
+                        <td key={idx} className="py-3 px-4 text-center text-white">
+                          {data.record}
+                        </td>
+                      ))}
+                    </tr>
+
+                    <tr className="border-b border-gray-700 bg-gray-800/30">
+                      <td className="py-3 px-4 text-gray-400 font-medium sticky left-0 bg-gradient-to-r from-purple-900/30 to-gray-800">
+                        Win %
+                      </td>
+                      {comparisonData.map((data, idx) => {
+                        const isWinner = idx === getWinner('winPct', true);
+                        return (
+                          <td key={idx} className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {isWinner && <span className="text-yellow-400">👑</span>}
+                              <span className={`font-semibold ${isWinner ? 'text-yellow-400' : 'text-white'}`}>
+                                {data.winPct.toFixed(1)}%
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    <tr className="border-b border-gray-700">
+                      <td className="py-3 px-4 text-gray-400 font-medium sticky left-0 bg-gradient-to-r from-purple-900/30 to-gray-800">
+                        Net Money
+                      </td>
+                      {comparisonData.map((data, idx) => {
+                        const isWinner = idx === getWinner('netMoney', true);
+                        return (
+                          <td key={idx} className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {isWinner && <span className="text-yellow-400">👑</span>}
+                              <span className={`font-semibold ${
+                                isWinner ? 'text-yellow-400' : 
+                                data.netMoney >= 0 ? 'text-green-400' : 'text-red-400'
+                              }`}>
+                                ${data.netMoney.toFixed(2)}
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    <tr className="border-b border-gray-700 bg-gray-800/30">
+                      <td className="py-3 px-4 text-gray-400 font-medium sticky left-0 bg-gradient-to-r from-purple-900/30 to-gray-800">
+                        And-1s
+                      </td>
+                      {comparisonData.map((data, idx) => {
+                        const isWinner = idx === getWinner('and1s', false); // Lower is better
+                        return (
+                          <td key={idx} className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {isWinner && <span className="text-yellow-400">👑</span>}
+                              <span className={`font-semibold ${isWinner ? 'text-yellow-400' : 'text-red-400'}`}>
+                                {data.and1s}
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    <tr className="border-b border-gray-700">
+                      <td className="py-3 px-4 text-gray-400 font-medium sticky left-0 bg-gradient-to-r from-purple-900/30 to-gray-800">
+                        And-1 Cost
+                      </td>
+                      {comparisonData.map((data, idx) => {
+                        const isWinner = idx === getWinner('and1Cost', false); // Lower is better
+                        return (
+                          <td key={idx} className="py-3 px-4 text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              {isWinner && <span className="text-yellow-400">👑</span>}
+                              <span className={`font-semibold ${isWinner ? 'text-yellow-400' : 'text-red-400'}`}>
+                                ${data.and1Cost.toFixed(2)}
+                              </span>
+                            </div>
+                          </td>
+                        );
+                      })}
+                    </tr>
+
+                    {/* By Sport - Only sports where all have 10+ */}
+                    {Object.keys(commonSports).length > 0 && (
+                      <>
+                        <tr>
+                          <td colSpan={comparisonData.length + 1} className="py-3 px-4 bg-gray-700/50">
+                            <h4 className="font-bold text-purple-400">📊 By Sport (10+ bets)</h4>
+                          </td>
+                        </tr>
+                        {Object.keys(commonSports).map(sport => (
+                          <tr key={sport} className="border-b border-gray-700">
+                            <td className="py-3 px-4 text-gray-400 font-medium sticky left-0 bg-gradient-to-r from-purple-900/30 to-gray-800">
+                              {sport}
+                            </td>
+                            {comparisonData.map((data, idx) => {
+                              const sportData = data.bySport[sport];
+                              const sportWinPct = sportData.total > 0 
+                                ? (((sportData.wins + sportData.pushes * 0.5) / sportData.total) * 100)
+                                : 0;
+                              
+                              // Find winner for this sport
+                              const sportWinPcts = comparisonData.map(p => {
+                                const sd = p.bySport[sport];
+                                return sd.total > 0 ? (((sd.wins + sd.pushes * 0.5) / sd.total) * 100) : 0;
+                              });
+                              const bestSportWinPct = Math.max(...sportWinPcts);
+                              const isWinner = sportWinPct === bestSportWinPct;
+
+                              return (
+                                <td key={idx} className="py-3 px-4 text-center">
+                                  <div className="flex flex-col items-center gap-1">
+                                    <div className="flex items-center gap-2">
+                                      {isWinner && <span className="text-yellow-400">👑</span>}
+                                      <span className={`font-semibold ${isWinner ? 'text-yellow-400' : 'text-white'}`}>
+                                        {sportWinPct.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                      {sportData.wins}-{sportData.losses}-{sportData.pushes}
+                                    </span>
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </>
+                    )}
+
+                    {/* By Bet Type - Only bet types where all have 10+ */}
+                    {Object.keys(commonBetTypes).length > 0 && (
+                      <>
+                        <tr>
+                          <td colSpan={comparisonData.length + 1} className="py-3 px-4 bg-gray-700/50">
+                            <h4 className="font-bold text-purple-400">🎲 By Bet Type (10+ bets)</h4>
+                          </td>
+                        </tr>
+                        {Object.keys(commonBetTypes).map(betType => (
+                          <tr key={betType} className="border-b border-gray-700">
+                            <td className="py-3 px-4 text-gray-400 font-medium sticky left-0 bg-gradient-to-r from-purple-900/30 to-gray-800">
+                              {betType}
+                            </td>
+                            {comparisonData.map((data, idx) => {
+                              const betData = data.byBetType[betType];
+                              const betWinPct = betData.total > 0 
+                                ? (((betData.wins + betData.pushes * 0.5) / betData.total) * 100)
+                                : 0;
+                              
+                              // Find winner for this bet type
+                              const betWinPcts = comparisonData.map(p => {
+                                const bd = p.byBetType[betType];
+                                return bd.total > 0 ? (((bd.wins + bd.pushes * 0.5) / bd.total) * 100) : 0;
+                              });
+                              const bestBetWinPct = Math.max(...betWinPcts);
+                              const isWinner = betWinPct === bestBetWinPct;
+
+                              return (
+                                <td key={idx} className="py-3 px-4 text-center">
+                                  <div className="flex flex-col items-center gap-1">
+                                    <div className="flex items-center gap-2">
+                                      {isWinner && <span className="text-yellow-400">👑</span>}
+                                      <span className={`font-semibold ${isWinner ? 'text-yellow-400' : 'text-white'}`}>
+                                        {betWinPct.toFixed(1)}%
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                      {betData.wins}-{betData.losses}-{betData.pushes}
+                                    </span>
+                                  </div>
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))}
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 };
