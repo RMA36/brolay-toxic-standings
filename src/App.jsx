@@ -159,7 +159,9 @@ const App = () => {
   const SHOW_IMPORT_TAB = false; // Set to true to show Import Data tab
   const SHOW_SETTINGS_TAB = false; // Set to true to show Settings tab
   
-  const [activeTab, setActiveTab] = useState('entry');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('currentActiveTab') || 'entry';
+  });
   const [csvInput, setCsvInput] = useState('');
   const [players] = useState(['Management', 'CD', '914', 'Junior', 'Jacoby']);
   const [parlays, setParlays] = useState([]);
@@ -4951,7 +4953,7 @@ const renderGroupDashboard = () => {
           </div>
           <p className="text-3xl md:text-4xl font-bold text-white">{totalParlays}</p>
           <p className="text-sm text-gray-400 mt-1">
-            {wonParlays}W-{lostParlays}L-{pendingParlays}P
+            {wonParlays}W-{lostParlays}L
           </p>
         </div>
         
@@ -4987,10 +4989,10 @@ const renderGroupDashboard = () => {
             <h3 className="text-base md:text-lg font-semibold text-purple-400">Avg Payout</h3>
           </div>
           <p className="text-3xl md:text-4xl font-bold text-white">
-            ${wonParlays > 0 ? (totalMoneyWon / wonParlays).toFixed(0) : '0'}
+            ${wonParlays > 0 ? ((totalMoneyWon / wonParlays) / 4).toFixed(0) : '0'}
           </p>
           <p className="text-sm text-gray-400 mt-1">
-            Per winning brolay
+            Per person per win
           </p>
         </div>
       </div>
@@ -5100,6 +5102,117 @@ const renderGroupDashboard = () => {
                 </div>
               );
             })}
+        </div>
+      </div>
+      {/* Sport Distribution Pie Chart */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">📊 Sport Distribution</h3>
+        <div className="space-y-3">
+          {Object.entries(bySport)
+            .sort(([, a], [, b]) => b.total - a.total)
+            .map(([sport, data], idx) => {
+              const totalPicks = Object.values(bySport).reduce((sum, s) => sum + s.total, 0);
+              const percentage = totalPicks > 0 ? ((data.total / totalPicks) * 100).toFixed(1) : '0';
+              const hue = idx * 40; // Spread colors across spectrum
+              
+              return (
+                <div key={sport} className="flex items-center gap-3">
+                  <div className="w-28 text-sm text-gray-300 font-medium">
+                    {sport}
+                  </div>
+                  <div className="flex-1 relative h-8 bg-gray-900/50 rounded-lg overflow-hidden border border-gray-700">
+                    <div 
+                      className="absolute left-0 top-0 h-full transition-all duration-500"
+                      style={{
+                        width: `${percentage}%`,
+                        background: `linear-gradient(90deg, hsl(${hue}, 70%, 50%), hsl(${hue}, 70%, 65%))`
+                      }}
+                    />
+                  </div>
+                  <div className="w-16 text-right">
+                    <div className="text-base font-bold text-white">
+                      {percentage}%
+                    </div>
+                  </div>
+                  <div className="w-16 text-right text-sm text-gray-400">
+                    ({data.total})
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* Rolling 12-Month Stats */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">📅 Rolling 12-Month Performance</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {(() => {
+            const twelveMonthsAgo = new Date();
+            twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+            
+            const recentBrolays = filteredParlays.filter(p => {
+              const parlayDate = new Date(p.date + 'T00:00:00');
+              return parlayDate >= twelveMonthsAgo;
+            });
+            
+            const recent12Won = recentBrolays.filter(p => {
+              const participants = Object.values(p.participants);
+              const losers = participants.filter(part => part.result === 'loss');
+              return losers.length === 0 && participants.some(part => part.result === 'win');
+            }).length;
+            
+            const recent12Lost = recentBrolays.filter(p => {
+              const participants = Object.values(p.participants);
+              return participants.some(part => part.result === 'loss');
+            }).length;
+            
+            const recent12WinRate = recentBrolays.length > 0 
+              ? ((recent12Won / recentBrolays.length) * 100).toFixed(1) 
+              : '0.0';
+            
+            const recent12Payout = recentBrolays
+              .filter(p => {
+                const participants = Object.values(p.participants);
+                const losers = participants.filter(part => part.result === 'loss');
+                return losers.length === 0 && participants.some(part => part.result === 'win');
+              })
+              .reduce((sum, p) => {
+                const participants = Object.values(p.participants);
+                return sum + Math.max(0, (p.totalPayout || 0) - (p.betAmount * participants.length));
+              }, 0);
+
+            return (
+              <>
+                <div className="bg-blue-900/30 rounded-lg p-4 border border-blue-500/30">
+                  <div className="text-sm text-gray-400 mb-1">Record</div>
+                  <div className="text-2xl font-bold text-white">
+                    {recent12Won}W-{recent12Lost}L
+                  </div>
+                </div>
+                <div className="bg-purple-900/30 rounded-lg p-4 border border-purple-500/30">
+                  <div className="text-sm text-gray-400 mb-1">Win Rate</div>
+                  <div className={`text-2xl font-bold ${
+                    parseFloat(recent12WinRate) >= 50 ? 'text-green-400' : 'text-red-400'
+                  }`}>
+                    {recent12WinRate}%
+                  </div>
+                </div>
+                <div className="bg-gray-700/30 rounded-lg p-4 border border-gray-600/30">
+                  <div className="text-sm text-gray-400 mb-1">Total Brolays</div>
+                  <div className="text-2xl font-bold text-white">
+                    {recentBrolays.length}
+                  </div>
+                </div>
+                <div className="bg-green-900/30 rounded-lg p-4 border border-green-500/30">
+                  <div className="text-sm text-gray-400 mb-1">Total Profit</div>
+                  <div className="text-2xl font-bold text-green-400">
+                    ${recent12Payout.toFixed(0)}
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -6316,13 +6429,13 @@ const renderGrid = () => {
     <div className="space-y-4 md:space-y-6">
       <h2 className="text-xl md:text-2xl font-bold text-yellow-400">🎯 Brolay Grid</h2>
       
-      <div className="bg-white rounded-lg shadow p-4 md:p-6 overflow-x-auto">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20 overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead>
-            <tr className="border-b-2 border-gray-300">
-              <th className="text-left py-2 px-2 sticky left-0 bg-white z-10 min-w-[100px]">Date</th>
+            <tr className="border-b-2 border-gray-600">
+              <th className="text-left py-2 px-2 sticky left-0 bg-gray-900 z-10 min-w-[100px] text-gray-300">Date</th>
               {players.map(player => (
-                <th key={player} className="text-center py-2 px-2 min-w-[80px] md:min-w-[150px]">{player}</th>
+                <th key={player} className="text-center py-2 px-2 min-w-[80px] md:min-w-[150px] text-gray-300">{player}</th>
               ))}
             </tr>
           </thead>
@@ -6331,8 +6444,8 @@ const renderGrid = () => {
               const participants = parlay.participants || {};
               
               return (
-                <tr key={parlay.id} className="border-b border-gray-200 hover:bg-gray-50">
-                  <td className="py-3 px-2 font-semibold sticky left-0 bg-white text-xs md:text-sm">
+                <tr key={parlay.id} className="border-b border-gray-700 hover:bg-gray-800/50">
+                  <td className="py-3 px-2 font-semibold sticky left-0 bg-gray-900 text-xs md:text-sm text-gray-300">
                     {formatDateForDisplay(parlay.date)}
                   </td>
                   {players.map((player) => {
@@ -6383,7 +6496,7 @@ const renderGrid = () => {
   );
 };  
 
-  const renderRankings = () => {
+const renderRankings = () => {
   const filteredParlays = applyFilters([...parlays]);
   
   // Calculate Sole Survivors
@@ -6637,14 +6750,14 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
       <h2 className="text-xl md:text-2xl font-bold text-yellow-400">🏆 Rankings & Records</h2>
       
       {/* Sole Survivors */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <h3 className="text-lg md:text-xl font-bold mb-4">💪 Sole Survivors</h3>
-        <p className="text-sm text-gray-600 mb-4">Only winner when everyone else lost</p>
+        <p className="text-sm text-gray-400 mb-4">Only winner when everyone else lost</p>
         <div className="space-y-2">
           {Object.entries(soleSurvivors)
             .sort(([, a], [, b]) => b - a)
             .map(([player, count], idx) => (
-              <div key={player} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+              <div key={player} className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-700 rounded">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl font-bold text-gray-400">#{idx + 1}</span>
                   <span className="font-semibold">{player}</span>
@@ -6657,143 +6770,143 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
 
       {/* Current Streaks */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-600">🔥 Current Hot Streak</h3>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-400">🔥 Current Hot Streak</h3>
           {currentStreaks.hot.length > 0 ? (
             <div className="space-y-2">
               {currentStreaks.hot.slice(0, 3).map((streak, idx) => (
                 <div key={idx} className="p-3 bg-green-50 rounded">
                   <div className="flex justify-between items-center">
                     <span className="font-semibold">{streak.player}</span>
-                    <span className="text-xl font-bold text-green-600">{streak.count} wins</span>
+                    <span className="text-xl font-bold text-green-400">{streak.count} wins</span>
                   </div>
-                  <div className="text-xs text-gray-600">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
+                  <div className="text-xs text-gray-400">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">No active hot streaks</p>
+            <p className="text-gray-300 text-center py-4">No active hot streaks</p>
           )}
         </div>
         
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-600">❄️ Current Cold Streak</h3>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-400">❄️ Current Cold Streak</h3>
           {currentStreaks.cold.length > 0 ? (
             <div className="space-y-2">
               {currentStreaks.cold.slice(0, 3).map((streak, idx) => (
                 <div key={idx} className="p-3 bg-red-50 rounded">
                   <div className="flex justify-between items-center">
                     <span className="font-semibold">{streak.player}</span>
-                    <span className="text-xl font-bold text-red-600">{streak.count} losses</span>
+                    <span className="text-xl font-bold text-red-400">{streak.count} losses</span>
                   </div>
-                  <div className="text-xs text-gray-600">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
+                  <div className="text-xs text-gray-400">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">No active cold streaks</p>
+            <p className="text-gray-300 text-center py-4">No active cold streaks</p>
           )}
         </div>
       </div>
 
       {/* All-Time Streaks */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-600">📈 Top 5 Hot Streaks (All-Time)</h3>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-400">📈 Top 5 Hot Streaks (All-Time)</h3>
           {allTimeStreaks.hot.slice(0, 5).length > 0 ? (
             <div className="space-y-2">
               {allTimeStreaks.hot.slice(0, 5).map((streak, idx) => (
                 <div key={idx} className="p-3 bg-green-50 rounded">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold">{streak.player}</span>
-                    <span className="text-lg font-bold text-green-600">{streak.count} wins</span>
+                    <span className="text-lg font-bold text-green-400">{streak.count} wins</span>
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-400">
                     {formatDateForDisplay(streak.startDate)} - {formatDateForDisplay(streak.endDate)}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">No streaks of 3+ yet</p>
+            <p className="text-gray-300 text-center py-4">No streaks of 3+ yet</p>
           )}
         </div>
         
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-600">📉 Top 5 Cold Streaks (All-Time)</h3>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-400">📉 Top 5 Cold Streaks (All-Time)</h3>
           {allTimeStreaks.cold.slice(0, 5).length > 0 ? (
             <div className="space-y-2">
               {allTimeStreaks.cold.slice(0, 5).map((streak, idx) => (
                 <div key={idx} className="p-3 bg-red-50 rounded">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold">{streak.player}</span>
-                    <span className="text-lg font-bold text-red-600">{streak.count} losses</span>
+                    <span className="text-lg font-bold text-red-400">{streak.count} losses</span>
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-400">
                     {formatDateForDisplay(streak.startDate)} - {formatDateForDisplay(streak.endDate)}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">No streaks of 3+ yet</p>
+            <p className="text-gray-300 text-center py-4">No streaks of 3+ yet</p>
           )}
         </div>
       </div>
 
       {/* Player/Sport Combinations */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-600">⭐ Top 5 Player/Sport Combos</h3>
-          <p className="text-sm text-gray-600 mb-4">Minimum 10 picks</p>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-400">⭐ Top 5 Player/Sport Combos</h3>
+          <p className="text-sm text-gray-400 mb-4">Minimum 10 picks</p>
           {topCombos.length > 0 ? (
             <div className="space-y-2">
               {topCombos.map((combo, idx) => (
                 <div key={idx} className="p-3 bg-green-50 rounded">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold">{combo.player} - {combo.sport}</span>
-                    <span className="text-lg font-bold text-green-600">{combo.winPct.toFixed(1)}%</span>
+                    <span className="text-lg font-bold text-green-400">{combo.winPct.toFixed(1)}%</span>
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-400">
                     {combo.wins}-{combo.losses} ({combo.total} picks)
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">Not enough data yet</p>
+            <p className="text-gray-300 text-center py-4">Not enough data yet</p>
           )}
         </div>
         
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-600">💩 Worst 5 Player/Sport Combos</h3>
-          <p className="text-sm text-gray-600 mb-4">Minimum 10 picks</p>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-400">💩 Worst 5 Player/Sport Combos</h3>
+          <p className="text-sm text-gray-400 mb-4">Minimum 10 picks</p>
           {worstCombos.length > 0 ? (
             <div className="space-y-2">
               {worstCombos.map((combo, idx) => (
                 <div key={idx} className="p-3 bg-red-50 rounded">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold">{combo.player} - {combo.sport}</span>
-                    <span className="text-lg font-bold text-red-600">{combo.winPct.toFixed(1)}%</span>
+                    <span className="text-lg font-bold text-red-400">{combo.winPct.toFixed(1)}%</span>
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-400">
                     {combo.wins}-{combo.losses} ({combo.total} picks)
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">Not enough data yet</p>
+            <p className="text-gray-300 text-center py-4">Not enough data yet</p>
           )}
         </div>
       </div>
 
       {/* Most Picked Teams */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <h3 className="text-lg md:text-xl font-bold mb-4">🎯 Top 5 Most Picked Teams/Players</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {topTeams.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded">
+            <div key={idx} className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-700 rounded">
               <div className="flex items-center gap-3">
                 <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
                 <span className="font-semibold">{item.team}</span>
@@ -6804,11 +6917,11 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
         </div>
       </div>
       {/* Most Picked Player/Team Combos */}
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
           <h3 className="text-lg md:text-xl font-bold mb-4">🤝 Top 5 Most Picked Player/Team Combos</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {topPlayerTeamCombos.map((item, idx) => (
-              <div key={idx} className="p-3 bg-gray-50 rounded">
+              <div key={idx} className="p-3 bg-gray-900/50 border border-gray-700 rounded">
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-3">
                     <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
@@ -6816,7 +6929,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
                   </div>
                   <span className="text-lg font-bold text-blue-600">{item.total}</span>
                 </div>
-                <div className="text-xs text-gray-600 ml-8">
+                <div className="text-xs text-gray-400 ml-8">
                   {item.wins}-{item.losses}{item.pushes > 0 ? `-${item.pushes}` : ''} ({item.total > 0 ? ((item.wins / item.total) * 100).toFixed(1) : 0}%)
                 </div>
               </div>
@@ -6826,47 +6939,47 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
       
       {/* Best/Worst Player/Team Win Percentages */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-600">🌟 Top 5 Player/Team Win %</h3>
-          <p className="text-sm text-gray-600 mb-4">Minimum 5 picks</p>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-400">🌟 Top 5 Player/Team Win %</h3>
+          <p className="text-sm text-gray-400 mb-4">Minimum 5 picks</p>
           {topPlayerTeamWinPct.length > 0 ? (
             <div className="space-y-2">
               {topPlayerTeamWinPct.map((combo, idx) => (
                 <div key={idx} className="p-3 bg-green-50 rounded">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold">{combo.player} + {combo.team}</span>
-                    <span className="text-lg font-bold text-green-600">{combo.winPct.toFixed(1)}%</span>
+                    <span className="text-lg font-bold text-green-400">{combo.winPct.toFixed(1)}%</span>
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-400">
                     {combo.wins}-{combo.losses}{combo.pushes > 0 ? `-${combo.pushes}` : ''} ({combo.total} picks)
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">Not enough data yet</p>
+            <p className="text-gray-300 text-center py-4">Not enough data yet</p>
           )}
         </div>
         
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-600">💀 Worst 5 Player/Team Win %</h3>
-          <p className="text-sm text-gray-600 mb-4">Minimum 5 picks</p>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-400">💀 Worst 5 Player/Team Win %</h3>
+          <p className="text-sm text-gray-400 mb-4">Minimum 5 picks</p>
           {worstPlayerTeamWinPct.length > 0 ? (
             <div className="space-y-2">
               {worstPlayerTeamWinPct.map((combo, idx) => (
                 <div key={idx} className="p-3 bg-red-50 rounded">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold">{combo.player} + {combo.team}</span>
-                    <span className="text-lg font-bold text-red-600">{combo.winPct.toFixed(1)}%</span>
+                    <span className="text-lg font-bold text-red-400">{combo.winPct.toFixed(1)}%</span>
                   </div>
-                  <div className="text-xs text-gray-600">
+                  <div className="text-xs text-gray-400">
                     {combo.wins}-{combo.losses}{combo.pushes > 0 ? `-${combo.pushes}` : ''} ({combo.total} picks)
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-4">Not enough data yet</p>
+            <p className="text-gray-300 text-center py-4">Not enough data yet</p>
           )}
         </div>
       </div>
@@ -7330,15 +7443,15 @@ const renderAllPicks = () => {
   });
 
   // Apply filters
-const filteredPicks = allPicks.filter(pick => {
-  if (filters.dateFrom && pick.parlayDate < filters.dateFrom) return false;
-  if (filters.dateTo && pick.parlayDate > filters.dateTo) return false;
-  if (filters.player && pick.player !== filters.player) return false;
-  if (filters.sport && pick.sport !== filters.sport) return false;
-  if (filters.placedBy && pick.parlayPlacedBy !== filters.placedBy) return false;
-  if (filters.result && pick.result !== filters.result) return false;
-  if (filters.autoUpdated === 'true' && !pick.autoUpdated) return false;
-  if (filters.autoUpdated === 'false' && pick.autoUpdated) return false;
+  const filteredPicks = allPicks.filter(pick => {
+    if (filters.dateFrom && pick.parlayDate < filters.dateFrom) return false;
+    if (filters.dateTo && pick.parlayDate > filters.dateTo) return false;
+    if (filters.player && pick.player !== filters.player) return false;
+    if (filters.sport && pick.sport !== filters.sport) return false;
+    if (filters.placedBy && pick.parlayPlacedBy !== filters.placedBy) return false;
+    if (filters.result && pick.result !== filters.result) return false;
+    if (filters.autoUpdated === 'true' && !pick.autoUpdated) return false;
+    if (filters.autoUpdated === 'false' && pick.autoUpdated) return false;
   
   // Bet Type filter
   if (filters.betType && pick.betType !== filters.betType) return false;
@@ -7624,9 +7737,9 @@ const handleSavePickEdit = async () => {
       </div>
 
       {/* Picks List */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg md:text-xl font-bold">
+          <h3 className="text-lg md:text-xl font-bold text-yellow-400">
             {sortedPicks.length} Pick{sortedPicks.length !== 1 ? 's' : ''}
           </h3>
         </div>
@@ -7646,16 +7759,16 @@ const handleSavePickEdit = async () => {
               const betDetails = formatBetDescription(pick);
               
               return (
-                <div key={`${pick.parlayId}-${pick.participantId}-${idx}`} className="border rounded p-4">
+                <div key={`${pick.parlayId}-${pick.participantId}-${idx}`} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50 hover:bg-gray-800/70 transition">
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
-                      <div className="text-sm text-gray-600 mb-1">
+                      <div className="text-sm text-gray-400 mb-1">
                         {formatDateForDisplay(pick.parlayDate)} • Placed by {pick.parlayPlacedBy || 'Unknown'}
                       </div>
                       <div className="font-semibold">
                         <strong>{pick.player}</strong> - {pick.sport} - {teamDisplay} {betDetails}
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-gray-400">
                         {pick.betType}
                         {pick.odds && ` • ${pick.odds}`}
                       </div>
@@ -7684,7 +7797,7 @@ const handleSavePickEdit = async () => {
                       </span>
                       <button
                         onClick={() => setEditingPick(pick)}
-                        className="text-blue-600 text-sm hover:text-blue-800"
+                        className="text-blue-400 text-sm hover:text-blue-300"
                       >
                         Edit
                       </button>
@@ -7728,13 +7841,13 @@ const handleSavePickEdit = async () => {
                   }
                 }}
               >
-                <div className="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto" style={{ maxWidth: isMobile ? '100%' : '800px' }}>
+                <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto border border-yellow-500/20" style={{ maxWidth: isMobile ? '100%' : '800px' }}>
             <div className="p-4 md:p-6">
-              <h2 className="text-xl md:text-2xl font-bold mb-4">Edit Pick</h2>
+              <h2 className="text-xl md:text-2xl font-bold mb-4 text-yellow-400">Edit Pick</h2>
               
-              <div className="mb-4 p-3 bg-gray-50 rounded text-sm">
-                <div className="font-semibold">From Brolay:</div>
-                <div className="text-gray-600">
+              <div className="mb-4 p-3 bg-gray-900/50 border border-gray-700 rounded text-sm">
+                <className="font-semibold text-gray-300">From Brolay:</div>
+                <div className="text-gray-400">
                   {formatDateForDisplay(editingPick.parlayDate)} • Placed by {editingPick.parlayPlacedBy || 'Unknown'}
                 </div>
               </div>
@@ -8142,7 +8255,9 @@ const renderSettings = () => {
       {/* New Brolay Button */}
       <button
         onClick={() => {
-          setActiveTab('entry');
+          const newTab = 'entry';
+          setActiveTab(newTab);
+          localStorage.setItem('currentActiveTab', newTab);
           if (isMobile) setSidebarOpen(false);
         }}
         className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
@@ -8181,13 +8296,23 @@ const renderSettings = () => {
           >
             <div className="bg-gray-800 rounded-lg border border-yellow-500/30 shadow-2xl overflow-hidden">
               <button
-                onClick={() => setActiveTab('allBrolays')}
+                onClick={() => {
+                  const newTab = 'allBrolays';
+                  setActiveTab(newTab);
+                  localStorage.setItem('currentActiveTab', newTab);
+                  if (isMobile) setSidebarOpen(false);
+                }}
                 className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
               >
                 📅 All Brolays
               </button>
               <button
-                onClick={() => setActiveTab('allPicks')}
+                onClick={() => {
+                  const newTab = 'allPicks';
+                  setActiveTab(newTab);
+                  localStorage.setItem('currentActiveTab', newTab);
+                  if (isMobile) setSidebarOpen(false);
+                }}
                 className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition"
               >
                 📊 All Picks
@@ -8249,31 +8374,56 @@ const renderSettings = () => {
           >
             <div className="bg-gray-800 rounded-lg border border-yellow-500/30 shadow-2xl overflow-hidden">
               <button
-                onClick={() => setActiveTab('search')}
+                onClick={() => {
+                  const newTab = 'search';
+                  setActiveTab(newTab);
+                  localStorage.setItem('currentActiveTab', newTab);
+                  if (isMobile) setSidebarOpen(false);
+                }}
                 className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
               >
                 🔍 Insights
               </button>
               <button
-                onClick={() => setActiveTab('individual')}
+                onClick={() => {
+                  const newTab = 'individual';
+                  setActiveTab(newTab);
+                  localStorage.setItem('currentActiveTab', newTab);
+                  if (isMobile) setSidebarOpen(false);
+                }}
                 className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
               >
                 👤 Individual Stats
               </button>
               <button
-                onClick={() => setActiveTab('group')}
+                onClick={() => {
+                  const newTab = 'group';
+                  setActiveTab(newTab);
+                  localStorage.setItem('currentActiveTab', newTab);
+                  if (isMobile) setSidebarOpen(false);
+                }}
                 className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
               >
                 👥 Group Stats
               </button>
               <button
-                onClick={() => setActiveTab('rankings')}
+                onClick={() => {
+                  const newTab = 'rankings';
+                  setActiveTab(newTab);
+                  localStorage.setItem('currentActiveTab', newTab);
+                  if (isMobile) setSidebarOpen(false);
+                }}
                 className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
               >
                 🏆 Rankings
               </button>
               <button
-                onClick={() => setActiveTab('grid')}
+                onClick={() => {
+                  const newTab = 'grid';
+                  setActiveTab(newTab);
+                  localStorage.setItem('currentActiveTab', newTab);
+                  if (isMobile) setSidebarOpen(false);
+                }}
                 className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition"
               >
                 🎯 Grid View
@@ -8345,7 +8495,9 @@ const renderSettings = () => {
       {/* Payments Button */}
       <button
         onClick={() => {
-          setActiveTab('payments');
+          const newTab = 'payments';
+          setActiveTab(newTab);
+          localStorage.setItem('currentActiveTab', newTab);
           if (isMobile) setSidebarOpen(false);
         }}
         className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
