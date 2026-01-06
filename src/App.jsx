@@ -106,13 +106,27 @@ const customStyles = `
     z-index: 50;
     min-width: 200px;
     margin-top: 0.5rem;
+    padding-top: 0.5rem;
   }
   
-  .dropdown:hover .dropdown-content {
+  .dropdown:hover .dropdown-content,
+  .dropdown-content:hover {
     display: block;
   }
-`;
 
+  .dropdown.dropdown-open .dropdown-content {
+    display: block;
+  }
+  
+  .dropdown-content::before {
+    content: '';
+    position: absolute;
+    top: -0.5rem;
+    left: 0;
+    right: 0;
+    height: 0.5rem;
+    background: transparent;
+  }
 // Inject styles into document
 if (typeof document !== 'undefined') {
   const styleSheet = document.createElement("style");
@@ -6942,10 +6956,11 @@ const renderSettings = () => {
         ✨ New Brolay
       </button>
       
-      {/* Historical Data Dropdown */}
+      {/* Brolay Data Dropdown */}
       <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
         <button
           onClick={() => isMobile && setActiveTab('allBrolays')}
+          onMouseEnter={(e) => !isMobile && e.currentTarget.parentElement.classList.add('dropdown-open')}
           className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
             ['allBrolays', 'allPicks'].includes(activeTab)
               ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
@@ -6953,10 +6968,13 @@ const renderSettings = () => {
           } transition text-base`}
           style={{ minHeight: isMobile ? '44px' : 'auto' }}
         >
-          📚 Historical Data {!isMobile && '▼'}
+          📚 Brolay Data {!isMobile && '▼'}
         </button>
         {!isMobile && (
-          <div className="dropdown-content">
+          <div 
+            className="dropdown-content"
+            onMouseLeave={(e) => e.currentTarget.parentElement.classList.remove('dropdown-open')}
+          >
             <div className="bg-gray-800 rounded-lg border border-yellow-500/30 shadow-2xl overflow-hidden">
               <button
                 onClick={() => setActiveTab('allBrolays')}
@@ -6979,6 +6997,7 @@ const renderSettings = () => {
       <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
         <button
           onClick={() => isMobile && setActiveTab('search')}
+          onMouseEnter={(e) => !isMobile && e.currentTarget.parentElement.classList.add('dropdown-open')}
           className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
             ['search', 'individual', 'group', 'rankings', 'grid'].includes(activeTab)
               ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
@@ -6989,7 +7008,10 @@ const renderSettings = () => {
           📈 Analytics {!isMobile && '▼'}
         </button>
         {!isMobile && (
-          <div className="dropdown-content">
+          <div 
+            className="dropdown-content"
+            onMouseLeave={(e) => e.currentTarget.parentElement.classList.remove('dropdown-open')}
+          >
             <div className="bg-gray-800 rounded-lg border border-yellow-500/30 shadow-2xl overflow-hidden">
               <button
                 onClick={() => setActiveTab('search')}
