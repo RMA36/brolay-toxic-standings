@@ -193,6 +193,10 @@ const App = () => {
     betType: '',
     propType: ''
   });
+  const [expandedPlayers, setExpandedPlayers] = useState(new Set());
+  const [comparisonMode, setComparisonMode] = useState(false);
+  const [selectedForComparison, setSelectedForComparison] = useState(new Set());
+  const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
 
     // Helper function to format date to mm/dd/yyyy for display
     const formatDateForDisplay = (dateStr) => {
@@ -1617,6 +1621,32 @@ useEffect(() => {
     }
   }
 }, [activeTab, authenticated]);
+
+  // Rotate insights ticker every 5 seconds
+useEffect(() => {
+  if (activeTab === 'individual') {
+    const interval = setInterval(() => {
+      setCurrentInsightIndex(prev => {
+        // We need to calculate insights length here
+        const filteredParlays = applyFilters([...parlays]);
+        const allStats = players.map(p => ({
+          player: p,
+          ...calculateStatsForPlayer(p, filteredParlays)
+        }));
+        
+        let insightsCount = 0;
+        if (allStats.filter(s => s.totalPicks >= 5).length > 0) insightsCount++;
+        if (allStats.filter(s => s.totalPicks >= 5).length > 0) insightsCount++;
+        if (allStats.some(s => (s.moneyWon - s.moneyLost) > 0)) insightsCount++;
+        if (allStats.some(s => s.and1s > 0)) insightsCount++;
+        
+        return insightsCount > 0 ? (prev + 1) % insightsCount : 0;
+      });
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }
+}, [activeTab, parlays, filters]);
   
   const loadParlays = async () => {
   try {
@@ -3920,11 +3950,6 @@ parlaysList.forEach(parlay => {
 };
 
 const renderIndividualDashboard = () => {
-    const [expandedPlayers, setExpandedPlayers] = React.useState(new Set());
-    const [comparisonMode, setComparisonMode] = React.useState(false);
-    const [selectedForComparison, setSelectedForComparison] = React.useState(new Set());
-    const [currentInsightIndex, setCurrentInsightIndex] = React.useState(0);
-    
     const filteredParlays = applyFilters([...parlays]);
 
     const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
@@ -3980,17 +4005,7 @@ const renderIndividualDashboard = () => {
     if (mostAnd1s && mostAnd1s.and1s > 0) {
       insights.push(`💀 ${mostAnd1s.player} has the most And-1s (${mostAnd1s.and1s}) - so close!`);
     }
-    
-    // Set up rotation effect
-    React.useEffect(() => {
-      if (insights.length > 1) {
-        const interval = setInterval(() => {
-          setCurrentInsightIndex(prev => (prev + 1) % insights.length);
-        }, 5000);
-        return () => clearInterval(interval);
-      }
-    }, [insights.length]);
-    
+       
     const currentInsight = insights[currentInsightIndex] || 'Keep betting to unlock insights!';
     
 return (
