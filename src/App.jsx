@@ -7846,7 +7846,7 @@ const handleSavePickEdit = async () => {
               <h2 className="text-xl md:text-2xl font-bold mb-4 text-yellow-400">Edit Pick</h2>
               
               <div className="mb-4 p-3 bg-gray-900/50 border border-gray-700 rounded text-sm">
-                <className="font-semibold text-gray-300">From Brolay:</div>
+                <div className="font-semibold text-gray-300">From Brolay:</div>
                 <div className="text-gray-400">
                   {formatDateForDisplay(editingPick.parlayDate)} • Placed by {editingPick.parlayPlacedBy || 'Unknown'}
                 </div>
