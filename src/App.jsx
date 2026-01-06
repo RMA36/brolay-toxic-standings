@@ -109,13 +109,26 @@ const customStyles = `
     padding-top: 0.5rem;
   }
   
-  .dropdown:hover .dropdown-content,
-  .dropdown-content:hover {
+  .dropdown:hover .dropdown-content {
     display: block;
   }
 
   .dropdown.dropdown-open .dropdown-content {
     display: block;
+  }
+  
+  .dropdown-content:hover {
+    display: block;
+  }
+  
+  /* Keep dropdown visible when hovering over the area between button and content */
+  .dropdown::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 0.5rem;
   }
   
   .dropdown-content::before {
@@ -217,6 +230,7 @@ const [refreshing, setRefreshing] = useState(false);
 const [pullStartY, setPullStartY] = useState(0);
 const [pullDistance, setPullDistance] = useState(0);
 const [brolaysToShow, setBrolaysToShow] = useState(10);
+const [mobileDropdownOpen, setMobileDropdownOpen] = useState(null);
 
 // Detect mobile device
 useEffect(() => {
@@ -2536,8 +2550,16 @@ const renderEditModal = () => {
 
   const participants = editingParlay.participants || {};
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 md:p-4 overflow-y-auto">
+return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 md:p-4 overflow-y-auto"
+      onClick={(e) => {
+        // Close modal if clicking the backdrop
+        if (e.target === e.currentTarget) {
+          setEditingParlay(null);
+        }
+      }}
+    >
       <div className="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto" style={{ maxWidth: isMobile ? '100%' : '1024px' }}>
         <div className="p-4 md:p-6">
           <h2 className="text-xl md:text-2xl font-bold mb-4">Edit Brolay</h2>
@@ -3581,14 +3603,17 @@ const renderEntry = () => {
   </div>
 </div>
 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
-  <div>
+  <div className={isMobile ? 'max-w-full overflow-hidden' : ''}>
     <label className="block text-sm font-medium mb-1">Date</label>
     <input
       type="date"
       value={newParlay.date}
       onChange={(e) => setNewParlay({...newParlay, date: e.target.value})}
       className="w-full px-3 py-2 border rounded text-base"
-      style={{ fontSize: isMobile ? '16px' : '14px' }}
+      style={{ 
+        fontSize: isMobile ? '16px' : '14px',
+        maxWidth: '100%'
+      }}
     />
   </div>
   <div>
@@ -6971,9 +6996,17 @@ const handleSavePickEdit = async () => {
       </div>
 
       {/* Edit Pick Modal */}
-      {editingPick && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 md:p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto" style={{ maxWidth: isMobile ? '100%' : '800px' }}>
+        {editingPick && (
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 md:p-4 overflow-y-auto"
+                onClick={(e) => {
+                  // Close modal if clicking the backdrop
+                  if (e.target === e.currentTarget) {
+                    setEditingPick(null);
+                  }
+                }}
+              >
+                <div className="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto" style={{ maxWidth: isMobile ? '100%' : '800px' }}>
             <div className="p-4 md:p-6">
               <h2 className="text-xl md:text-2xl font-bold mb-4">Edit Pick</h2>
               
@@ -7403,7 +7436,12 @@ const renderSettings = () => {
       {/* Brolay Data Dropdown */}
       <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
         <button
-          onClick={() => isMobile && setActiveTab('allBrolays')}
+          onClick={() => {
+            if (isMobile) {
+              const newState = mobileDropdownOpen === 'brolayData' ? null : 'brolayData';
+              setMobileDropdownOpen(newState);
+            }
+          }}
           onMouseEnter={(e) => !isMobile && e.currentTarget.parentElement.classList.add('dropdown-open')}
           className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
             ['allBrolays', 'allPicks'].includes(activeTab)
@@ -7412,7 +7450,7 @@ const renderSettings = () => {
           } transition text-base`}
           style={{ minHeight: isMobile ? '44px' : 'auto' }}
         >
-          📚 Brolay Data {!isMobile && '▼'}
+          📚 Brolay Data {isMobile ? (mobileDropdownOpen === 'brolayData' ? '▲' : '▼') : '▼'}
         </button>
         {!isMobile && (
           <div 
@@ -7435,12 +7473,43 @@ const renderSettings = () => {
             </div>
           </div>
         )}
+        {isMobile && mobileDropdownOpen === 'brolayData' && (
+          <div className="ml-4 mt-2 space-y-2">
+            <button
+              onClick={() => {
+                setActiveTab('allBrolays');
+                setSidebarOpen(false);
+                setMobileDropdownOpen(null);
+              }}
+              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
+              style={{ minHeight: '44px' }}
+            >
+              📅 All Brolays
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('allPicks');
+                setSidebarOpen(false);
+                setMobileDropdownOpen(null);
+              }}
+              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
+              style={{ minHeight: '44px' }}
+            >
+              📊 All Picks
+            </button>
+          </div>
+        )}
       </div>
       
       {/* Analytics Dropdown */}
       <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
         <button
-          onClick={() => isMobile && setActiveTab('search')}
+          onClick={() => {
+            if (isMobile) {
+              const newState = mobileDropdownOpen === 'analytics' ? null : 'analytics';
+              setMobileDropdownOpen(newState);
+            }
+          }}
           onMouseEnter={(e) => !isMobile && e.currentTarget.parentElement.classList.add('dropdown-open')}
           className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
             ['search', 'individual', 'group', 'rankings', 'grid'].includes(activeTab)
@@ -7449,7 +7518,7 @@ const renderSettings = () => {
           } transition text-base`}
           style={{ minHeight: isMobile ? '44px' : 'auto' }}
         >
-          📈 Analytics {!isMobile && '▼'}
+          📈 Analytics {isMobile ? (mobileDropdownOpen === 'analytics' ? '▲' : '▼') : '▼'}
         </button>
         {!isMobile && (
           <div 
@@ -7488,6 +7557,65 @@ const renderSettings = () => {
                 🎯 Grid View
               </button>
             </div>
+          </div>
+        )}
+        {isMobile && mobileDropdownOpen === 'analytics' && (
+          <div className="ml-4 mt-2 space-y-2">
+            <button
+              onClick={() => {
+                setActiveTab('search');
+                setSidebarOpen(false);
+                setMobileDropdownOpen(null);
+              }}
+              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
+              style={{ minHeight: '44px' }}
+            >
+              🔍 Insights
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('individual');
+                setSidebarOpen(false);
+                setMobileDropdownOpen(null);
+              }}
+              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
+              style={{ minHeight: '44px' }}
+            >
+              👤 Individual Stats
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('group');
+                setSidebarOpen(false);
+                setMobileDropdownOpen(null);
+              }}
+              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
+              style={{ minHeight: '44px' }}
+            >
+              👥 Group Stats
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('rankings');
+                setSidebarOpen(false);
+                setMobileDropdownOpen(null);
+              }}
+              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
+              style={{ minHeight: '44px' }}
+            >
+              🏆 Rankings
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('grid');
+                setSidebarOpen(false);
+                setMobileDropdownOpen(null);
+              }}
+              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
+              style={{ minHeight: '44px' }}
+            >
+              🎯 Grid View
+            </button>
           </div>
         )}
       </div>
