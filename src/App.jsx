@@ -3932,88 +3932,81 @@ const renderIndividualDashboard = () => {
         return count + participants.filter(p => p.result === 'pending').length;
       }, 0);
     
+    // Calculate insights
+    const allStats = players.map(p => ({
+      player: p,
+      ...calculateStatsForPlayer(p, filteredParlays)
+    }));
+    
+    const hottestPlayer = allStats
+      .filter(s => s.totalPicks >= 5)
+      .sort((a, b) => {
+        const aWinRate = ((a.wins + a.pushes * 0.5) / a.totalPicks) * 100;
+        const bWinRate = ((b.wins + b.pushes * 0.5) / b.totalPicks) * 100;
+        return bWinRate - aWinRate;
+      })[0];
+    
+    const coldestPlayer = allStats
+      .filter(s => s.totalPicks >= 5)
+      .sort((a, b) => {
+        const aWinRate = ((a.wins + a.pushes * 0.5) / a.totalPicks) * 100;
+        const bWinRate = ((b.wins + b.pushes * 0.5) / b.totalPicks) * 100;
+        return aWinRate - bWinRate;
+      })[0];
+    
+    const biggestWinner = [...allStats].sort((a, b) => 
+      (b.moneyWon - b.moneyLost) - (a.moneyWon - a.moneyLost)
+    )[0];
+    
+    const mostAnd1s = [...allStats].sort((a, b) => b.and1s - a.and1s)[0];
+    
+    const insights = [];
+    
+    if (hottestPlayer) {
+      const winRate = ((hottestPlayer.wins + hottestPlayer.pushes * 0.5) / hottestPlayer.totalPicks * 100).toFixed(1);
+      insights.push(`🔥 ${hottestPlayer.player} is on fire with a ${winRate}% win rate!`);
+    }
+    
+    if (coldestPlayer) {
+      const winRate = ((coldestPlayer.wins + coldestPlayer.pushes * 0.5) / coldestPlayer.totalPicks * 100).toFixed(1);
+      insights.push(`❄️ ${coldestPlayer.player} is struggling at ${winRate}% - time to turn it around!`);
+    }
+    
+    if (biggestWinner && (biggestWinner.moneyWon - biggestWinner.moneyLost) > 0) {
+      const netMoney = (biggestWinner.moneyWon - biggestWinner.moneyLost).toFixed(2);
+      insights.push(`💰 ${biggestWinner.player} leads with $${netMoney} in profits!`);
+    }
+    
+    if (mostAnd1s && mostAnd1s.and1s > 0) {
+      insights.push(`💀 ${mostAnd1s.player} has the most And-1s (${mostAnd1s.and1s}) - so close!`);
+    }
+    
+    // Set up rotation effect
+    React.useEffect(() => {
+      if (insights.length > 1) {
+        const interval = setInterval(() => {
+          setCurrentInsightIndex(prev => (prev + 1) % insights.length);
+        }, 5000);
+        return () => clearInterval(interval);
+      }
+    }, [insights.length]);
+    
+    const currentInsight = insights[currentInsightIndex] || 'Keep betting to unlock insights!';
+    
 return (
     <div className="space-y-4 md:space-y-6">
       {/* Rotating Insights Ticker */}
-      {(() => {
-        const allStats = players.map(p => ({
-          player: p,
-          ...calculateStatsForPlayer(p, filteredParlays)
-        }));
-        
-        // Find hottest player (highest win % with min 5 picks)
-        const hottestPlayer = allStats
-          .filter(s => s.totalPicks >= 5)
-          .sort((a, b) => {
-            const aWinRate = ((a.wins + a.pushes * 0.5) / a.totalPicks) * 100;
-            const bWinRate = ((b.wins + b.pushes * 0.5) / b.totalPicks) * 100;
-            return bWinRate - aWinRate;
-          })[0];
-        
-        // Find coldest player (lowest win % with min 5 picks)
-        const coldestPlayer = allStats
-          .filter(s => s.totalPicks >= 5)
-          .sort((a, b) => {
-            const aWinRate = ((a.wins + a.pushes * 0.5) / a.totalPicks) * 100;
-            const bWinRate = ((b.wins + b.pushes * 0.5) / b.totalPicks) * 100;
-            return aWinRate - bWinRate;
-          })[0];
-        
-        // Find biggest money winner
-        const biggestWinner = allStats.sort((a, b) => 
-          (b.moneyWon - b.moneyLost) - (a.moneyWon - a.moneyLost)
-        )[0];
-        
-        // Find most And-1s
-        const mostAnd1s = allStats.sort((a, b) => b.and1s - a.and1s)[0];
-        
-        const insights = [];
-        
-        if (hottestPlayer) {
-          const winRate = ((hottestPlayer.wins + hottestPlayer.pushes * 0.5) / hottestPlayer.totalPicks * 100).toFixed(1);
-          insights.push(`🔥 ${hottestPlayer.player} is on fire with a ${winRate}% win rate!`);
-        }
-        
-        if (coldestPlayer) {
-          const winRate = ((coldestPlayer.wins + coldestPlayer.pushes * 0.5) / coldestPlayer.totalPicks * 100).toFixed(1);
-          insights.push(`❄️ ${coldestPlayer.player} is struggling at ${winRate}% - time to turn it around!`);
-        }
-        
-        if (biggestWinner && (biggestWinner.moneyWon - biggestWinner.moneyLost) > 0) {
-          const netMoney = (biggestWinner.moneyWon - biggestWinner.moneyLost).toFixed(2);
-          insights.push(`💰 ${biggestWinner.player} leads with $${netMoney} in profits!`);
-        }
-        
-        if (mostAnd1s && mostAnd1s.and1s > 0) {
-          insights.push(`💀 ${mostAnd1s.player} has the most And-1s (${mostAnd1s.and1s}) - so close!`);
-        }
-        
-        // Set up rotation effect
-        React.useEffect(() => {
-          if (insights.length > 1) {
-            const interval = setInterval(() => {
-              setCurrentInsightIndex(prev => (prev + 1) % insights.length);
-            }, 5000);
-            return () => clearInterval(interval);
-          }
-        }, [insights.length]);
-        
-        const currentInsight = insights[currentInsightIndex] || 'Keep betting to unlock insights!';
-        
-        return (
-          <div className="bg-gradient-to-r from-blue-900/30 via-purple-900/30 to-blue-900/30 rounded-xl p-4 border border-blue-500/30 overflow-hidden">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">💡</span>
-              <div className="flex-1">
-                <div className="font-semibold text-blue-400 text-sm">Quick Insight</div>
-                <div className="text-white text-sm md:text-base">
-                  {currentInsight}
-                </div>
-              </div>
+      <div className="bg-gradient-to-r from-blue-900/30 via-purple-900/30 to-blue-900/30 rounded-xl p-4 border border-blue-500/30 overflow-hidden">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">💡</span>
+          <div className="flex-1">
+            <div className="font-semibold text-blue-400 text-sm">Quick Insight</div>
+            <div className="text-white text-sm md:text-base">
+              {currentInsight}
             </div>
           </div>
-        );
-      })()}
+        </div>
+      </div>
 
       <div className="flex justify-between items-center">
         <h2 className="text-xl md:text-2xl font-bold text-yellow-400">👤 Individual Statistics</h2>
