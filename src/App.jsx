@@ -3536,7 +3536,7 @@ const renderEntry = () => {
       )}
 
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <h2 className="text-xl md:text-2xl font-bold mb-4">New Brolay Entry</h2>
+        <h2 className="text-xl md:text-2xl font-bold mb-4 text-yellow-400">✨ New Brolay Entry</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4">
   <div>
@@ -3899,7 +3899,7 @@ parlaysList.forEach(parlay => {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl md:text-2xl font-bold">Individual Statistics</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-yellow-400">👤 Individual Statistics</h2>
         {pendingPicksCount > 0 && (
           <button
             onClick={autoUpdatePendingPicks}
@@ -4180,7 +4180,7 @@ const renderGroupDashboard = () => {
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl md:text-2xl font-bold">Group Statistics</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-yellow-400">👥 Group Statistics</h2>
         {pendingPicksCount > 0 && (
           <button
             onClick={autoUpdatePendingPicks}
@@ -4520,7 +4520,7 @@ const renderAllBrolays = () => {
               <h4 className="text-lg font-bold text-yellow-400 mb-4">
                 📊 {formatDateForDisplay(selectedCalendarDate)} - {getBrolaysForDate(selectedCalendarDate).length} Brolay{getBrolaysForDate(selectedCalendarDate).length !== 1 ? 's' : ''}
               </h4>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {getBrolaysForDate(selectedCalendarDate).map(parlay => {
                   const participants = Object.values(parlay.participants);
                   const losers = participants.filter(p => p.result === 'loss');
@@ -4535,30 +4535,102 @@ const renderAllBrolays = () => {
                   return (
                     <div
                       key={parlay.id}
-                      onClick={() => setEditingParlay(parlay)}
-                      className={`bg-gray-800/50 rounded-lg p-4 border cursor-pointer transition-all hover:scale-102 ${
-                        won ? 'border-green-500/30 hover:border-green-500/60' :
-                        losers.length > 0 ? 'border-red-500/30 hover:border-red-500/60' :
-                        'border-yellow-500/30 hover:border-yellow-500/60'
+                      className={`bg-gray-800/50 rounded-lg p-4 border transition-all ${
+                        won ? 'border-green-500/30' :
+                        losers.length > 0 ? 'border-red-500/30' :
+                        'border-yellow-500/30'
                       }`}
                     >
-                      <div className="flex justify-between items-start mb-2">
+                      <div className="flex justify-between items-start mb-3">
                         <div>
                           <div className="text-white font-semibold">{parlayType} • {participants.length} picks</div>
                           <div className="text-gray-400 text-sm">
-                            ${parlay.betAmount * participants.length} → ${parlay.totalPayout || 0}
+                            ${parlay.betAmount * participants.length} Risked • 
+                            ${parlay.totalPayout || 0} Total Payout • 
+                            ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
                             {parlay.placedBy && ` • Placed by ${parlay.placedBy}`}
                           </div>
                         </div>
-                        <span className={`px-3 py-1 rounded-full font-bold text-sm ${
-                          won ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-black' :
-                          losers.length > 0 ? 'bg-gradient-to-r from-red-400 to-rose-500 text-white' :
-                          'bg-gray-700 text-gray-300'
-                        }`}>
-                          {won ? 'WON' : losers.length > 0 ? (and1 ? 'LOST (And-1)' : 'LOST') : 'PENDING'}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-3 py-1 rounded-full font-bold text-sm ${
+                            won ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-black' :
+                            losers.length > 0 ? 'bg-gradient-to-r from-red-400 to-rose-500 text-white' :
+                            'bg-gray-700 text-gray-300'
+                          }`}>
+                            {won ? 'WON' : losers.length > 0 ? (and1 ? 'LOST (And-1)' : 'LOST') : 'PENDING'}
+                          </span>
+                          {pushes.length > 0 && won && (
+                            <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded border border-yellow-500/30">
+                              ⚠️ {pushes.length} Push{pushes.length > 1 ? 'es' : ''}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => setEditingParlay(parlay)}
+                            className="text-blue-400 text-sm hover:text-blue-300"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteParlay(parlay.id)}
+                            className="text-red-400 text-sm hover:text-red-300"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500">Click to edit</div>
+                      
+                      {/* Individual Picks */}
+                      <div className="space-y-2">
+                        {Object.entries(parlay.participants).map(([pid, participant]) => {
+                          let teamDisplay = '';
+                          if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType)) {
+                            teamDisplay = `${participant.awayTeam} @ ${participant.homeTeam}`;
+                          } else {
+                            teamDisplay = participant.team;
+                          }
+                        
+                          const betDetails = formatBetDescription(participant);
+                        
+                          return (
+                            <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-900/50 p-2 rounded gap-1 border border-gray-800">
+                              <span className="flex-1 text-gray-300">
+                                <strong className="text-white">{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails}
+                                {participant.odds && (
+                                  <span className="ml-2 text-purple-400 font-semibold">
+                                    {participant.odds}
+                                    {participant.oddsSource && <span className="text-xs text-gray-500"> ({participant.oddsSource})</span>}
+                                  </span>
+                                )}
+                                {participant.actualStats && (
+                                  <span className="ml-2 text-blue-400 font-semibold">
+                                    [{participant.actualStats}]
+                                  </span>
+                                )}
+                              </span>
+                                
+                              <div className="flex items-center gap-2">
+                                {participant.autoUpdated && (
+                                  <span 
+                                    className="text-blue-400 cursor-help text-base" 
+                                    title={`Auto-updated on ${new Date(participant.autoUpdatedAt).toLocaleString()}`}
+                                  >
+                                    🤖
+                                  </span>
+                                )}
+                                
+                                <span className={`font-semibold ${
+                                  participant.result === 'win' ? 'text-green-400' :
+                                  participant.result === 'loss' ? 'text-red-400' :
+                                  participant.result === 'push' ? 'text-yellow-400' :
+                                  'text-gray-500'
+                                }`}>
+                                  {participant.result.toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })}
@@ -4995,7 +5067,7 @@ const renderAllBrolays = () => {
 
 return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold">Payment Tracker</h2>
+      <h2 className="text-xl md:text-2xl font-bold text-yellow-400">💰 Payment Tracker</h2>
       
       {/* Filters - Collapsible */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
@@ -5240,7 +5312,7 @@ return (
 const renderImport = () => (
   <div className="space-y-4 md:space-y-6">
     <div className="bg-white rounded-lg shadow p-4 md:p-6">
-      <h2 className="text-xl md:text-2xl font-bold mb-4">Import Historical Data</h2>
+      <h2 className="text-xl md:text-2xl font-bold mb-4 text-yellow-400">📥 Import Historical Data</h2>
       <p className="text-gray-600 mb-4">
         Paste your CSV data below. Make sure it follows the exact format with all required columns.
       </p>
@@ -5316,7 +5388,7 @@ const renderGrid = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold">Brolay Grid</h2>
+      <h2 className="text-xl md:text-2xl font-bold text-yellow-400">🎯 Brolay Grid</h2>
       
       <div className="bg-white rounded-lg shadow p-4 md:p-6 overflow-x-auto">
         <table className="w-full border-collapse text-sm">
@@ -5636,7 +5708,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold">🏆 Rankings & Records</h2>
+      <h2 className="text-xl md:text-2xl font-bold text-yellow-400">🏆 Rankings & Records</h2>
       
       {/* Sole Survivors */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
@@ -6470,7 +6542,7 @@ const handleSavePickEdit = async () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold">All Individual Picks</h2>
+      <h2 className="text-xl md:text-2xl font-bold text-yellow-400">📋 All Individual Picks</h2>
       
       {/* Filters */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
@@ -6943,7 +7015,7 @@ const renderSettings = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold">⚙️ Settings</h2>
+      <h2 className="text-xl md:text-2xl font-bold text-yellow-400">⚙️ Settings</h2>
       
       {/* Learned Prop Types */}
       <div className="bg-white rounded-lg shadow p-4 md:p-6">
