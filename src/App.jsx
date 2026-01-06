@@ -2054,7 +2054,12 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
   const toggleSettlement = async (parlayId) => {
   const updatedParlays = parlays.map(parlay => {
     if (parlay.id === parlayId) {
-      return { ...parlay, settled: !parlay.settled };
+      const newSettled = !parlay.settled;
+      return { 
+        ...parlay, 
+        settled: newSettled,
+        settledAt: newSettled ? new Date().toISOString() : null
+      };
     }
     return parlay;
   });
@@ -2067,7 +2072,8 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
     try {
       const parlayDoc = doc(db, 'parlays', parlayToUpdate.firestoreId);
       await updateDoc(parlayDoc, {
-        settled: parlayToUpdate.settled
+        settled: parlayToUpdate.settled,
+        settledAt: parlayToUpdate.settledAt
       });
     } catch (error) {
       console.error('Error updating settlement:', error);
@@ -5273,97 +5279,115 @@ return (
     <div className="space-y-4 md:space-y-6">
       <h2 className="text-xl md:text-2xl font-bold text-yellow-400">💰 Payment Tracker</h2>
       
-      {/* Filters - Collapsible */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <button
-          onClick={() => setFiltersExpanded(!filtersExpanded)}
-          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2"
-        >
-          <span>Filters</span>
-          <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
-        </button>
-        
-        {filtersExpanded && (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Date From</label>
-                <input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Date To</label>
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Placed By</label>
-                <select
-                  value={filters.placedBy}
-                  onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  {players.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-            </div>
-            <button
-              onClick={() => setFilters({
-                dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
-                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
-              })}
-              className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
-            >
-              Clear Filters
-            </button>
-          </>
-        )}
-      </div>
-      
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6">
-        <div className="flex items-start gap-2">
-          <AlertCircle className="text-yellow-600 mt-1" size={20} />
-          <div>
-            <h3 className="font-semibold text-yellow-800">Outstanding Payments</h3>
-            <p className="text-sm text-yellow-700">
-              {lostParlays.length} lost brolay(s) • {wonParlays.length} won brolay(s) need settlement
-            </p>
+      {/* Filters - Compact for Payments */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <div className="flex flex-wrap gap-3 items-end">
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-sm font-medium mb-1 text-gray-300">Date From</label>
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            />
           </div>
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-sm font-medium mb-1 text-gray-300">Date To</label>
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            />
+          </div>
+          <div className="flex-1 min-w-[140px]">
+            <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
+            <select
+              value={filters.placedBy}
+              onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+              className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+              style={{ fontSize: isMobile ? '16px' : '14px' }}
+            >
+              <option value="">All</option>
+              {players.map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+          <button
+            onClick={() => setFilters({
+              dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
+              placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
+            })}
+            className="px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 hover:text-yellow-400 transition text-base border border-gray-600"
+            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          >
+            Clear
+          </button>
         </div>
       </div>
+      
+      {/* Visual Summary Section */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-gradient-to-br from-yellow-900/30 to-gray-800 rounded-xl p-5 border border-yellow-500/30 shadow-xl">
+          <div className="flex items-center gap-3 mb-2">
+            <AlertCircle className="text-yellow-400" size={24} />
+            <h3 className="text-yellow-400 font-bold text-lg">Unsettled</h3>
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">
+            {lostParlays.length + wonParlays.length}
+          </div>
+          <div className="text-sm text-gray-400">
+            {lostParlays.length} lost • {wonParlays.length} won
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-red-900/30 to-gray-800 rounded-xl p-5 border border-red-500/30 shadow-xl">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">💸</span>
+            <h3 className="text-red-400 font-bold text-lg">Total Owed</h3>
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">
+            ${simplifiedPayments.reduce((sum, p) => sum + p.amount, 0).toFixed(2)}
+          </div>
+          <div className="text-sm text-gray-400">
+            {simplifiedPayments.length} payment{simplifiedPayments.length !== 1 ? 's' : ''} pending
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-green-900/30 to-gray-800 rounded-xl p-5 border border-green-500/30 shadow-xl">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-2xl">✅</span>
+            <h3 className="text-green-400 font-bold text-lg">Recently Settled</h3>
+          </div>
+          <div className="text-3xl font-bold text-white mb-1">
+            {parlays.filter(p => p.settled).length}
+          </div>
+          <div className="text-sm text-gray-400">
+            All-time settlements
+          </div>
+        </div>
+      </div>>
 
       {/* Who Owes Who Summary Table */}
       {simplifiedPayments.length > 0 && (
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold mb-4">💰 Who Owes Who (Net Summary)</h3>
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">💰 Who Owes Who (Net Summary)</h3>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b-2 border-gray-300">
-                  <th className="text-left py-2 px-4">From</th>
-                  <th className="text-left py-2 px-4">To</th>
-                  <th className="text-right py-2 px-4">Amount</th>
+                <tr className="border-b-2 border-gray-700">
+                  <th className="text-left py-3 px-4 text-gray-300 font-semibold">From</th>
+                  <th className="text-left py-3 px-4 text-gray-300 font-semibold">To</th>
+                  <th className="text-right py-3 px-4 text-gray-300 font-semibold">Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {simplifiedPayments.map((payment, idx) => (
-                  <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="py-3 px-4 font-semibold text-red-600">{payment.from}</td>
-                    <td className="py-3 px-4 font-semibold text-green-600">{payment.to}</td>
-                    <td className="py-3 px-4 text-right font-bold text-base md:text-lg">
+                  <tr key={idx} className="border-b border-gray-700 hover:bg-gray-700/30 transition">
+                    <td className="py-3 px-4 font-semibold text-red-400">{payment.from}</td>
+                    <td className="py-3 px-4 font-semibold text-green-400">{payment.to}</td>
+                    <td className="py-3 px-4 text-right font-bold text-base md:text-lg text-white">
                       ${payment.amount.toFixed(2)}
                     </td>
                   </tr>
@@ -5375,8 +5399,8 @@ return (
       )}
 
       {/* Won Brolays */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <h3 className="text-base md:text-lg font-bold mb-3 text-green-600">✅ Won Brolays</h3>
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <h3 className="text-base md:text-lg font-bold mb-3 text-green-400">✅ Won Brolays</h3>
         <div className="space-y-3">
           {wonParlays.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No won brolays to settle</p>
@@ -5388,31 +5412,31 @@ return (
               const amountPerWinner = winners.length > 0 ? netProfit / winners.length : 0;
 
               return (
-                <div key={parlay.id} className="border rounded p-4 md:p-6 bg-green-50">
+                <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 md:p-6 bg-green-900/10 hover:bg-green-900/20 transition">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <div className="font-semibold">{formatDateForDisplay(parlay.date)}</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="font-semibold text-white">{formatDateForDisplay(parlay.date)}</div>
+                      <div className="text-sm text-gray-400">
                         Placed by: {parlay.placedBy || 'Unknown'}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-base md:text-lg font-bold text-green-600">
+                      <div className="text-base md:text-lg font-bold text-green-400">
                         ${netProfit.toFixed(2)} profit
                       </div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-gray-500">
                         (${parlay.totalPayout || 0} payout)
                       </div>
                     </div>
                   </div>
-                  <div className="text-sm mb-2">
-                    <span className="font-medium">{parlay.placedBy || 'Unknown'} pays winners: </span>
+                  <div className="text-sm mb-2 text-gray-300">
+                    <span className="font-medium text-white">{parlay.placedBy || 'Unknown'} pays winners: </span>
                     {winners.map(winner => `${winner.player} ($${amountPerWinner.toFixed(2)})`).join(', ')}
                   </div>
                   <button
                     onClick={() => toggleSettlement(parlay.id)}
                     disabled={saving}
-                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400 text-base"
+                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400 transition text-base"
                     style={{ minHeight: isMobile ? '44px' : 'auto' }}
                   >
                     Mark as Settled
@@ -5425,8 +5449,8 @@ return (
       </div>
       
       {/* Lost Brolays */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <h3 className="text-base md:text-lg font-bold mb-3 text-red-600">❌ Lost Brolays</h3>
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <h3 className="text-base md:text-lg font-bold mb-3 text-red-400">❌ Lost Brolays</h3>
         <div className="space-y-3">
           {lostParlays.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No lost brolays to settle</p>
@@ -5441,29 +5465,29 @@ return (
                 : (parlay.betAmount * participants.length) / losers.length;
 
               return (
-                <div key={parlay.id} className="border rounded p-4 md:p-6">
+                <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 md:p-6 bg-red-900/10 hover:bg-red-900/20 transition">
                   <div className="flex justify-between items-start mb-2">
                     <div>
-                      <div className="font-semibold">{formatDateForDisplay(parlay.date)}</div>
-                      <div className="text-sm text-gray-600">
+                      <div className="font-semibold text-white">{formatDateForDisplay(parlay.date)}</div>
+                      <div className="text-sm text-gray-400">
                         Placed by: {parlay.placedBy || 'Unknown'}
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-base md:text-lg font-bold text-red-600">
+                      <div className="text-base md:text-lg font-bold text-red-400">
                         ${(parlay.betAmount * participants.length).toFixed(2)}
                       </div>
-                      {and1 && <span className="text-xs text-red-600 font-semibold">And-1</span>}
+                      {and1 && <span className="text-xs text-red-400 font-semibold">And-1</span>}
                     </div>
                   </div>
-                  <div className="text-sm mb-2">
-                    <span className="font-medium">Losers pay {parlay.placedBy || 'Unknown'}: </span>
+                  <div className="text-sm mb-2 text-gray-300">
+                    <span className="font-medium text-white">Losers pay {parlay.placedBy || 'Unknown'}: </span>
                     {losers.map(loser => `${loser.player} ($${amountPerLoser.toFixed(2)})`).join(', ')}
                   </div>
                   <button
                     onClick={() => toggleSettlement(parlay.id)}
                     disabled={saving}
-                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400 text-base"
+                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400 transition text-base"
                     style={{ minHeight: isMobile ? '44px' : 'auto' }}
                   >
                     Mark as Settled
@@ -5475,22 +5499,33 @@ return (
         </div>
       </div>
 
-{/* Recently Settled */}
-<div className="bg-white rounded-lg shadow p-4 md:p-6">
-  <h3 className="text-base md:text-lg font-bold mb-3">Recently Settled</h3>
-  <div className="space-y-2">
-    {parlays.filter(p => p.settled).slice(-5).reverse().map(parlay => {
+      {/* Recently Settled */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <h3 className="text-base md:text-lg font-bold mb-3 text-gray-300">Recently Settled</h3>
+        <div className="space-y-2">
+          {parlays
+            .filter(p => p.settled)
+            .sort((a, b) => {
+              // Sort by settledAt timestamp if available, otherwise by date
+              if (a.settledAt && b.settledAt) {
+                return new Date(b.settledAt) - new Date(a.settledAt);
+              }
+              // Fall back to parlay date
+              return new Date(b.date) - new Date(a.date);
+            })
+            .slice(0, 5)
+            .map(parlay => {
       const participants = Object.values(parlay.participants);
       const losers = participants.filter(p => p.result === 'loss');
       const winners = participants.filter(p => p.result === 'win');
       const won = losers.length === 0 && winners.length > 0;
       
       return (
-        <div key={parlay.id} className="border rounded p-3 bg-gray-50">
+        <div key={parlay.id} className="border border-gray-700 rounded-lg p-3 bg-gray-800/50 hover:bg-gray-800/70 transition">
           <div className="flex justify-between items-start">
             <div className="flex-1">
-              <div className="font-semibold text-sm">{formatDateForDisplay(parlay.date)}</div>
-              <div className="text-xs text-gray-600">
+              <div className="font-semibold text-sm text-white">{formatDateForDisplay(parlay.date)}</div>
+              <div className="text-xs text-gray-400">
                 {won ? `Winners paid by ${parlay.placedBy || 'Unknown'}: ${winners.map(w => w.player).join(', ')}` 
                      : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
               </div>
@@ -5498,10 +5533,10 @@ return (
             <button
               onClick={() => toggleSettlement(parlay.id)}
               disabled={saving}
-              className="ml-3 px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 disabled:bg-gray-400 whitespace-nowrap text-base"
+              className="ml-3 px-3 py-1 bg-red-600/80 text-white text-xs rounded hover:bg-red-700 disabled:bg-gray-400 whitespace-nowrap border border-red-500/50 transition text-base"
               style={{ minHeight: isMobile ? '44px' : 'auto' }}
             >
-              Mark as Not Settled
+              Unsettle
             </button>
           </div>
         </div>
