@@ -4674,7 +4674,6 @@ return (
 const renderGroupDashboard = () => {
   const filteredParlays = applyFilters([...parlays]);
   
-  // MOVE THIS TO THE TOP - Calculate pending picks count
   const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
     const participants = Object.values(parlay.participants || {});
     return count + participants.filter(p => p.result === 'pending').length;
@@ -4686,8 +4685,14 @@ const renderGroupDashboard = () => {
     const losers = participants.filter(part => part.result === 'loss');
     return losers.length === 0 && participants.some(part => part.result === 'win');
   }).length;
+  const lostParlays = filteredParlays.filter(p => {
+    const participants = Object.values(p.participants);
+    return participants.some(part => part.result === 'loss');
+  }).length;
+  const pendingParlays = totalParlays - wonParlays - lostParlays;
   const groupWinPct = totalParlays > 0 ? ((wonParlays / totalParlays) * 100).toFixed(1) : '0.0';
 
+  // Calculate by sport
   const bySport = {};
   filteredParlays.forEach(p => {
     const participants = Object.values(p.participants);
@@ -4695,15 +4700,79 @@ const renderGroupDashboard = () => {
     participants.forEach(part => {
       if (part.sport) {
         if (!bySport[part.sport]) {
-          bySport[part.sport] = { total: 0, won: 0 };
+          bySport[part.sport] = { total: 0, won: 0, lost: 0, pending: 0 };
         }
         bySport[part.sport].total++;
-        if (part.result === 'win') {
-          bySport[part.sport].won++;
-        }
+        if (part.result === 'win') bySport[part.sport].won++;
+        else if (part.result === 'loss') bySport[part.sport].lost++;
+        else if (part.result === 'pending') bySport[part.sport].pending++;
       }
     });
   });
+
+  // Last 10 brolays
+  const last10Brolays = [...filteredParlays]
+    .sort((a, b) => {
+      const dateCompare = new Date(b.date) - new Date(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      const aKey = a.firestoreId || a.id;
+      const bKey = b.firestoreId || b.id;
+      return String(bKey).localeCompare(String(aKey));
+    })
+    .slice(0, 10);
+  
+  const last10Won = last10Brolays.filter(p => {
+    const participants = Object.values(p.participants);
+    const losers = participants.filter(part => part.result === 'loss');
+    return losers.length === 0 && participants.some(part => part.result === 'win');
+  }).length;
+  
+  const last10Lost = last10Brolays.filter(p => {
+    const participants = Object.values(p.participants);
+    return participants.some(part => part.result === 'loss');
+  }).length;
+
+  // Current month stats
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthBrolays = filteredParlays.filter(p => {
+    const parlayDate = new Date(p.date + 'T00:00:00');
+    return parlayDate >= currentMonthStart;
+  });
+  
+  const currentMonthWon = currentMonthBrolays.filter(p => {
+    const participants = Object.values(p.participants);
+    const losers = participants.filter(part => part.result === 'loss');
+    return losers.length === 0 && participants.some(part => part.result === 'win');
+  }).length;
+  
+  const currentMonthLost = currentMonthBrolays.filter(p => {
+    const participants = Object.values(p.participants);
+    return participants.some(part => part.result === 'loss');
+  }).length;
+
+  // Calculate total money metrics
+  const totalMoneyWon = filteredParlays
+    .filter(p => {
+      const participants = Object.values(p.participants);
+      const losers = participants.filter(part => part.result === 'loss');
+      return losers.length === 0 && participants.some(part => part.result === 'win');
+    })
+    .reduce((sum, p) => {
+      const participants = Object.values(p.participants);
+      const netProfit = Math.max(0, (p.totalPayout || 0) - (p.betAmount * participants.length));
+      return sum + netProfit;
+    }, 0);
+  
+  const totalMoneyLost = filteredParlays
+    .filter(p => {
+      const participants = Object.values(p.participants);
+      return participants.some(part => part.result === 'loss');
+    })
+    .reduce((sum, p) => {
+      const participants = Object.values(p.participants);
+      return sum + (p.betAmount * participants.length);
+    }, 0);
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -4723,10 +4792,10 @@ const renderGroupDashboard = () => {
       </div>
       
       {/* Filters - Collapsible */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <button
           onClick={() => setFiltersExpanded(!filtersExpanded)}
-          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2"
+          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
         >
           <span>Filters</span>
           <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
@@ -4864,7 +4933,7 @@ const renderGroupDashboard = () => {
                 dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
                 placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
               })}
-              className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
+              className="mt-4 px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 hover:text-yellow-400 transition border border-gray-600 text-base"
               style={{ minHeight: isMobile ? '44px' : 'auto' }}
             >
               Clear Filters
@@ -4873,43 +4942,164 @@ const renderGroupDashboard = () => {
         )}
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      {/* Main Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
+        <div className="bg-gradient-to-br from-blue-900/30 to-gray-800 rounded-xl p-5 border border-blue-500/30 shadow-xl">
           <div className="flex items-center gap-3 mb-2">
-            <Users className="text-blue-600" size={24} />
-            <h3 className="text-base md:text-lg font-semibold">Total Brolays</h3>
+            <Users className="text-blue-400" size={28} />
+            <h3 className="text-base md:text-lg font-semibold text-blue-400">Total Brolays</h3>
           </div>
-          <p className="text-2xl md:text-3xl font-bold">{totalParlays}</p>
+          <p className="text-3xl md:text-4xl font-bold text-white">{totalParlays}</p>
+          <p className="text-sm text-gray-400 mt-1">
+            {wonParlays}W-{lostParlays}L-{pendingParlays}P
+          </p>
         </div>
         
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <div className="bg-gradient-to-br from-green-900/30 to-gray-800 rounded-xl p-5 border border-green-500/30 shadow-xl">
           <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="text-green-600" size={24} />
-            <h3 className="text-base md:text-lg font-semibold">Brolays Won</h3>
+            <TrendingUp className="text-green-400" size={28} />
+            <h3 className="text-base md:text-lg font-semibold text-green-400">Win Rate</h3>
           </div>
-          <p className="text-2xl md:text-3xl font-bold">{wonParlays}</p>
+          <p className="text-3xl md:text-4xl font-bold text-white">{groupWinPct}%</p>
+          <p className="text-sm text-gray-400 mt-1">
+            {wonParlays} wins out of {totalParlays}
+          </p>
         </div>
         
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
+        <div className="bg-gradient-to-br from-yellow-900/30 to-gray-800 rounded-xl p-5 border border-yellow-500/30 shadow-xl">
           <div className="flex items-center gap-3 mb-2">
-            <Award className="text-purple-600" size={24} />
-            <h3 className="text-base md:text-lg font-semibold">Win Percentage</h3>
+            <Award className="text-yellow-400" size={28} />
+            <h3 className="text-base md:text-lg font-semibold text-yellow-400">Net Profit</h3>
           </div>
-          <p className="text-2xl md:text-3xl font-bold">{groupWinPct}%</p>
+          <p className={`text-3xl md:text-4xl font-bold ${
+            (totalMoneyWon - totalMoneyLost) >= 0 ? 'text-green-400' : 'text-red-400'
+          }`}>
+            ${(totalMoneyWon - totalMoneyLost).toFixed(0)}
+          </p>
+          <p className="text-sm text-gray-400 mt-1">
+            ${totalMoneyWon.toFixed(0)} won, ${totalMoneyLost.toFixed(0)} lost
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-purple-900/30 to-gray-800 rounded-xl p-5 border border-purple-500/30 shadow-xl">
+          <div className="flex items-center gap-3 mb-2">
+            <AlertCircle className="text-purple-400" size={28} />
+            <h3 className="text-base md:text-lg font-semibold text-purple-400">Avg Payout</h3>
+          </div>
+          <p className="text-3xl md:text-4xl font-bold text-white">
+            ${wonParlays > 0 ? (totalMoneyWon / wonParlays).toFixed(0) : '0'}
+          </p>
+          <p className="text-sm text-gray-400 mt-1">
+            Per winning brolay
+          </p>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <h3 className="text-lg md:text-xl font-bold mb-4">Performance by Sport</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
-          {Object.entries(bySport).map(([sport, data]) => (
-            <div key={sport} className="border rounded p-3">
-              <div className="font-semibold">{sport}</div>
-              <div className="text-sm text-gray-600">
-                {data.won}-{data.total - data.won} ({data.total > 0 ? ((data.won/data.total)*100).toFixed(0) : 0}%)
-              </div>
+      {/* Recent Performance */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg font-bold mb-4 text-yellow-400">📅 This Month</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-300">Brolays:</span>
+              <span className="text-white font-semibold text-lg">{currentMonthBrolays.length}</span>
             </div>
-          ))}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-300">Record:</span>
+              <span className="text-white font-semibold text-lg">
+                {currentMonthWon}-{currentMonthLost}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-300">Win Rate:</span>
+              <span className={`font-bold text-lg ${
+                currentMonthBrolays.length > 0 && ((currentMonthWon / currentMonthBrolays.length) * 100) >= 50 
+                  ? 'text-green-400' 
+                  : 'text-red-400'
+              }`}>
+                {currentMonthBrolays.length > 0 
+                  ? ((currentMonthWon / currentMonthBrolays.length) * 100).toFixed(1) 
+                  : '0.0'}%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg font-bold mb-4 text-yellow-400">🔥 Last 10 Brolays</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-300">Record:</span>
+              <span className="text-white font-semibold text-lg">
+                {last10Won}-{last10Lost}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-300">Win Rate:</span>
+              <span className={`font-bold text-lg ${
+                last10Brolays.length > 0 && ((last10Won / last10Brolays.length) * 100) >= 50 
+                  ? 'text-green-400' 
+                  : 'text-red-400'
+              }`}>
+                {last10Brolays.length > 0 
+                  ? ((last10Won / last10Brolays.length) * 100).toFixed(1) 
+                  : '0.0'}%
+              </span>
+            </div>
+            <div className="flex gap-1 mt-2">
+              {last10Brolays.map((parlay, idx) => {
+                const participants = Object.values(parlay.participants);
+                const losers = participants.filter(p => p.result === 'loss');
+                const winners = participants.filter(p => p.result === 'win');
+                const won = losers.length === 0 && winners.length > 0;
+                const lost = losers.length > 0;
+                
+                return (
+                  <div
+                    key={idx}
+                    className={`flex-1 h-8 rounded ${
+                      won ? 'bg-green-500' : lost ? 'bg-red-500' : 'bg-gray-600'
+                    }`}
+                    title={`${formatDateForDisplay(parlay.date)} - ${won ? 'Won' : lost ? 'Lost' : 'Pending'}`}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Performance by Sport */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">🏆 Performance by Sport</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+          {Object.entries(bySport)
+            .sort(([, a], [, b]) => b.total - a.total)
+            .map(([sport, data]) => {
+              const winPct = data.total > 0 ? ((data.won / data.total) * 100).toFixed(1) : '0.0';
+              return (
+                <div key={sport} className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 hover:bg-gray-800/70 transition">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-semibold text-white">{sport}</h4>
+                    <span className={`text-sm font-bold px-2 py-1 rounded ${
+                      parseFloat(winPct) >= 55 ? 'bg-green-500/20 text-green-400' :
+                      parseFloat(winPct) >= 45 ? 'bg-yellow-500/20 text-yellow-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>
+                      {winPct}%
+                    </span>
+                  </div>
+                  <div className="text-sm text-gray-400">
+                    {data.won}-{data.lost} ({data.total} picks)
+                  </div>
+                  {data.pending > 0 && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {data.pending} pending
+                    </div>
+                  )}
+                </div>
+              );
+            })}
         </div>
       </div>
     </div>
