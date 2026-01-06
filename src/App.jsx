@@ -163,6 +163,9 @@ const App = () => {
   const [searchResults, setSearchResults] = useState(null);
   const [editingPick, setEditingPick] = useState(null);
   const [picksToShow, setPicksToShow] = useState(20); 
+  const [calendarView, setCalendarView] = useState(true); // Toggle between calendar and list view
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(null); // Selected day for details
+  const [calendarMonth, setCalendarMonth] = useState(new Date()); // Current month being viewed
   const [filters, setFilters] = useState({
     dateFrom: '',
     dateTo: '',
@@ -2459,6 +2462,45 @@ const getDayOfWeek = (dateString) => {
   const date = new Date(dateString + 'T00:00:00'); // Add time to avoid timezone issues
   return date.toLocaleDateString('en-US', { weekday: 'long' });
 };
+
+// Calendar helper functions
+const getCalendarDays = (month, year) => {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+  const startingDayOfWeek = firstDay.getDay(); // 0 = Sunday
+  
+  const days = [];
+  
+  // Add empty days for the beginning of the month
+  for (let i = 0; i < startingDayOfWeek; i++) {
+    days.push(null);
+  }
+  
+  // Add all days of the month
+  for (let day = 1; day <= daysInMonth; day++) {
+    days.push(day);
+  }
+  
+  return days;
+};
+
+const getBrolaysForDate = (dateStr) => {
+  return parlays.filter(parlay => parlay.date === dateStr);
+};
+
+const formatCalendarDate = (year, month, day) => {
+  const monthStr = String(month + 1).padStart(2, '0');
+  const dayStr = String(day).padStart(2, '0');
+  return `${year}-${monthStr}-${dayStr}`;
+};
+
+const changeMonth = (direction) => {
+  const newDate = new Date(calendarMonth);
+  newDate.setMonth(newDate.getMonth() + direction);
+  setCalendarMonth(newDate);
+  setSelectedCalendarDate(null); // Clear selection when changing months
+};
   // Helper function to format bet description for display
 const formatBetDescription = (participant) => {
   switch(participant.betType) {
@@ -4352,11 +4394,11 @@ const renderAllBrolays = () => {
     if (dateCompare !== 0) return dateCompare;
     // For same-day brolays, use sortOrder if available
     if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
-      return b.sortOrder - a.sortOrder; // Note: reversed for descending order
+      return b.sortOrder - a.sortOrder;
     }
     const aKey = a.firestoreId || a.id;
     const bKey = b.firestoreId || b.id;
-    return String(bKey).localeCompare(String(aKey)); // Note: reversed for descending order
+    return String(bKey).localeCompare(String(aKey));
   });
 
   const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
@@ -4364,325 +4406,474 @@ const renderAllBrolays = () => {
     return count + participants.filter(p => p.result === 'pending').length;
   }, 0);
 
+  // Calendar data
+  const currentMonth = calendarMonth.getMonth();
+  const currentYear = calendarMonth.getFullYear();
+  const calendarDays = getCalendarDays(currentMonth, currentYear);
+  const monthName = calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl md:text-2xl font-bold">All Brolays</h2>
-        {pendingPicksCount > 0 && (
+        <h2 className="text-xl md:text-2xl font-bold text-yellow-400">📅 All Brolays</h2>
+        <div className="flex gap-2">
+          {pendingPicksCount > 0 && (
+            <button
+              onClick={autoUpdatePendingPicks}
+              disabled={autoUpdating}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              <RefreshCw size={isMobile ? 20 : 16} className={autoUpdating ? 'animate-spin' : ''} />
+              {autoUpdating ? 'Updating...' : `Auto-Update ${pendingPicksCount} Pending`}
+            </button>
+          )}
           <button
-            onClick={autoUpdatePendingPicks}
-            disabled={autoUpdating}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 text-base"
+            onClick={() => setCalendarView(!calendarView)}
+            className="px-4 py-2 bg-gray-800 text-gray-300 rounded hover:bg-gray-700 border border-gray-700 text-base"
             style={{ minHeight: isMobile ? '44px' : 'auto' }}
           >
-            <RefreshCw size={isMobile ? 20 : 16} className={autoUpdating ? 'animate-spin' : ''} />
-            {autoUpdating ? 'Updating...' : `Auto-Update ${pendingPicksCount} Pending`}
+            {calendarView ? '📋 List View' : '📅 Calendar View'}
           </button>
-        )}
+        </div>
       </div>
       
-      {/* Filters - Collapsible */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <button
-          onClick={() => setFiltersExpanded(!filtersExpanded)}
-          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2"
-        >
-          <span>Filters</span>
-          <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
-        </button>
-        
-        {filtersExpanded && (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Date From</label>
-                <input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Date To</label>
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Big Guy</label>
-                <select
-                  value={filters.player}
-                  onChange={(e) => setFilters({...filters, player: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  {players.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Sport</label>
-                <select
-                  value={filters.sport}
-                  onChange={(e) => setFilters({...filters, sport: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  {sports.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Placed By</label>
-                <select
-                  value={filters.placedBy}
-                  onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  {players.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Min Payout</label>
-                <input
-                  type="number"
-                  value={filters.minPayout}
-                  onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="$0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Max Payout</label>
-                <input
-                  type="number"
-                  value={filters.maxPayout}
-                  onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="Any"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Result</label>
-                <select
-                  value={filters.result}
-                  onChange={(e) => setFilters({...filters, result: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  <option value="win">Win</option>
-                  <option value="loss">Loss</option>
-                  <option value="push">Push</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
-              {/* ADD THIS: Auto-Updated Filter */}
-              <div>
-                <label className="block text-sm font-medium mb-1">Auto-Updated</label>
-                <select
-                  value={filters.autoUpdated}
-                  onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  <option value="true">Auto-Updated Only</option>
-                  <option value="false">Manual Only</option>
-                </select>
-              </div>
-              <div className="relative">
-                <label className="block text-sm font-medium mb-1">Team/Player</label>
-                <input
-                  type="text"
-                  value={filters.teamPlayer}
-                  onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="Search teams/players..."
-                  list="team-player-suggestions"
-                />
-                <datalist id="team-player-suggestions">
-                  {[...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])].map((team, idx) => (
-                    <option key={idx} value={team} />
-                  ))}
-                </datalist>
-              </div>
+      {/* Calendar View */}
+      {calendarView && (
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20 animate-fadeInUp">
+          {/* Calendar Header */}
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl md:text-2xl font-bold text-yellow-400">{monthName}</h3>
+            <div className="flex gap-2">
+              <button
+                onClick={() => changeMonth(-1)}
+                className="px-3 py-2 bg-gray-700 rounded-lg text-gray-300 hover:text-yellow-400 hover:bg-gray-600 transition border border-gray-600"
+              >
+                ← Prev
+              </button>
+              <button
+                onClick={() => setCalendarMonth(new Date())}
+                className="px-3 py-2 bg-gray-700 rounded-lg text-gray-300 hover:text-yellow-400 hover:bg-gray-600 transition border border-gray-600"
+              >
+                Today
+              </button>
+              <button
+                onClick={() => changeMonth(1)}
+                className="px-3 py-2 bg-gray-700 rounded-lg text-gray-300 hover:text-yellow-400 hover:bg-gray-600 transition border border-gray-600"
+              >
+                Next →
+              </button>
             </div>
-            <button
-              onClick={() => setFilters({
-                dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
-                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
-              })}
-              className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
-            >
-              Clear Filters
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Brolays List */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg md:text-xl font-bold">
-            {filteredParlays.length} Brolay{filteredParlays.length !== 1 ? 's' : ''}
-          </h3>
-        </div>
-        
-        <div className="space-y-3">
-          {filteredParlays.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">No brolays match your filters</p>
-          ) : (
-            filteredParlays.slice(0, brolaysToShow).map(parlay => {
-              const participants = Object.values(parlay.participants);
-              const losers = participants.filter(p => p.result === 'loss');
-              const winners = participants.filter(p => p.result === 'win');
-              const pushes = participants.filter(p => p.result === 'push');
-              const won = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
-              const and1 = losers.length === 1 && winners.length === participants.length - 1;
+          </div>
+          
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-7 gap-2 mb-6">
+            {/* Day headers */}
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              <div key={day} className="text-center text-gray-500 font-semibold py-2 text-sm">
+                {day}
+              </div>
+            ))}
+            
+            {/* Calendar days */}
+            {calendarDays.map((day, index) => {
+              if (day === null) {
+                return <div key={`empty-${index}`} className="aspect-square" />;
+              }
               
-              const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
-              const parlayType = sports.length > 1 ? 'Multi-Sport Brolay' : 
-                                 sports.length === 1 ? `${sports[0]} Brolay` : 'Brolay';
+              const dateStr = formatCalendarDate(currentYear, currentMonth, day);
+              const dayBrolays = getBrolaysForDate(dateStr);
+              const hasBrolays = dayBrolays.length > 0;
+              const isSelected = selectedCalendarDate === dateStr;
+              const isToday = new Date().toDateString() === new Date(dateStr).toDateString();
               
               return (
-                <div key={parlay.id} className="border rounded p-4 md:p-6">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <div className="font-semibold">{formatDateForDisplay(parlay.date)} - {parlayType}</div>
-                      <div className="text-sm text-gray-600">
-                        {participants.length} picks • ${parlay.betAmount * participants.length} Risked • 
-                        ${parlay.totalPayout || 0} Total Payout • 
-                        ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
-                        {parlay.placedBy && <span> • Placed by {parlay.placedBy}</span>}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {won && (
-                        <>
-                          <span className="text-green-600 font-semibold">WON</span>
-                          {pushes.length > 0 && (
-                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                              ⚠️ {pushes.length} Push{pushes.length > 1 ? 'es' : ''} - Adjusted Payout
-                            </span>
-                          )}
-                        </>
-                      )}
-                      {!won && losers.length > 0 && (
-                        <span className="text-red-600 font-semibold">
-                          LOST {and1 && '(And-1)'}
-                        </span>
-                      )}
-                      {losers.length === 0 && winners.length === 0 && (
-                        <span className="text-gray-500 font-semibold">PENDING</span>
-                      )}
-                      <button
-                        onClick={() => setEditingParlay(parlay)}
-                        className="text-blue-600 text-sm hover:text-blue-800 text-base"
-                        style={{ minHeight: isMobile ? '44px' : 'auto' }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteParlay(parlay.id)}
-                        className="text-red-600 text-sm hover:text-red-800 text-base"
-                        style={{ minHeight: isMobile ? '44px' : 'auto' }}
-                      >
-                        Delete
-                      </button>
-                    </div>
+                <button
+                  key={day}
+                  onClick={() => setSelectedCalendarDate(isSelected ? null : dateStr)}
+                  className={`aspect-square rounded-lg flex flex-col items-center justify-center border transition-all ${
+                    isSelected
+                      ? 'bg-yellow-500/20 border-yellow-500 scale-105'
+                      : hasBrolays
+                      ? 'bg-gray-700 border-gray-600 hover:border-yellow-500/50 hover:scale-105'
+                      : 'bg-gray-800 border-gray-700'
+                  } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+                >
+                  <div className={`text-lg font-bold ${
+                    hasBrolays ? 'text-white' : 'text-gray-500'
+                  }`}>
+                    {day}
                   </div>
+                  {hasBrolays && (
+                    <div className="text-xs text-yellow-400 mt-1">
+                      {dayBrolays.length} {dayBrolays.length === 1 ? 'brolay' : 'brolays'}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          
+          {/* Selected Day Details */}
+          {selectedCalendarDate && (
+            <div className="mt-6 pt-6 border-t border-gray-700 animate-fadeInUp">
+              <h4 className="text-lg font-bold text-yellow-400 mb-4">
+                📊 {formatDateForDisplay(selectedCalendarDate)} - {getBrolaysForDate(selectedCalendarDate).length} Brolay{getBrolaysForDate(selectedCalendarDate).length !== 1 ? 's' : ''}
+              </h4>
+              <div className="space-y-3">
+                {getBrolaysForDate(selectedCalendarDate).map(parlay => {
+                  const participants = Object.values(parlay.participants);
+                  const losers = participants.filter(p => p.result === 'loss');
+                  const winners = participants.filter(p => p.result === 'win');
+                  const pushes = participants.filter(p => p.result === 'push');
+                  const won = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
+                  const and1 = losers.length === 1 && winners.length === participants.length - 1;
                   
-                  <div className="space-y-2">
-                    {Object.entries(parlay.participants).map(([pid, participant]) => {
-                      let teamDisplay = '';
-                      if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType)) {
-                        teamDisplay = `${participant.awayTeam} @ ${participant.homeTeam}`;
-                      } else {
-                        teamDisplay = participant.team;
-                      }
-                    
-                      // Format bet details
-                      const betDetails = formatBetDescription(participant);
-                    
-                      return (
-                        <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-50 p-2 rounded gap-1">
-                          <span className="flex-1">
-                            <strong>{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails}
-                            {participant.odds && (
-                              <span className="ml-2 text-purple-600 font-semibold">
-                                {participant.odds}
-                                {participant.oddsSource && <span className="text-xs text-gray-500"> ({participant.oddsSource})</span>}
-                              </span>
-                            )}
-                            {participant.actualStats && (
-                              <span className="ml-2 text-blue-600 font-semibold">
-                                [{participant.actualStats}]
-                              </span>
-                            )}
-                          </span>
-                            
-                          <div className="flex items-center gap-2">
-                            {participant.autoUpdated && (
-                              <span 
-                                className="text-blue-600 cursor-help text-base" 
-                                title={`Auto-updated on ${new Date(participant.autoUpdatedAt).toLocaleString()}`}
-                              >
-                                🤖
-                              </span>
-                            )}
-                            
-                            <span className={`font-semibold ${
-                              participant.result === 'win' ? 'text-green-600' :
-                              participant.result === 'loss' ? 'text-red-600' :
-                              participant.result === 'push' ? 'text-yellow-600' :
-                              'text-gray-500'
-                            }`}>
-                              {participant.result.toUpperCase()}
-                            </span>
+                  const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
+                  const parlayType = sports.length > 1 ? 'Multi-Sport' : sports[0] || 'Brolay';
+                  
+                  return (
+                    <div
+                      key={parlay.id}
+                      onClick={() => setEditingParlay(parlay)}
+                      className={`bg-gray-800/50 rounded-lg p-4 border cursor-pointer transition-all hover:scale-102 ${
+                        won ? 'border-green-500/30 hover:border-green-500/60' :
+                        losers.length > 0 ? 'border-red-500/30 hover:border-red-500/60' :
+                        'border-yellow-500/30 hover:border-yellow-500/60'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="text-white font-semibold">{parlayType} • {participants.length} picks</div>
+                          <div className="text-gray-400 text-sm">
+                            ${parlay.betAmount * participants.length} → ${parlay.totalPayout || 0}
+                            {parlay.placedBy && ` • Placed by ${parlay.placedBy}`}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })
+                        <span className={`px-3 py-1 rounded-full font-bold text-sm ${
+                          won ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-black' :
+                          losers.length > 0 ? 'bg-gradient-to-r from-red-400 to-rose-500 text-white' :
+                          'bg-gray-700 text-gray-300'
+                        }`}>
+                          {won ? 'WON' : losers.length > 0 ? (and1 ? 'LOST (And-1)' : 'LOST') : 'PENDING'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500">Click to edit</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </div>
-        
-        {/* Pagination Controls */}
-        {filteredParlays.length > brolaysToShow && (
-          <div className="mt-4 flex gap-3 justify-center">
+      )}
+      
+      {/* List View (existing code) */}
+      {!calendarView && (
+        <>
+          {/* Filters */}
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
             <button
-              onClick={() => setBrolaysToShow(prev => prev + 10)}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              onClick={() => setFiltersExpanded(!filtersExpanded)}
+              className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
             >
-              Show More (10)
+              <span>Filters</span>
+              <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
             </button>
-            <button
-              onClick={() => setBrolaysToShow(filteredParlays.length)}
-              className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
-            >
-              Show All ({filteredParlays.length})
-            </button>
+            
+            {filtersExpanded && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Date From</label>
+                    <input
+                      type="date"
+                      value={filters.dateFrom}
+                      onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Date To</label>
+                    <input
+                      type="date"
+                      value={filters.dateTo}
+                      onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
+                    <select
+                      value={filters.player}
+                      onChange={(e) => setFilters({...filters, player: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                    >
+                      <option value="">All</option>
+                      {players.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Sport</label>
+                    <select
+                      value={filters.sport}
+                      onChange={(e) => setFilters({...filters, sport: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                    >
+                      <option value="">All</option>
+                      {sports.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
+                    <select
+                      value={filters.placedBy}
+                      onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                    >
+                      <option value="">All</option>
+                      {players.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Min Payout</label>
+                    <input
+                      type="number"
+                      value={filters.minPayout}
+                      onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                      placeholder="$0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Max Payout</label>
+                    <input
+                      type="number"
+                      value={filters.maxPayout}
+                      onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                      placeholder="Any"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
+                    <select
+                      value={filters.result}
+                      onChange={(e) => setFilters({...filters, result: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                    >
+                      <option value="">All</option>
+                      <option value="win">Win</option>
+                      <option value="loss">Loss</option>
+                      <option value="push">Push</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Auto-Updated</label>
+                    <select
+                      value={filters.autoUpdated}
+                      onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                    >
+                      <option value="">All</option>
+                      <option value="true">Auto-Updated Only</option>
+                      <option value="false">Manual Only</option>
+                    </select>
+                  </div>
+                  <div className="relative">
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
+                    <input
+                      type="text"
+                      value={filters.teamPlayer}
+                      onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                      placeholder="Search teams/players..."
+                      list="team-player-suggestions"
+                    />
+                    <datalist id="team-player-suggestions">
+                      {[...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])].map((team, idx) => (
+                        <option key={idx} value={team} />
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setFilters({
+                    dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
+                    placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
+                    betType: '', propType: ''
+                  })}
+                  className="mt-4 px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 text-base"
+                  style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                >
+                  Clear Filters
+                </button>
+              </>
+            )}
           </div>
-        )}
-      </div>
+
+          {/* Brolays List */}
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg md:text-xl font-bold text-white">
+                {filteredParlays.length} Brolay{filteredParlays.length !== 1 ? 's' : ''}
+              </h3>
+            </div>
+            
+            <div className="space-y-3">
+              {filteredParlays.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No brolays match your filters</p>
+              ) : (
+                filteredParlays.slice(0, brolaysToShow).map(parlay => {
+                  const participants = Object.values(parlay.participants);
+                  const losers = participants.filter(p => p.result === 'loss');
+                  const winners = participants.filter(p => p.result === 'win');
+                  const pushes = participants.filter(p => p.result === 'push');
+                  const won = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
+                  const and1 = losers.length === 1 && winners.length === participants.length - 1;
+                  
+                  const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
+                  const parlayType = sports.length > 1 ? 'Multi-Sport Brolay' : 
+                                     sports.length === 1 ? `${sports[0]} Brolay` : 'Brolay';
+                  
+                  return (
+                    <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 md:p-6 bg-gray-800/50">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <div className="font-semibold text-white">{formatDateForDisplay(parlay.date)} - {parlayType}</div>
+                          <div className="text-sm text-gray-400">
+                            {participants.length} picks • ${parlay.betAmount * participants.length} Risked • 
+                            ${parlay.totalPayout || 0} Total Payout • 
+                            ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
+                            {parlay.placedBy && <span> • Placed by {parlay.placedBy}</span>}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {won && (
+                            <>
+                              <span className="text-green-600 font-semibold">WON</span>
+                              {pushes.length > 0 && (
+                                <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
+                                  ⚠️ {pushes.length} Push{pushes.length > 1 ? 'es' : ''} - Adjusted Payout
+                                </span>
+                              )}
+                            </>
+                          )}
+                          {!won && losers.length > 0 && (
+                            <span className="text-red-600 font-semibold">
+                              LOST {and1 && '(And-1)'}
+                            </span>
+                          )}
+                          {losers.length === 0 && winners.length === 0 && (
+                            <span className="text-gray-500 font-semibold">PENDING</span>
+                          )}
+                          <button
+                            onClick={() => setEditingParlay(parlay)}
+                            className="text-blue-400 text-sm hover:text-blue-300 text-base"
+                            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteParlay(parlay.id)}
+                            className="text-red-400 text-sm hover:text-red-300 text-base"
+                            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        {Object.entries(parlay.participants).map(([pid, participant]) => {
+                          let teamDisplay = '';
+                          if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType)) {
+                            teamDisplay = `${participant.awayTeam} @ ${participant.homeTeam}`;
+                          } else {
+                            teamDisplay = participant.team;
+                          }
+                        
+                          const betDetails = formatBetDescription(participant);
+                        
+                          return (
+                            <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-900/50 p-2 rounded gap-1">
+                              <span className="flex-1 text-gray-300">
+                                <strong className="text-white">{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails}
+                                {participant.odds && (
+                                  <span className="ml-2 text-purple-400 font-semibold">
+                                    {participant.odds}
+                                    {participant.oddsSource && <span className="text-xs text-gray-500"> ({participant.oddsSource})</span>}
+                                  </span>
+                                )}
+                                {participant.actualStats && (
+                                  <span className="ml-2 text-blue-400 font-semibold">
+                                    [{participant.actualStats}]
+                                  </span>
+                                )}
+                              </span>
+                                
+                              <div className="flex items-center gap-2">
+                                {participant.autoUpdated && (
+                                  <span 
+                                    className="text-blue-400 cursor-help text-base" 
+                                    title={`Auto-updated on ${new Date(participant.autoUpdatedAt).toLocaleString()}`}
+                                  >
+                                    🤖
+                                  </span>
+                                )}
+                                
+                                <span className={`font-semibold ${
+                                  participant.result === 'win' ? 'text-green-400' :
+                                  participant.result === 'loss' ? 'text-red-400' :
+                                  participant.result === 'push' ? 'text-yellow-400' :
+                                  'text-gray-500'
+                                }`}>
+                                  {participant.result.toUpperCase()}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            
+            {/* Pagination Controls */}
+            {filteredParlays.length > brolaysToShow && (
+              <div className="mt-4 flex gap-3 justify-center">
+                <button
+                  onClick={() => setBrolaysToShow(prev => prev + 10)}
+                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-base"
+                  style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                >
+                  Show More (10)
+                </button>
+                <button
+                  onClick={() => setBrolaysToShow(filteredParlays.length)}
+                  className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-base"
+                  style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                >
+                  Show All ({filteredParlays.length})
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };
