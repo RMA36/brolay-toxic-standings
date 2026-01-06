@@ -4487,26 +4487,163 @@ const renderAllBrolays = () => {
               const isSelected = selectedCalendarDate === dateStr;
               const isToday = new Date().toDateString() === new Date(dateStr).toDateString();
               
+              // Calculate day's financial performance
+              let dayNetProfit = 0;
+              let dayWins = 0;
+              let dayLosses = 0;
+              let dayAnd1s = 0;
+              
+              dayBrolays.forEach(parlay => {
+                const participants = Object.values(parlay.participants);
+                const losers = participants.filter(p => p.result === 'loss');
+                const winners = participants.filter(p => p.result === 'win');
+                const pushes = participants.filter(p => p.result === 'push');
+                const won = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
+                const and1 = losers.length === 1 && winners.length === participants.length - 1;
+                
+                if (won) {
+                  const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+                  dayNetProfit += netProfit;
+                  dayWins++;
+                } else if (losers.length > 0) {
+                  const totalRisk = parlay.betAmount * participants.length;
+                  dayNetProfit -= totalRisk;
+                  dayLosses++;
+                  if (and1) dayAnd1s++;
+                }
+              });
+              
+              // Determine color based on profit/loss (calibrated to historical data)
+              let bgColorClass = 'bg-gray-800';
+              let borderColorClass = 'border-gray-700';
+              let hoverBorderClass = 'hover:border-yellow-500/50';
+              
+              if (hasBrolays && dayNetProfit !== 0) {
+                if (dayNetProfit > 0) {
+                  // Green gradient based on profit amount
+                  // Huge win: $1,000+ (rare jackpots like $4,791, $1,280, $1,279)
+                  if (dayNetProfit >= 1000) {
+                    bgColorClass = 'bg-gradient-to-br from-green-400 via-emerald-500 to-green-600 shadow-lg shadow-green-500/30';
+                    borderColorClass = 'border-green-300';
+                    hoverBorderClass = 'hover:border-green-200';
+                  }
+                  // Big win: $600-$999 (great days like $811, $876, $976)
+                  else if (dayNetProfit >= 600) {
+                    bgColorClass = 'bg-gradient-to-br from-green-500 to-emerald-700';
+                    borderColorClass = 'border-green-400';
+                    hoverBorderClass = 'hover:border-green-300';
+                  }
+                  // Medium win: $350-$599 (solid wins like $420, $400, $391)
+                  else if (dayNetProfit >= 350) {
+                    bgColorClass = 'bg-gradient-to-br from-green-600 to-green-800';
+                    borderColorClass = 'border-green-500';
+                    hoverBorderClass = 'hover:border-green-400';
+                  }
+                  // Small win: $180-$349 (typical good days)
+                  else if (dayNetProfit >= 180) {
+                    bgColorClass = 'bg-gradient-to-br from-green-700 to-green-900';
+                    borderColorClass = 'border-green-600';
+                    hoverBorderClass = 'hover:border-green-500';
+                  }
+                  // Tiny win: $1-$179 (barely profitable)
+                  else {
+                    bgColorClass = 'bg-gradient-to-br from-green-800 to-gray-800';
+                    borderColorClass = 'border-green-700';
+                    hoverBorderClass = 'hover:border-green-600';
+                  }
+                } else {
+                  // Red gradient based on loss amount
+                  // Huge loss: -$200+ (disaster days like -$230)
+                  if (dayNetProfit <= -200) {
+                    bgColorClass = 'bg-gradient-to-br from-red-500 via-rose-600 to-red-700 shadow-lg shadow-red-500/30';
+                    borderColorClass = 'border-red-400';
+                    hoverBorderClass = 'hover:border-red-300';
+                  }
+                  // Big loss: -$130 to -$199 (really bad days)
+                  else if (dayNetProfit <= -130) {
+                    bgColorClass = 'bg-gradient-to-br from-red-600 to-red-800';
+                    borderColorClass = 'border-red-500';
+                    hoverBorderClass = 'hover:border-red-400';
+                  }
+                  // Medium loss: -$80 to -$129 (bad days, very common)
+                  else if (dayNetProfit <= -80) {
+                    bgColorClass = 'bg-gradient-to-br from-red-700 to-red-900';
+                    borderColorClass = 'border-red-600';
+                    hoverBorderClass = 'hover:border-red-500';
+                  }
+                  // Small loss: -$50 to -$79 (typical losing day)
+                  else if (dayNetProfit <= -50) {
+                    bgColorClass = 'bg-gradient-to-br from-red-800 to-gray-800';
+                    borderColorClass = 'border-red-700';
+                    hoverBorderClass = 'hover:border-red-600';
+                  }
+                  // Tiny loss: -$1 to -$49 (minimal damage)
+                  else {
+                    bgColorClass = 'bg-gradient-to-br from-red-900 to-gray-800';
+                    borderColorClass = 'border-red-800';
+                    hoverBorderClass = 'hover:border-red-700';
+                  }
+                }
+              } else if (hasBrolays) {
+                // Pending/no result yet
+                bgColorClass = 'bg-gray-700';
+                borderColorClass = 'border-gray-600';
+              }
+              
+              // Emoji indicator
+              let emoji = '';
+              if (dayWins > 0 && dayLosses === 0) {
+                emoji = '🏆'; // All wins
+              } else if (dayAnd1s > 0) {
+                emoji = '💀'; // Had and-1(s)
+              } else if (dayNetProfit > 0) {
+                emoji = '💰'; // Net positive
+              } else if (dayNetProfit < 0) {
+                emoji = '😬'; // Net negative
+              }
+              
               return (
                 <button
                   key={day}
                   onClick={() => setSelectedCalendarDate(isSelected ? null : dateStr)}
                   className={`aspect-square rounded-lg flex flex-col items-center justify-center border transition-all ${
                     isSelected
-                      ? 'bg-yellow-500/20 border-yellow-500 scale-105'
-                      : hasBrolays
-                      ? 'bg-gray-700 border-gray-600 hover:border-yellow-500/50 hover:scale-105'
-                      : 'bg-gray-800 border-gray-700'
-                  } ${isToday ? 'ring-2 ring-blue-500' : ''}`}
+                      ? 'bg-yellow-500/30 border-yellow-400 scale-105 shadow-lg shadow-yellow-500/50'
+                      : `${bgColorClass} ${borderColorClass} ${hoverBorderClass} hover:scale-105`
+                  } ${isToday ? 'ring-2 ring-blue-500' : ''} relative overflow-hidden`}
                 >
+                  {/* Emoji indicator at top */}
+                  {emoji && (
+                    <div className="absolute top-0.5 right-0.5 text-xs">
+                      {emoji}
+                    </div>
+                  )}
+                  
                   <div className={`text-lg font-bold ${
                     hasBrolays ? 'text-white' : 'text-gray-500'
                   }`}>
                     {day}
                   </div>
+                  
                   {hasBrolays && (
-                    <div className="text-xs text-yellow-400 mt-1">
-                      {dayBrolays.length} {dayBrolays.length === 1 ? 'brolay' : 'brolays'}
+                    <div className="text-center mt-1">
+                      <div className="text-xs text-gray-200 font-semibold">
+                        {dayBrolays.length} {dayBrolays.length === 1 ? 'brolay' : 'brolays'}
+                      </div>
+                      {dayBrolays.length > 1 && (
+                        <div className="text-xs font-bold mt-0.5" style={{
+                          color: dayNetProfit > 0 ? '#4ade80' : dayNetProfit < 0 ? '#f87171' : '#fbbf24'
+                        }}>
+                          {dayWins}-{dayLosses}
+                        </div>
+                      )}
+                      {dayNetProfit !== 0 && (
+                        <div className={`text-xs font-bold mt-0.5 ${
+                          dayNetProfit > 0 ? 'text-green-300' : 'text-red-300'
+                        }`}>
+                          {dayNetProfit > 0 ? '+' : ''}{dayNetProfit > 0 ? `$${dayNetProfit.toFixed(0)}` : `-$${Math.abs(dayNetProfit).toFixed(0)}`}
+                        </div>
+                      )}
                     </div>
                   )}
                 </button>
