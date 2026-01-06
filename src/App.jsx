@@ -127,6 +127,8 @@ const customStyles = `
     height: 0.5rem;
     background: transparent;
   }
+`;
+
 // Inject styles into document
 if (typeof document !== 'undefined') {
   const styleSheet = document.createElement("style");
