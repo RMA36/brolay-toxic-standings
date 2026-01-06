@@ -3919,7 +3919,11 @@ parlaysList.forEach(parlay => {
   return playerStats;
 };
 
-  const renderIndividualDashboard = () => {
+const renderIndividualDashboard = () => {
+    const [expandedPlayers, setExpandedPlayers] = React.useState(new Set());
+    const [comparisonMode, setComparisonMode] = React.useState(false);
+    const [selectedForComparison, setSelectedForComparison] = React.useState(new Set());
+    
     const filteredParlays = applyFilters([...parlays]);
 
     const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
@@ -3927,8 +3931,86 @@ parlaysList.forEach(parlay => {
         return count + participants.filter(p => p.result === 'pending').length;
       }, 0);
     
-  return (
+return (
     <div className="space-y-4 md:space-y-6">
+      {/* Rotating Insights Ticker */}
+      <div className="bg-gradient-to-r from-blue-900/30 via-purple-900/30 to-blue-900/30 rounded-xl p-4 border border-blue-500/30 overflow-hidden">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">💡</span>
+          <div className="flex-1">
+            <div className="font-semibold text-blue-400 text-sm">Quick Insight</div>
+            <div className="text-white text-sm md:text-base">
+              {(() => {
+                const allStats = players.map(p => ({
+                  player: p,
+                  ...calculateStatsForPlayer(p, filteredParlays)
+                }));
+                
+                // Find hottest player (highest win % with min 5 picks)
+                const hottestPlayer = allStats
+                  .filter(s => s.totalPicks >= 5)
+                  .sort((a, b) => {
+                    const aWinRate = ((a.wins + a.pushes * 0.5) / a.totalPicks) * 100;
+                    const bWinRate = ((b.wins + b.pushes * 0.5) / b.totalPicks) * 100;
+                    return bWinRate - aWinRate;
+                  })[0];
+                
+                // Find coldest player (lowest win % with min 5 picks)
+                const coldestPlayer = allStats
+                  .filter(s => s.totalPicks >= 5)
+                  .sort((a, b) => {
+                    const aWinRate = ((a.wins + a.pushes * 0.5) / a.totalPicks) * 100;
+                    const bWinRate = ((b.wins + b.pushes * 0.5) / b.totalPicks) * 100;
+                    return aWinRate - bWinRate;
+                  })[0];
+                
+                // Find biggest money winner
+                const biggestWinner = allStats.sort((a, b) => 
+                  (b.moneyWon - b.moneyLost) - (a.moneyWon - a.moneyLost)
+                )[0];
+                
+                // Find most And-1s
+                const mostAnd1s = allStats.sort((a, b) => b.and1s - a.and1s)[0];
+                
+                const insights = [];
+                
+                if (hottestPlayer) {
+                  const winRate = ((hottestPlayer.wins + hottestPlayer.pushes * 0.5) / hottestPlayer.totalPicks * 100).toFixed(1);
+                  insights.push(`🔥 ${hottestPlayer.player} is on fire with a ${winRate}% win rate!`);
+                }
+                
+                if (coldestPlayer) {
+                  const winRate = ((coldestPlayer.wins + coldestPlayer.pushes * 0.5) / coldestPlayer.totalPicks * 100).toFixed(1);
+                  insights.push(`❄️ ${coldestPlayer.player} is struggling at ${winRate}% - time to turn it around!`);
+                }
+                
+                if (biggestWinner && (biggestWinner.moneyWon - biggestWinner.moneyLost) > 0) {
+                  const netMoney = (biggestWinner.moneyWon - biggestWinner.moneyLost).toFixed(2);
+                  insights.push(`💰 ${biggestWinner.player} leads with $${netMoney} in profits!`);
+                }
+                
+                if (mostAnd1s && mostAnd1s.and1s > 0) {
+                  insights.push(`💀 ${mostAnd1s.player} has the most And-1s (${mostAnd1s.and1s}) - so close!`);
+                }
+                
+                // Rotate through insights every 5 seconds
+                const [currentInsight, setCurrentInsight] = React.useState(0);
+                React.useEffect(() => {
+                  if (insights.length > 1) {
+                    const interval = setInterval(() => {
+                      setCurrentInsight(prev => (prev + 1) % insights.length);
+                    }, 5000);
+                    return () => clearInterval(interval);
+                  }
+                }, [insights.length]);
+                
+                return insights[currentInsight] || 'Keep betting to unlock insights!';
+              })()}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex justify-between items-center">
         <h2 className="text-xl md:text-2xl font-bold text-yellow-400">👤 Individual Statistics</h2>
         {pendingPicksCount > 0 && (
@@ -3945,10 +4027,10 @@ parlaysList.forEach(parlay => {
       </div>
       
       {/* Filters - Collapsible */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <button
           onClick={() => setFiltersExpanded(!filtersExpanded)}
-          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2"
+          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
         >
           <span>Filters</span>
           <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
@@ -3958,31 +4040,31 @@ parlaysList.forEach(parlay => {
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Date From</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Date From</label>
                 <input
                   type="date"
                   value={filters.dateFrom}
                   onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Date To</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Date To</label>
                 <input
                   type="date"
                   value={filters.dateTo}
                   onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Big Guy</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
                 <select
                   value={filters.player}
                   onChange={(e) => setFilters({...filters, player: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -3990,11 +4072,11 @@ parlaysList.forEach(parlay => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Sport</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Sport</label>
                 <select
                   value={filters.sport}
                   onChange={(e) => setFilters({...filters, sport: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -4002,11 +4084,11 @@ parlaysList.forEach(parlay => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Placed By</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
                 <select
                   value={filters.placedBy}
                   onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -4014,33 +4096,33 @@ parlaysList.forEach(parlay => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Min Payout</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Min Payout</label>
                 <input
                   type="number"
                   value={filters.minPayout}
                   onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="$0"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Max Payout</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Max Payout</label>
                 <input
                   type="number"
                   value={filters.maxPayout}
                   onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="Any"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Result</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
                 <select
                   value={filters.result}
                   onChange={(e) => setFilters({...filters, result: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -4051,11 +4133,11 @@ parlaysList.forEach(parlay => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Auto-Updated</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Auto-Updated</label>
                 <select
                   value={filters.autoUpdated}
                   onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -4064,12 +4146,12 @@ parlaysList.forEach(parlay => {
                 </select>
               </div>
               <div className="relative">
-                <label className="block text-sm font-medium mb-1">Team/Player</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
                 <input
                   type="text"
                   value={filters.teamPlayer}
                   onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="Search teams/players..."
                   list="team-player-suggestions"
@@ -4086,7 +4168,7 @@ parlaysList.forEach(parlay => {
                 dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
                 placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
               })}
-              className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
+              className="mt-4 px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 hover:text-yellow-400 transition border border-gray-600 text-base"
               style={{ minHeight: isMobile ? '44px' : 'auto' }}
             >
               Clear Filters
@@ -4095,80 +4177,252 @@ parlaysList.forEach(parlay => {
         )}
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-        {players.map(player => {
-          const playerStats = calculateStatsForPlayer(player, filteredParlays);
-          const adjustedWins = playerStats.wins + (playerStats.pushes * 0.5);
-          const winPct = playerStats.totalPicks > 0 
-            ? ((adjustedWins / playerStats.totalPicks) * 100).toFixed(1)
-            : '0.0';
-          const netMoney = playerStats.moneyWon - playerStats.moneyLost;
+      {/* Comparison Mode Toggle */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => {
+            setComparisonMode(!comparisonMode);
+            setSelectedForComparison(new Set());
+          }}
+          className={`px-4 py-2 rounded-lg font-semibold transition text-base ${
+            comparisonMode
+              ? 'bg-yellow-500 text-black'
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+          }`}
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        >
+          {comparisonMode ? '✓ Comparing' : '🔄 Compare Players'}
+        </button>
+      </div>
 
-          return (
-            <div key={player} className="bg-white rounded-lg shadow p-4 md:p-6">
-              <h3 className="text-lg md:text-xl font-bold mb-4">{player}</h3>
+      {/* Comparison View */}
+      {comparisonMode && selectedForComparison.size > 0 && (
+        <div className="bg-gradient-to-br from-purple-900/30 to-gray-800 rounded-xl shadow-xl p-4 md:p-6 border border-purple-500/30">
+          <h3 className="text-lg font-bold text-purple-400 mb-4">
+            Comparing {selectedForComparison.size} Player{selectedForComparison.size !== 1 ? 's' : ''}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from(selectedForComparison).map(player => {
+              const playerStats = calculateStatsForPlayer(player, filteredParlays);
+              const adjustedWins = playerStats.wins + (playerStats.pushes * 0.5);
+              const winPct = playerStats.totalPicks > 0 
+                ? ((adjustedWins / playerStats.totalPicks) * 100).toFixed(1)
+                : '0.0';
+              const netMoney = playerStats.moneyWon - playerStats.moneyLost;
+
+              return (
+                <div key={player} className="bg-gray-900/50 rounded-lg p-4 border border-purple-500/30">
+                  <h4 className="text-lg font-bold text-white mb-3">{player}</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Record:</span>
+                      <span className="text-white font-semibold">{playerStats.wins}-{playerStats.losses}-{playerStats.pushes}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Win %:</span>
+                      <span className="text-white font-semibold">{winPct}%</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Net Money:</span>
+                      <span className={`font-semibold ${netMoney >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        ${netMoney.toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">And-1s:</span>
+                      <span className="text-red-400 font-semibold">{playerStats.and1s}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Leaderboard */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">🏆 Leaderboard</h3>
+        <div className="space-y-3">
+          {players
+            .map(player => ({
+              player,
+              ...calculateStatsForPlayer(player, filteredParlays)
+            }))
+            .sort((a, b) => {
+              const aWinRate = a.totalPicks > 0 ? ((a.wins + a.pushes * 0.5) / a.totalPicks) * 100 : 0;
+              const bWinRate = b.totalPicks > 0 ? ((b.wins + b.pushes * 0.5) / b.totalPicks) * 100 : 0;
+              return bWinRate - aWinRate;
+            })
+            .map((stats, index) => {
+              const isExpanded = expandedPlayers.has(stats.player);
+              const isSelected = selectedForComparison.has(stats.player);
+              const adjustedWins = stats.wins + (stats.pushes * 0.5);
+              const winPct = stats.totalPicks > 0 
+                ? ((adjustedWins / stats.totalPicks) * 100).toFixed(1)
+                : '0.0';
+              const netMoney = stats.moneyWon - stats.moneyLost;
               
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Record:</span>
-                  <span className="font-semibold">{playerStats.wins}-{playerStats.losses}-{playerStats.pushes}</span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Win %:</span>
-                  <span className="font-semibold">{winPct}%</span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Net Money:</span>
-                  <span className={`font-semibold ${netMoney >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    ${netMoney.toFixed(2)}
-                  </span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">And-1s:</span>
-                  <span className="font-semibold text-red-600">{playerStats.and1s}</span>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-600">And-1 Cost:</span>
-                  <span className="font-semibold text-red-600">
-                    ${playerStats.and1Cost.toFixed(2)}
-                  </span>
-                </div>
-              </div>
+              // Medal for top 3
+              const medals = ['🥇', '🥈', '🥉'];
+              const medal = index < 3 ? medals[index] : null;
 
-              {Object.keys(playerStats.bySport).length > 0 && (
-                <div className="border-t pt-3">
-                  <h4 className="font-semibold text-sm mb-2">By Sport:</h4>
-                  <div className="space-y-1 text-xs">
-                    {Object.entries(playerStats.bySport).map(([sport, data]) => (
-                      <div key={sport} className="flex justify-between">
-                        <span>{sport}:</span>
-                        <span>{data.wins}-{data.losses}-{data.pushes} ({data.total > 0 ? (((data.wins + data.pushes * 0.5)/data.total)*100).toFixed(0) : 0}%)</span>
+              return (
+                <div 
+                  key={stats.player} 
+                  className={`border rounded-lg transition-all ${
+                    isSelected 
+                      ? 'border-purple-500 bg-purple-900/20'
+                      : 'border-gray-700 bg-gray-800/50'
+                  } ${isExpanded ? 'shadow-xl' : 'hover:bg-gray-800/70'}`}
+                >
+                  {/* Header - Always Visible */}
+                  <div className="p-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      {comparisonMode && (
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {
+                            const newSelected = new Set(selectedForComparison);
+                            if (isSelected) {
+                              newSelected.delete(stats.player);
+                            } else {
+                              newSelected.add(stats.player);
+                            }
+                            setSelectedForComparison(newSelected);
+                          }}
+                          className="w-5 h-5"
+                        />
+                      )}
+                      <div className="flex items-center gap-2 flex-1">
+                        {medal && <span className="text-2xl">{medal}</span>}
+                        <div className="flex-1">
+                          <h4 className="text-lg font-bold text-white">{stats.player}</h4>
+                          <div className="text-xs text-gray-400">Rank #{index + 1}</div>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+                      <button
+                        onClick={() => {
+                          const newExpanded = new Set(expandedPlayers);
+                          if (isExpanded) {
+                            newExpanded.delete(stats.player);
+                          } else {
+                            newExpanded.add(stats.player);
+                          }
+                          setExpandedPlayers(newExpanded);
+                        }}
+                        className="text-yellow-400 hover:text-yellow-300 transition"
+                      >
+                        {isExpanded ? '▲' : '▼'}
+                      </button>
+                    </div>
 
-              {Object.keys(playerStats.byBetType).length > 0 && (
-                <div className="border-t pt-3 mt-3">
-                  <h4 className="font-semibold text-sm mb-2">By Bet Type:</h4>
-                  <div className="space-y-1 text-xs">
-                    {Object.entries(playerStats.byBetType).map(([type, data]) => (
-                      <div key={type} className="flex justify-between">
-                        <span>{type}:</span>
-                        <span>{data.wins}-{data.losses}-{data.pushes} ({data.total > 0 ? (((data.wins + data.pushes * 0.5)/data.total)*100).toFixed(0) : 0}%)</span>
+                    {/* Quick Stats - Always Visible */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div className="bg-gray-900/50 rounded p-2 border border-gray-700">
+                        <div className="text-xs text-gray-400">Record</div>
+                        <div className="text-sm font-semibold text-white">
+                          {stats.wins}-{stats.losses}-{stats.pushes}
+                        </div>
                       </div>
-                    ))}
+                      <div className="bg-gray-900/50 rounded p-2 border border-gray-700">
+                        <div className="text-xs text-gray-400">Win %</div>
+                        <div className="text-sm font-semibold text-white">{winPct}%</div>
+                      </div>
+                      <div className="bg-gray-900/50 rounded p-2 border border-gray-700">
+                        <div className="text-xs text-gray-400">Net Money</div>
+                        <div className={`text-sm font-semibold ${netMoney >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          ${netMoney.toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="bg-gray-900/50 rounded p-2 border border-gray-700">
+                        <div className="text-xs text-gray-400">And-1s</div>
+                        <div className="text-sm font-semibold text-red-400">{stats.and1s}</div>
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Expanded Details */}
+                  {isExpanded && (
+                    <div className="border-t border-gray-700 p-4 space-y-4 bg-gray-900/30">
+                      {/* And-1 Cost */}
+                      <div className="bg-red-900/20 rounded-lg p-3 border border-red-500/30">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-300">And-1 Cost (Lost Profit):</span>
+                          <span className="text-lg font-bold text-red-400">
+                            ${stats.and1Cost.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* By Sport */}
+                      {Object.keys(stats.bySport).length > 0 && (
+                        <div>
+                          <h5 className="font-semibold text-sm mb-2 text-gray-300">📊 By Sport</h5>
+                          <div className="space-y-2">
+                            {Object.entries(stats.bySport)
+                              .sort(([, a], [, b]) => b.total - a.total)
+                              .map(([sport, data]) => {
+                                const sportWinPct = data.total > 0 ? (((data.wins + data.pushes * 0.5) / data.total) * 100).toFixed(0) : 0;
+                                return (
+                                  <div key={sport} className="flex justify-between items-center bg-gray-800/50 rounded p-2 border border-gray-700">
+                                    <span className="text-sm text-gray-300">{sport}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs text-gray-400">
+                                        {data.wins}-{data.losses}-{data.pushes}
+                                      </span>
+                                      <span className={`text-sm font-semibold ${
+                                        sportWinPct >= 55 ? 'text-green-400' :
+                                        sportWinPct >= 45 ? 'text-yellow-400' :
+                                        'text-red-400'
+                                      }`}>
+                                        {sportWinPct}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* By Bet Type */}
+                      {Object.keys(stats.byBetType).length > 0 && (
+                        <div>
+                          <h5 className="font-semibold text-sm mb-2 text-gray-300">🎲 By Bet Type</h5>
+                          <div className="space-y-2">
+                            {Object.entries(stats.byBetType)
+                              .sort(([, a], [, b]) => b.total - a.total)
+                              .map(([type, data]) => {
+                                const betWinPct = data.total > 0 ? (((data.wins + data.pushes * 0.5) / data.total) * 100).toFixed(0) : 0;
+                                return (
+                                  <div key={type} className="flex justify-between items-center bg-gray-800/50 rounded p-2 border border-gray-700">
+                                    <span className="text-sm text-gray-300">{type}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs text-gray-400">
+                                        {data.wins}-{data.losses}-{data.pushes}
+                                      </span>
+                                      <span className={`text-sm font-semibold ${
+                                        betWinPct >= 55 ? 'text-green-400' :
+                                        betWinPct >= 45 ? 'text-yellow-400' :
+                                        'text-red-400'
+                                      }`}>
+                                        {betWinPct}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          );
-        })}
+              );
+            })}
+        </div>
       </div>
     </div>
   );
@@ -4239,31 +4493,31 @@ const renderGroupDashboard = () => {
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Date From</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Date From</label>
                 <input
                   type="date"
                   value={filters.dateFrom}
                   onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Date To</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Date To</label>
                 <input
                   type="date"
                   value={filters.dateTo}
                   onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Big Guy</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
                 <select
                   value={filters.player}
                   onChange={(e) => setFilters({...filters, player: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -4271,11 +4525,11 @@ const renderGroupDashboard = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Sport</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Sport</label>
                 <select
                   value={filters.sport}
                   onChange={(e) => setFilters({...filters, sport: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -4283,11 +4537,11 @@ const renderGroupDashboard = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Placed By</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
                 <select
                   value={filters.placedBy}
                   onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -4295,33 +4549,33 @@ const renderGroupDashboard = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Min Payout</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Min Payout</label>
                 <input
                   type="number"
                   value={filters.minPayout}
                   onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="$0"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Max Payout</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Max Payout</label>
                 <input
                   type="number"
                   value={filters.maxPayout}
                   onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="Any"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Result</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
                 <select
                   value={filters.result}
                   onChange={(e) => setFilters({...filters, result: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -4332,11 +4586,11 @@ const renderGroupDashboard = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Auto-Updated</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Auto-Updated</label>
                 <select
                   value={filters.autoUpdated}
                   onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -4345,12 +4599,12 @@ const renderGroupDashboard = () => {
                 </select>
               </div>
               <div className="relative">
-                <label className="block text-sm font-medium mb-1">Team/Player</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
                 <input
                   type="text"
                   value={filters.teamPlayer}
                   onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="Search teams/players..."
                   list="team-player-suggestions"
@@ -6797,31 +7051,31 @@ const handleSavePickEdit = async () => {
           <>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
               <div>
-                <label className="block text-sm font-medium mb-1">Date From</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Date From</label>
                 <input
                   type="date"
                   value={filters.dateFrom}
                   onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Date To</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Date To</label>
                 <input
                   type="date"
                   value={filters.dateTo}
                   onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Big Guy</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
                 <select
                   value={filters.player}
                   onChange={(e) => setFilters({...filters, player: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -6829,11 +7083,11 @@ const handleSavePickEdit = async () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Sport</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Sport</label>
                 <select
                   value={filters.sport}
                   onChange={(e) => setFilters({...filters, sport: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -6841,11 +7095,11 @@ const handleSavePickEdit = async () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Placed By</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
                 <select
                   value={filters.placedBy}
                   onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -6853,11 +7107,11 @@ const handleSavePickEdit = async () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Result</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
                 <select
                   value={filters.result}
                   onChange={(e) => setFilters({...filters, result: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -6868,11 +7122,11 @@ const handleSavePickEdit = async () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Auto-Updated</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Auto-Updated</label>
                 <select
                   value={filters.autoUpdated}
                   onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -6881,22 +7135,22 @@ const handleSavePickEdit = async () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Team/Player</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
                 <input
                   type="text"
                   value={filters.teamPlayer}
                   onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="Search teams/players..."
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Bet Type</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Bet Type</label>
                 <select
                   value={filters.betType || ''}
                   onChange={(e) => setFilters({...filters, betType: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
                   <option value="">All</option>
@@ -6904,12 +7158,12 @@ const handleSavePickEdit = async () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1">Prop Type</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Prop Type</label>
                 <input
                   type="text"
                   value={filters.propType || ''}
                   onChange={(e) => setFilters({...filters, propType: e.target.value})}
-                  className="w-full px-3 py-2 border rounded text-base"
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                   placeholder="e.g., Passing Touchdowns"
                   list="prop-type-filter-suggestions"
@@ -7060,11 +7314,11 @@ const handleSavePickEdit = async () => {
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Big Guy</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
                   <select
                     value={editingPick.player}
                     onChange={(e) => setEditingPick({...editingPick, player: e.target.value})}
-                    className="w-full px-3 py-2 border rounded text-base"
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                     style={{ fontSize: isMobile ? '16px' : '14px' }}
                   >
                     <option value="">Select</option>
@@ -7072,22 +7326,22 @@ const handleSavePickEdit = async () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Sport</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Sport</label>
                   <select
                     value={editingPick.sport}
                     onChange={(e) => setEditingPick({...editingPick, sport: e.target.value})}
-                    className="w-full px-3 py-2 border rounded text-base"
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                     style={{ fontSize: isMobile ? '16px' : '14px' }}
                   >
                     {sports.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Bet Type</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Bet Type</label>
                   <select
                     value={editingPick.betType}
                     onChange={(e) => setEditingPick({...editingPick, betType: e.target.value})}
-                    className="w-full px-3 py-2 border rounded text-base"
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                     style={{ fontSize: isMobile ? '16px' : '14px' }}
                   >
                     {betTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
@@ -7097,12 +7351,12 @@ const handleSavePickEdit = async () => {
 
               {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(editingPick.betType) && (
                 <div className="mb-3">
-                  <label className="block text-sm font-medium mb-1">Team/Player</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
                   <input
                     type="text"
                     value={editingPick.team || ''}
                     onChange={(e) => setEditingPick({...editingPick, team: e.target.value})}
-                    className="w-full px-3 py-2 border rounded text-base"
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                     style={{ fontSize: isMobile ? '16px' : '14px' }}
                   />
                 </div>
@@ -7111,22 +7365,22 @@ const handleSavePickEdit = async () => {
               {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(editingPick.betType) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                   <div>
-                    <label className="block text-sm font-medium mb-1">Away Team</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Away Team</label>
                     <input
                       type="text"
                       value={editingPick.awayTeam || ''}
                       onChange={(e) => setEditingPick({...editingPick, awayTeam: e.target.value})}
-                      className="w-full px-3 py-2 border rounded text-base"
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                       style={{ fontSize: isMobile ? '16px' : '14px' }}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Home Team</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Home Team</label>
                     <input
                       type="text"
                       value={editingPick.homeTeam || ''}
                       onChange={(e) => setEditingPick({...editingPick, homeTeam: e.target.value})}
-                      className="w-full px-3 py-2 border rounded text-base"
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                       style={{ fontSize: isMobile ? '16px' : '14px' }}
                     />
                   </div>
@@ -7137,21 +7391,21 @@ const handleSavePickEdit = async () => {
                 {editingPick.betType === 'Prop Bet' && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Prop Type</label>
+                      <label className="block text-sm font-medium mb-1 text-gray-300">Prop Type</label>
                       <input
                         type="text"
                         value={editingPick.propType || ''}
                         onChange={(e) => setEditingPick({...editingPick, propType: e.target.value})}
-                        className="w-full px-3 py-2 border rounded text-base"
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                         style={{ fontSize: isMobile ? '16px' : '14px' }}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Over/Under</label>
+                      <label className="block text-sm font-medium mb-1 text-gray-300">Over/Under</label>
                       <select
                         value={editingPick.overUnder || 'Over'}
                         onChange={(e) => setEditingPick({...editingPick, overUnder: e.target.value})}
-                        className="w-full px-3 py-2 border rounded text-base"
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                         style={{ fontSize: isMobile ? '16px' : '14px' }}
                       >
                         <option value="Over">Over</option>
@@ -7159,12 +7413,12 @@ const handleSavePickEdit = async () => {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Line</label>
+                      <label className="block text-sm font-medium mb-1 text-gray-300">Line</label>
                       <input
                         type="text"
                         value={editingPick.line || ''}
                         onChange={(e) => setEditingPick({...editingPick, line: e.target.value})}
-                        className="w-full px-3 py-2 border rounded text-base"
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                         style={{ fontSize: isMobile ? '16px' : '14px' }}
                       />
                     </div>
@@ -7172,21 +7426,21 @@ const handleSavePickEdit = async () => {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Odds (Optional)</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Odds (Optional)</label>
                   <input
                     type="text"
                     value={editingPick.odds || ''}
                     onChange={(e) => setEditingPick({...editingPick, odds: e.target.value})}
-                    className="w-full px-3 py-2 border rounded text-base"
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                     style={{ fontSize: isMobile ? '16px' : '14px' }}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Result</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
                   <select
                     value={editingPick.result}
                     onChange={(e) => setEditingPick({...editingPick, result: e.target.value})}
-                    className="w-full px-3 py-2 border rounded text-base"
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                     style={{ fontSize: isMobile ? '16px' : '14px' }}
                   >
                     <option value="pending">Pending</option>
@@ -7196,12 +7450,12 @@ const handleSavePickEdit = async () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Actual Stats (Optional)</label>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Actual Stats (Optional)</label>
                   <input
                     type="text"
                     value={editingPick.actualStats || ''}
                     onChange={(e) => setEditingPick({...editingPick, actualStats: e.target.value})}
-                    className="w-full px-3 py-2 border rounded text-base"
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                     style={{ fontSize: isMobile ? '16px' : '14px' }}
                   />
                 </div>
