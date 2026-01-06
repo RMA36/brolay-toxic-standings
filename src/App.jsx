@@ -27,6 +27,99 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+// Add custom styles for Theme 3
+const customStyles = `
+  @keyframes slideInFromLeft {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes slideInFromRight {
+    from {
+      opacity: 0;
+      transform: translateX(30px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes gradientFlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  
+  .animate-slideInLeft {
+    animation: slideInFromLeft 0.5s ease-out;
+  }
+  
+  .animate-slideInRight {
+    animation: slideInFromRight 0.5s ease-out;
+  }
+  
+  .animate-fadeInUp {
+    animation: fadeInUp 0.5s ease-out;
+  }
+  
+  .stat-card {
+    transition: all 0.3s ease;
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-5px) scale(1.02);
+  }
+  
+  .flowing-bg {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    background-size: 200% 200%;
+    animation: gradientFlow 15s ease infinite;
+  }
+  
+  .dropdown {
+    position: relative;
+  }
+  
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 50;
+    min-width: 200px;
+    margin-top: 0.5rem;
+  }
+  
+  .dropdown:hover .dropdown-content {
+    display: block;
+  }
+`;
+
+// Inject styles into document
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement("style");
+  styleSheet.innerText = customStyles;
+  document.head.appendChild(styleSheet);
+}
+
 const App = () => {
   const [authenticated, setAuthenticated] = useState(false);
   const [passwordInput, setPasswordInput] = useState('');
@@ -6759,7 +6852,7 @@ const renderSettings = () => {
   
   return (
   <div 
-    className="min-h-screen bg-gray-100"
+    className="min-h-screen flowing-bg"
     onTouchStart={handleTouchStart}
     onTouchMove={handleTouchMove}
     onTouchEnd={handleTouchEnd}
@@ -6783,28 +6876,37 @@ const renderSettings = () => {
   </div>
 )}
     {renderEditModal()}
-    <div className="bg-blue-600 text-white p-4 md:p-6 shadow-lg">
+    <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-md text-white p-4 md:p-6 shadow-2xl border-b border-yellow-500/20 animate-slideInLeft">
   <div className="flex items-center justify-between">
     {isMobile && (
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="p-2 text-base"
+        className="p-2 text-base hover:bg-gray-700 rounded-lg transition"
         style={{ minHeight: isMobile ? '44px' : 'auto' }}
       >
         {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
     )}
-    <div className="flex-1">
-      <h1 className="text-2xl md:text-3xl font-bold">Brolay Toxic Standings</h1>
-      <p className="text-blue-100 text-sm md:text-base">5 Big Guys, Inc.</p>
+    <div className="flex items-center gap-3 flex-1">
+      <div className="bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl p-2 md:p-3 shadow-lg">
+        <span className="text-2xl md:text-3xl">👑</span>
+      </div>
+      <div>
+        <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-yellow-400 to-amber-500 text-transparent bg-clip-text">
+          Brolay Toxic Standings
+        </h1>
+        <p className="text-gray-400 text-xs md:text-sm">5 Big Guys, Inc.</p>
+      </div>
     </div>
     {saving && (
-      <div className="text-sm">
-        <Loader className="inline animate-spin" size={16} />
+      <div className="text-sm bg-gray-800 px-3 py-1 rounded-lg border border-gray-700">
+        <Loader className="inline animate-spin text-yellow-400" size={16} />
       </div>
     )}
   </div>
-</div>{/* Mobile Sidebar Overlay */}
+</div>
+    
+    {/* Mobile Sidebar Overlay */}
 {isMobile && sidebarOpen && (
   <div 
     className="fixed inset-0 bg-black bg-opacity-50 z-40"
@@ -6812,43 +6914,170 @@ const renderSettings = () => {
   />
 )}
 
-{/* Navigation - Collapsible sidebar for mobile, horizontal tabs for desktop */}
+{/* Navigation - Enhanced with Dropdowns */}
 <div className={`${
   isMobile 
-    ? `fixed top-0 left-0 h-full w-64 bg-white shadow-lg z-50 transform transition-transform duration-300 ${
+    ? `fixed top-0 left-0 h-full w-64 bg-gray-900 shadow-lg z-50 transform transition-transform duration-300 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`
     : 'container mx-auto p-4 md:p-6'
 }`}>
-  <div className={isMobile ? 'pt-20 px-4' : 'mb-6 flex gap-2 overflow-x-auto'}>
-{[
-  { id: 'entry', label: 'New Brolay' },
-  { id: 'search', label: 'Search' },
-  { id: 'allBrolays', label: 'All Brolays' },
-  { id: 'allPicks', label: 'All Picks' },
-  { id: 'individual', label: 'Individual Stats' },
-  { id: 'group', label: 'Group Stats' },
-  { id: 'payments', label: 'Payments' },
-  { id: 'rankings', label: 'Rankings' },
-  { id: 'grid', label: 'Grid' },
-  ...(SHOW_SETTINGS_TAB ? [{ id: 'settings', label: 'Settings' }] : []),
-  ...(SHOW_IMPORT_TAB ? [{ id: 'import', label: 'Import Data' }] : [])
-].map(tab => (
+  <div className={isMobile ? 'pt-20 px-4' : 'mb-6'}>
+    <div className={`${
+      isMobile ? 'space-y-2' : 'bg-gray-900/80 backdrop-blur-md rounded-xl p-2 border border-gray-700 shadow-xl flex gap-2 flex-wrap animate-slideInRight'
+    }`}>
+      {/* New Brolay Button */}
       <button
-        key={tab.id}
         onClick={() => {
-          setActiveTab(tab.id);
+          setActiveTab('entry');
           if (isMobile) setSidebarOpen(false);
         }}
-        className={`${
-          isMobile ? 'w-full text-left' : 'whitespace-nowrap'
-        } px-4 py-3 rounded-lg font-semibold ${
-          activeTab === tab.id ? 'bg-blue-600 text-white' : 'bg-white text-gray-700'} text-base`}
+        className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
+          activeTab === 'entry' 
+            ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-black shadow-lg' 
+            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
+        } transition-all transform hover:scale-105 text-base`}
         style={{ minHeight: isMobile ? '44px' : 'auto' }}
       >
-        {tab.label}
+        ✨ New Brolay
       </button>
-    ))}
+      
+      {/* Historical Data Dropdown */}
+      <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
+        <button
+          onClick={() => isMobile && setActiveTab('allBrolays')}
+          className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
+            ['allBrolays', 'allPicks'].includes(activeTab)
+              ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
+              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
+          } transition text-base`}
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        >
+          📚 Historical Data {!isMobile && '▼'}
+        </button>
+        {!isMobile && (
+          <div className="dropdown-content">
+            <div className="bg-gray-800 rounded-lg border border-yellow-500/30 shadow-2xl overflow-hidden">
+              <button
+                onClick={() => setActiveTab('allBrolays')}
+                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
+              >
+                📅 All Brolays
+              </button>
+              <button
+                onClick={() => setActiveTab('allPicks')}
+                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition"
+              >
+                📊 All Picks
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Analytics Dropdown */}
+      <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
+        <button
+          onClick={() => isMobile && setActiveTab('search')}
+          className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
+            ['search', 'individual', 'group', 'rankings', 'grid'].includes(activeTab)
+              ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
+              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
+          } transition text-base`}
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        >
+          📈 Analytics {!isMobile && '▼'}
+        </button>
+        {!isMobile && (
+          <div className="dropdown-content">
+            <div className="bg-gray-800 rounded-lg border border-yellow-500/30 shadow-2xl overflow-hidden">
+              <button
+                onClick={() => setActiveTab('search')}
+                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
+              >
+                🔍 Insights
+              </button>
+              <button
+                onClick={() => setActiveTab('individual')}
+                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
+              >
+                👤 Individual Stats
+              </button>
+              <button
+                onClick={() => setActiveTab('group')}
+                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
+              >
+                👥 Group Stats
+              </button>
+              <button
+                onClick={() => setActiveTab('rankings')}
+                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
+              >
+                🏆 Rankings
+              </button>
+              <button
+                onClick={() => setActiveTab('grid')}
+                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition"
+              >
+                🎯 Grid View
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Payments Button */}
+      <button
+        onClick={() => {
+          setActiveTab('payments');
+          if (isMobile) setSidebarOpen(false);
+        }}
+        className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
+          activeTab === 'payments'
+            ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
+            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
+        } transition text-base`}
+        style={{ minHeight: isMobile ? '44px' : 'auto' }}
+      >
+        💰 Payments
+      </button>
+      
+      {/* Settings (if enabled) */}
+      {SHOW_SETTINGS_TAB && (
+        <button
+          onClick={() => {
+            setActiveTab('settings');
+            if (isMobile) setSidebarOpen(false);
+          }}
+          className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
+            activeTab === 'settings'
+              ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
+              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
+          } transition text-base`}
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        >
+          ⚙️ Settings
+        </button>
+      )}
+      
+      {/* Import (if enabled) */}
+      {SHOW_IMPORT_TAB && (
+        <button
+          onClick={() => {
+            setActiveTab('import');
+            if (isMobile) setSidebarOpen(false);
+          }}
+          className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
+            activeTab === 'import'
+              ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
+              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
+          } transition text-base`}
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        >
+          📥 Import Data
+        </button>
+      )}
+    </div>
   </div>
 </div>
   <div className="container mx-auto p-4 md:p-6">
