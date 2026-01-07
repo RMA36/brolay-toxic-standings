@@ -3323,6 +3323,11 @@ const analyzeSearchQuery = (query) => {
     const filteredPicks = isSport || isPlayer || isBetType ?
       filterByRelevance(matchingPicks, searchContext, 5) : matchingPicks;
 
+    // Apply relevance filtering for specific queries - use lower threshold for team-only searches
+    const shouldFilter = isSport || isPlayer || isBetType;
+    const filteredPicks = shouldFilter ?
+      filterByRelevance(matchingPicks, searchContext, 3) : matchingPicks;
+    
     // TEMPORARY DEBUG - remove after fixing
     console.log('Team Search Debug:', {
       searchedTeam: searchContext.matchedTeam,
