@@ -2210,7 +2210,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
       return (
         <>
           <div>
-            <label className="block text-xs font-medium mb-1">Favorite/Dog</label>
+            <label className="block text-xs font-medium mb-1 text-white">Favorite/Dog</label>
             <select
               value={participant.favorite || 'Favorite'}
               onChange={(e) => updateFunc('favorite', e.target.value)}
@@ -2222,7 +2222,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Spread</label>
+            <label className="block text-xs font-medium mb-1 text-white">Spread</label>
             <input
               type="text"
               value={participant.spread || ''}
@@ -2239,7 +2239,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
       return (
         <>
           <div>
-            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
             <select
               value={participant.overUnder || 'Over'}
               onChange={(e) => updateFunc('overUnder', e.target.value)}
@@ -2251,7 +2251,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Total</label>
+            <label className="block text-xs font-medium mb-1 text-white">Total</label>
             <input
               type="text"
               value={participant.total || ''}
@@ -2268,7 +2268,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
       return (
         <>
           <div>
-            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
             <select
               value={participant.overUnder || 'Over'}
               onChange={(e) => updateFunc('overUnder', e.target.value)}
@@ -2280,7 +2280,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">1H Total</label>
+            <label className="block text-xs font-medium mb-1 text-white">1H Total</label>
             <input
               type="text"
               value={participant.total || ''}
@@ -2297,7 +2297,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
       return (
         <>
           <div>
-            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
             <select
               value={participant.overUnder || 'Over'}
               onChange={(e) => updateFunc('overUnder', e.target.value)}
@@ -2309,7 +2309,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Team Total</label>
+            <label className="block text-xs font-medium mb-1 text-white">Team Total</label>
             <input
               type="text"
               value={participant.total || ''}
@@ -2325,7 +2325,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
     case 'First Inning Runs':
       return (
         <div>
-          <label className="block text-xs font-medium mb-1">Yes/No Runs</label>
+          <label className="block text-xs font-medium mb-1 text-white">Yes/No Runs</label>
           <select
             value={participant.yesNoRuns || 'Yes'}
             onChange={(e) => updateFunc('yesNoRuns', e.target.value)}
@@ -2341,7 +2341,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
     case 'Quarter Moneyline':
       return (
         <div>
-          <label className="block text-xs font-medium mb-1">Quarter</label>
+          <label className="block text-xs font-medium mb-1 text-white">Quarter</label>
           <select
             value={participant.quarter || '1Q'}
             onChange={(e) => updateFunc('quarter', e.target.value)}
@@ -2360,7 +2360,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
       return (
         <>
           <div>
-            <label className="block text-xs font-medium mb-1">Quarter</label>
+            <label className="block text-xs font-medium mb-1 text-white">Quarter</label>
             <select
               value={participant.quarter || '1Q'}
               onChange={(e) => updateFunc('quarter', e.target.value)}
@@ -2374,7 +2374,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
             <select
               value={participant.overUnder || 'Over'}
               onChange={(e) => updateFunc('overUnder', e.target.value)}
@@ -2386,7 +2386,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Quarter Total</label>
+            <label className="block text-xs font-medium mb-1 text-white">Quarter Total</label>
             <input
               type="text"
               value={participant.total || ''}
@@ -2403,7 +2403,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
       return (
         <>
           <div>
-            <label className="block text-xs font-medium mb-1">Quarter</label>
+            <label className="block text-xs font-medium mb-1 text-white">Quarter</label>
             <select
               value={participant.quarter || '1Q'}
               onChange={(e) => updateFunc('quarter', e.target.value)}
@@ -2417,7 +2417,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
             <select
               value={participant.overUnder || 'Over'}
               onChange={(e) => updateFunc('overUnder', e.target.value)}
@@ -2429,7 +2429,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Team Total</label>
+            <label className="block text-xs font-medium mb-1 text-white">Team Total</label>
             <input
               type="text"
               value={participant.total || ''}
@@ -2446,7 +2446,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
       return (
         <>
           <div className="relative">
-            <label className="block text-xs font-medium mb-1">Prop Type</label>
+            <label className="block text-xs font-medium mb-1 text-white">Prop Type</label>
             <input
               type="text"
               value={participant.propType || ''}
@@ -2478,7 +2478,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
             )}
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Over/Under</label>
+            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
             <select
               value={participant.overUnder || 'Over'}
               onChange={(e) => updateFunc('overUnder', e.target.value)}
@@ -2490,7 +2490,7 @@ const renderBetSpecificFields = (participant, id, isEditMode = false) => {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium mb-1">Line</label>
+            <label className="block text-xs font-medium mb-1 text-white">Line</label>
             <input
               type="text"
               value={participant.line || ''}
@@ -3698,7 +3698,7 @@ const renderEntry = () => {
             <div key={id} className="border border-gray-700 rounded-lg p-4 md:p-6 bg-gray-800/50">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                 <div>
-                  <label className="block text-xs font-medium mb-1">Big Guy</label>
+                  <label className="block text-xs font-medium mb-1 text-white">Big Guy</label>
                   <select
                     value={participant.player}
                     onChange={(e) => updateParticipant(id, 'player', e.target.value)}
@@ -3710,7 +3710,7 @@ const renderEntry = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1">Sport</label>
+                  <label className="block text-xs font-medium mb-1 text-white">Sport</label>
                   <select
                     value={participant.sport}
                     onChange={(e) => updateParticipant(id, 'sport', e.target.value)}
@@ -3721,7 +3721,7 @@ const renderEntry = () => {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1">Bet Type</label>
+                  <label className="block text-xs font-medium mb-1 text-white">Bet Type</label>
                   <select
                     value={participant.betType}
                     onChange={(e) => updateParticipant(id, 'betType', e.target.value)}
@@ -3734,7 +3734,7 @@ const renderEntry = () => {
                 
                 {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
                   <div className="relative">
-                    <label className="block text-xs font-medium mb-1">Team/Player</label>
+                    <label className="block text-xs font-medium mb-1 text-white">Team/Player</label>
                     <input
                       type="text"
                       value={participant.team}
@@ -3765,7 +3765,7 @@ const renderEntry = () => {
               {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                   <div className="relative">
-                    <label className="block text-xs font-medium mb-1">Away Team</label>
+                    <label className="block text-xs font-medium mb-1 text-white">Away Team</label>
                     <input
                       type="text"
                       value={participant.awayTeam || ''}
@@ -3791,7 +3791,7 @@ const renderEntry = () => {
                     )}
                   </div>
                   <div className="relative">
-                    <label className="block text-xs font-medium mb-1">Home Team</label>
+                    <label className="block text-xs font-medium mb-1 text-white">Home Team</label>
                     <input
                       type="text"
                       value={participant.homeTeam || ''}
@@ -3823,7 +3823,7 @@ const renderEntry = () => {
                 {renderBetSpecificFields(participant, id, false)}
           
                 <div>
-                  <label className="block text-xs font-medium mb-1">Odds (Optional)</label>
+                  <label className="block text-xs font-medium mb-1 text-white">Odds (Optional)</label>
                   <input
                     type="text"
                     value={participant.odds || ''}
@@ -3834,7 +3834,7 @@ const renderEntry = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium mb-1">Result</label>
+                  <label className="block text-xs font-medium mb-1 text-white">Result</label>
                   <select
                     value={participant.result}
                     onChange={(e) => updateParticipant(id, 'result', e.target.value)}
@@ -6758,7 +6758,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
               <div key={player} className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-700 rounded">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl font-bold text-gray-400">#{idx + 1}</span>
-                  <span className="font-semibold text-white">{player}</span>
+                  <span className="font-semibold text-yellow-400">{player}</span>
                 </div>
                 <span className="text-xl font-bold text-yellow-400">{count}</span>
               </div>
