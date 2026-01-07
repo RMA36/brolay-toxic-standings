@@ -7871,9 +7871,6 @@ const renderSearch = () => {
           )}
         </div>
       )}
-          </p>
-        </div>
-      )}
     </div>
   );
 };
