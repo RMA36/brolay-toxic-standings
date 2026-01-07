@@ -193,7 +193,6 @@ const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [lastSearchedQuery, setLastSearchedQuery] = useState('');
-  const [searchTimeout, setSearchTimeout] = useState(null);
   const [searchCache, setSearchCache] = useState({});
   const [editingPick, setEditingPick] = useState(null);
   const [picksToShow, setPicksToShow] = useState(20); 
@@ -3208,7 +3207,13 @@ const analyzeSearchQuery = (query) => {
         stats.bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
 
-      stats.byPlayer[pick.player][pick.result]++;
+      if (pick.result === 'win') {
+        stats.byPlayer[pick.player].wins++;
+      } else if (pick.result === 'loss') {
+        stats.byPlayer[pick.player].losses++;
+      } else if (pick.result === 'push') {
+        stats.byPlayer[pick.player].pushes++;
+      }
       stats.byPlayer[pick.player].total++;
       stats.bySport[pick.sport][pick.result]++;
       stats.bySport[pick.sport].total++;
@@ -3271,7 +3276,13 @@ const analyzeSearchQuery = (query) => {
       if (!stats.byPlayer[pick.player]) {
         stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
-      stats.byPlayer[pick.player][pick.result]++;
+      if (pick.result === 'win') {
+        stats.byPlayer[pick.player].wins++;
+      } else if (pick.result === 'loss') {
+        stats.byPlayer[pick.player].losses++;
+      } else if (pick.result === 'push') {
+        stats.byPlayer[pick.player].pushes++;
+      }
       stats.byPlayer[pick.player].total++;
     });
 
@@ -3310,7 +3321,7 @@ const analyzeSearchQuery = (query) => {
 
     // Apply relevance filtering for specific queries
     const filteredPicks = isSport || isPlayer || isBetType ?
-      filterByRelevance(matchingPicks, searchContext, 8) : matchingPicks;
+      filterByRelevance(matchingPicks, searchContext, 5) : matchingPicks;
 
     const stats = {
       team: searchContext.matchedTeam,
@@ -3333,7 +3344,13 @@ const analyzeSearchQuery = (query) => {
         stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
 
-      stats.byPlayer[pick.player][pick.result]++;
+      if (pick.result === 'win') {
+        stats.byPlayer[pick.player].wins++;
+      } else if (pick.result === 'loss') {
+        stats.byPlayer[pick.player].losses++;
+      } else if (pick.result === 'push') {
+        stats.byPlayer[pick.player].pushes++;
+      }
       stats.byPlayer[pick.player].total++;
       stats.byBetType[pick.betType][pick.result]++;
       stats.byBetType[pick.betType].total++;
@@ -3394,7 +3411,13 @@ const analyzeSearchQuery = (query) => {
         stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
 
-      stats.byPlayer[pick.player][pick.result]++;
+      if (pick.result === 'win') {
+        stats.byPlayer[pick.player].wins++;
+      } else if (pick.result === 'loss') {
+        stats.byPlayer[pick.player].losses++;
+      } else if (pick.result === 'push') {
+        stats.byPlayer[pick.player].pushes++;
+      }
       stats.byPlayer[pick.player].total++;
       stats.byBetType[pick.betType][pick.result]++;
       stats.byBetType[pick.betType].total++;
@@ -7549,25 +7572,10 @@ const renderSearch = () => {
       
       {/* Search Bar */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <div className="flex gap-3">
-          <input
+        <div className="flex gap-3"><input
             type="text"
             value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              
-              // Clear existing timeout
-              if (searchTimeout) clearTimeout(searchTimeout);
-              
-              // Set new timeout for auto-search (500ms delay)
-              const timeout = setTimeout(() => {
-                if (e.target.value.trim().length >= 3) {
-                  handleSearch();
-                }
-              }, 500);
-              
-              setSearchTimeout(timeout);
-            }}
+            onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             placeholder='Try: "Anytime Touchdown Scorer record" or "Chiefs record" or "Management NBA stats"'
             className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
