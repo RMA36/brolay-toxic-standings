@@ -289,10 +289,20 @@ export function calculateRelevanceScore(pick, searchContext) {
   }
   
   // Team match
-  if (searchContext.matchedTeam && 
-      (pick.team?.includes(searchContext.matchedTeam) || 
-       pick.opponent?.includes(searchContext.matchedTeam))) {
-    score += 7;
+  if (searchContext.matchedTeam) {
+    const pickTeam = pick.team || '';
+    const pickOpp = pick.opponent || '';
+    const pickAwayTeam = pick.awayTeam || '';
+    const pickHomeTeam = pick.homeTeam || '';
+    const pickFavorite = pick.favorite || '';
+    
+    if (pickTeam.includes(searchContext.matchedTeam) || 
+        pickOpp.includes(searchContext.matchedTeam) ||
+        pickAwayTeam.includes(searchContext.matchedTeam) ||
+        pickHomeTeam.includes(searchContext.matchedTeam) ||
+        pickFavorite.includes(searchContext.matchedTeam)) {
+      score += 7;
+    }
   }
   
   return score;
