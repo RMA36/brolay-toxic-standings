@@ -140,6 +140,23 @@ const customStyles = `
     height: 0.5rem;
     background: transparent;
   }
+  
+  /* Optimize input performance and prevent mobile zoom */
+  input[type="text"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px;
+  }
+  
+  @media (min-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    select {
+      font-size: 14px;
+    }
+  }
 `;
 
 // Inject styles into document
@@ -7428,17 +7445,17 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
 };
 
 const renderSearch = () => {
+  // Memoize expensive calculations
+  const moneyMaker = React.useMemo(() => findMoneyMaker(parlays, players), [parlays, players]);
+  const dangerZone = React.useMemo(() => findDangerZone(parlays, players), [parlays, players]);
+  const currentDay = React.useMemo(() => getCurrentDayOfWeek(), []);
+  const currentSports = React.useMemo(() => getCurrentSportsInSeason(), []);
+  const seasonalTip = React.useMemo(() => getSeasonalTip(), []);
+
   const handleSearch = () => {
     const results = analyzeSearchQuery(searchQuery);
     setSearchResults(results);
   };
-
-  // Calculate dynamic insights
-  const moneyMaker = findMoneyMaker(parlays, players);
-  const dangerZone = findDangerZone(parlays, players);
-  const currentDay = getCurrentDayOfWeek();
-  const currentSports = getCurrentSportsInSeason();
-  const seasonalTip = getSeasonalTip();
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -7453,8 +7470,7 @@ const renderSearch = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             placeholder='Try: "Anytime Touchdown Scorer record" or "Chiefs record" or "Management NBA stats"'
-            className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white text-base focus:border-yellow-500 focus:outline-none"
-            style={{ fontSize: isMobile ? '16px' : '14px' }}
+            className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
           />
           <button
             onClick={handleSearch}
@@ -7465,17 +7481,7 @@ const renderSearch = () => {
           </button>
         </div>
         
-        {/* Current Context Info */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          <div className="bg-gray-900/50 rounded-full px-3 py-1 text-xs text-gray-400 border border-gray-700">
-            📅 Today: {currentDay}
-          </div>
-          <div className="bg-gray-900/50 rounded-full px-3 py-1 text-xs text-gray-400 border border-gray-700">
-            🏆 In Season: {currentSports.slice(0, 3).join(', ')}
-            {currentSports.length > 3 && ` +${currentSports.length - 3} more`}
-          </div>
-        </div>
-        
+        {/* Search Examples */}     
         <div className="mt-3 text-sm text-gray-600">
           <p className="font-semibold mb-2 text-gray-400">Examples:</p>
           <div className="flex flex-wrap gap-2">
