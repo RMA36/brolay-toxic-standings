@@ -6555,6 +6555,7 @@ const renderRankings = () => {
       // Current streak
       let currentStreak = 0;
       let currentType = null;
+      let lastOppositeDate = null;
       
       for (let i = picks.length - 1; i >= 0; i--) {
         const isWin = picks[i].result === 'win';
@@ -6568,16 +6569,26 @@ const renderRankings = () => {
         } else if ((currentType === 'hot' && isWin) || (currentType === 'cold' && !isWin)) {
           currentStreak++;
         } else {
+          // Found opposite result - this is our "last loss" or "last win"
+          lastOppositeDate = picks[i].date;
           break;
         }
       }
       
       if (currentStreak > 0) {
-        currentStreaks[currentType].push({
+        const streakData = {
           player,
           count: currentStreak,
           lastDate: picks[picks.length - 1].date
-        });
+        };
+        
+        if (currentType === 'hot') {
+          streakData.lastLossDate = lastOppositeDate;
+        } else {
+          streakData.lastWinDate = lastOppositeDate;
+        }
+        
+        currentStreaks[currentType].push(streakData);
       }
       
       // All-time streaks
@@ -6778,7 +6789,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
                     <span className="font-semibold text-white">{streak.player}</span>
                     <span className="text-xl font-bold text-green-400">{streak.count} wins</span>
                   </div>
-                  <div className="text-xs text-gray-400">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
+                  <div className="text-xs text-gray-400">Last loss: {formatDateForDisplay(streak.lastLossDate || 'Never')}</div>
                 </div>
               ))}
             </div>
@@ -6797,7 +6808,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
                     <span className="font-semibold text-white">{streak.player}</span>
                     <span className="text-xl font-bold text-red-400">{streak.count} losses</span>
                   </div>
-                  <div className="text-xs text-gray-400">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
+                  <div className="text-xs text-gray-400">Last win: {formatDateForDisplay(streak.lastWinDate || 'Never')}</div>
                 </div>
               ))}
             </div>
