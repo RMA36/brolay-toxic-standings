@@ -198,6 +198,7 @@ const App = () => {
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
+  const [lastSearchedQuery, setLastSearchedQuery] = useState('');
   const [editingPick, setEditingPick] = useState(null);
   const [picksToShow, setPicksToShow] = useState(20); 
   const [calendarView, setCalendarView] = useState(true); // Toggle between calendar and list view
@@ -7451,8 +7452,12 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
 
 const renderSearch = () => {
   const handleSearch = () => {
-    const results = analyzeSearchQuery(searchQuery);
-    setSearchResults(results);
+    const trimmedQuery = searchQuery.trim();
+    if (trimmedQuery.length >= 3) {
+      setLastSearchedQuery(trimmedQuery);
+      const results = analyzeSearchQuery(trimmedQuery);
+      setSearchResults(results);
+    }
   };
 
   return (
@@ -7506,12 +7511,12 @@ const renderSearch = () => {
       </div>
 
       {/* No Results Message - Show immediately after search bar */}
-      {searchResults === null && searchQuery.trim().length >= 3 && (
+      {searchResults === null && lastSearchedQuery && (
         <div className="bg-gradient-to-br from-red-900/30 to-gray-800 rounded-xl p-4 md:p-6 border border-red-500/30">
           <div className="flex items-center gap-3">
             <span className="text-2xl">❌</span>
             <p className="text-red-400 font-semibold">
-              No results found for "{searchQuery}"
+              No results found for "{lastSearchedQuery}"
             </p>
           </div>
           <p className="text-gray-400 text-sm mt-2">
