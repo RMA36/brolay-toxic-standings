@@ -7641,7 +7641,12 @@ const renderSearch = () => {
                     <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
                       <span className="font-semibold text-white">{player}</span>
                       <span className="text-sm text-gray-300">
-                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ?
+                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
                       </span>
                     </div>
                   ))}
