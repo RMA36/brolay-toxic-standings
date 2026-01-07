@@ -5131,9 +5131,9 @@ const renderGroupDashboard = () => {
       {/* Sport Distribution Pie Chart */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">📊 Sport Distribution</h3>
-        <div className="flex flex-col md:flex-row items-center gap-6">
+        <div className="flex justify-center">
           {/* Pie Chart */}
-          <div className="relative" style={{ width: '300px', height: '300px' }}>
+          <div className="relative" style={{ width: '400px', height: '400px' }}>
             <svg viewBox="0 0 200 200" className="transform -rotate-90">
               {(() => {
                 const sortedSports = Object.entries(bySport).sort(([, a], [, b]) => b.total - a.total);
@@ -5147,6 +5147,7 @@ const renderGroupDashboard = () => {
                   // Calculate SVG arc
                   const startAngle = (cumulativePercent / 100) * 360;
                   const endAngle = ((cumulativePercent + percentage) / 100) * 360;
+                  const midAngle = (startAngle + endAngle) / 2;
                   cumulativePercent += percentage;
                   
                   const startRad = (startAngle - 90) * Math.PI / 180;
@@ -5166,49 +5167,84 @@ const renderGroupDashboard = () => {
                     `Z`
                   ].join(' ');
                   
+                  // Calculate label position (for large slices)
+                  const midRad = (midAngle - 90) * Math.PI / 180;
+                  const labelRadius = 50; // Closer to center for label
+                  const labelX = 100 + labelRadius * Math.cos(midRad);
+                  const labelY = 100 + labelRadius * Math.sin(midRad);
+                  
+                  const showLabel = percentage >= 15; // Only show labels for slices >= 15%
+                  
                   return (
-                    <path
-                      key={sport}
-                      d={pathData}
-                      fill={`hsl(${hue}, 70%, 55%)`}
-                      stroke="#1f2937"
-                      strokeWidth="1"
-                      className="hover:opacity-80 transition-opacity cursor-pointer"
-                    />
+                    <g key={sport}>
+                      <path
+                        d={pathData}
+                        fill={`hsl(${hue}, 70%, 55%)`}
+                        stroke="#1f2937"
+                        strokeWidth="1"
+                        className="hover:opacity-80 transition-opacity cursor-pointer"
+                        data-sport={sport}
+                        data-total={data.total}
+                        data-percentage={percentage.toFixed(1)}
+                        onMouseEnter={(e) => {
+                          const tooltip = document.getElementById('sport-tooltip');
+                          tooltip.style.display = 'block';
+                          tooltip.innerHTML = `
+                            <div class="bg-gray-900 text-white p-3 rounded-lg border border-gray-700 shadow-xl">
+                              <div class="font-bold text-yellow-400">${sport}</div>
+                              <div class="text-sm">${data.total} picks (${percentage.toFixed(1)}%)</div>
+                              <div class="text-xs text-gray-400 mt-1">${data.won}W-${data.lost}L</div>
+                            </div>
+                          `;
+                        }}
+                        onMouseMove={(e) => {
+                          const tooltip = document.getElementById('sport-tooltip');
+                          tooltip.style.left = e.pageX + 10 + 'px';
+                          tooltip.style.top = e.pageY + 10 + 'px';
+                        }}
+                        onMouseLeave={() => {
+                          const tooltip = document.getElementById('sport-tooltip');
+                          tooltip.style.display = 'none';
+                        }}
+                      />
+                      {showLabel && (
+                        <g transform={`rotate(${midAngle} ${labelX} ${labelY})`}>
+                          <text
+                            x={labelX}
+                            y={labelY}
+                            fill="white"
+                            fontSize="10"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            className="pointer-events-none"
+                          >
+                            {sport}
+                          </text>
+                          <text
+                            x={labelX}
+                            y={labelY + 12}
+                            fill="white"
+                            fontSize="8"
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            className="pointer-events-none"
+                          >
+                            {percentage.toFixed(1)}%
+                          </text>
+                        </g>
+                      )}
+                    </g>
                   );
                 });
               })()}
             </svg>
             {/* Center circle for donut effect */}
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="bg-gray-800 rounded-full" style={{ width: '120px', height: '120px' }} />
             </div>
-          </div>
-          
-          {/* Legend */}
-          <div className="flex-1 space-y-2">
-            {Object.entries(bySport)
-              .sort(([, a], [, b]) => b.total - a.total)
-              .map(([sport, data], idx) => {
-                const totalPicks = Object.values(bySport).reduce((sum, s) => sum + s.total, 0);
-                const percentage = totalPicks > 0 ? ((data.total / totalPicks) * 100).toFixed(1) : '0';
-                const hue = idx * 360 / Object.keys(bySport).length;
-                
-                return (
-                  <div key={sport} className="flex items-center gap-3">
-                    <div 
-                      className="w-4 h-4 rounded"
-                      style={{ backgroundColor: `hsl(${hue}, 70%, 55%)` }}
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-white">{sport}</div>
-                      <div className="text-xs text-gray-400">
-                        {data.total} picks ({percentage}%)
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            {/* Tooltip */}
+            <div id="sport-tooltip" style={{ display: 'none', position: 'fixed', zIndex: 1000, pointerEvents: 'none' }}></div>
           </div>
         </div>
       </div>
@@ -5327,10 +5363,15 @@ const renderGroupDashboard = () => {
               monthlyData[monthKey] = {
                 month: monthKey,
                 total: 0,
-                byPlayer: {}
+                byPlayer: {},
+                stats: {
+                  total: { wins: 0, losses: 0, profit: 0 },
+                  byPlayer: {}
+                }
               };
               players.forEach(p => {
                 monthlyData[monthKey].byPlayer[p] = 0;
+                monthlyData[monthKey].stats.byPlayer[p] = { wins: 0, losses: 0, profit: 0 };
               });
             }
             
@@ -5342,19 +5383,29 @@ const renderGroupDashboard = () => {
             if (won) {
               const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
               monthlyData[monthKey].total += netProfit;
+              monthlyData[monthKey].stats.total.wins++;
+              monthlyData[monthKey].stats.total.profit += netProfit;
               
               winners.forEach(winner => {
                 if (winner.player && monthlyData[monthKey].byPlayer[winner.player] !== undefined) {
-                  monthlyData[monthKey].byPlayer[winner.player] += netProfit / winners.length;
+                  const playerProfit = netProfit / winners.length;
+                  monthlyData[monthKey].byPlayer[winner.player] += playerProfit;
+                  monthlyData[monthKey].stats.byPlayer[winner.player].wins++;
+                  monthlyData[monthKey].stats.byPlayer[winner.player].profit += playerProfit;
                 }
               });
             } else if (losers.length > 0) {
               const loss = parlay.betAmount * participants.length;
               monthlyData[monthKey].total -= loss;
+              monthlyData[monthKey].stats.total.losses++;
+              monthlyData[monthKey].stats.total.profit -= loss;
               
               losers.forEach(loser => {
                 if (loser.player && monthlyData[monthKey].byPlayer[loser.player] !== undefined) {
-                  monthlyData[monthKey].byPlayer[loser.player] -= loss / losers.length;
+                  const playerLoss = loss / losers.length;
+                  monthlyData[monthKey].byPlayer[loser.player] -= playerLoss;
+                  monthlyData[monthKey].stats.byPlayer[loser.player].losses++;
+                  monthlyData[monthKey].stats.byPlayer[loser.player].profit -= playerLoss;
                 }
               });
             }
@@ -5377,6 +5428,7 @@ const renderGroupDashboard = () => {
               month,
               displayMonth: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
               total: cumulativeTotal,
+              monthStats: monthlyData[month].stats,
               ...cumulativeByPlayer
             });
           });
@@ -5393,6 +5445,7 @@ const renderGroupDashboard = () => {
           
           const graphHeight = 300;
           const graphWidth = Math.max(800, cumulativeData.length * 60);
+          const leftMargin = 60;
           
           const getY = (value) => {
             const normalized = (value - (minProfit - padding)) / (range + 2 * padding);
@@ -5400,7 +5453,7 @@ const renderGroupDashboard = () => {
           };
           
           const getX = (index) => {
-            return (index / (cumulativeData.length - 1)) * graphWidth;
+            return leftMargin + (index / (cumulativeData.length - 1)) * (graphWidth - leftMargin);
           };
           
           // Generate line paths
@@ -5410,7 +5463,7 @@ const renderGroupDashboard = () => {
           
           const playerColors = {
             'Management': 'hsl(0, 70%, 55%)',
-            'CD': 'hsl(60, 70%, 55%)',
+            'CD': 'hsl(330, 70%, 60%)', // Pink for CD
             '914': 'hsl(120, 70%, 55%)',
             'Junior': 'hsl(180, 70%, 55%)',
             'Jacoby': 'hsl(240, 70%, 55%)'
@@ -5418,15 +5471,15 @@ const renderGroupDashboard = () => {
           
           return (
             <div className="overflow-x-auto">
-              <svg viewBox={`0 0 ${graphWidth} ${graphHeight + 60}`} className="w-full" style={{ minWidth: '600px' }}>
-                {/* Grid lines */}
+              <svg viewBox={`0 0 ${graphWidth + 20} ${graphHeight + 60}`} className="w-full" style={{ minWidth: '600px' }}>
+                {/* Y-axis scale */}
                 {[0, 0.25, 0.5, 0.75, 1].map(ratio => {
                   const y = graphHeight * ratio;
                   const value = maxProfit + padding - (ratio * (range + 2 * padding));
                   return (
                     <g key={ratio}>
                       <line
-                        x1="0"
+                        x1={leftMargin}
                         y1={y}
                         x2={graphWidth}
                         y2={y}
@@ -5435,7 +5488,7 @@ const renderGroupDashboard = () => {
                         strokeDasharray="4"
                       />
                       <text
-                        x="-10"
+                        x={leftMargin - 10}
                         y={y + 5}
                         fill="#9ca3af"
                         fontSize="12"
@@ -5447,9 +5500,22 @@ const renderGroupDashboard = () => {
                   );
                 })}
                 
+                {/* Y-axis label */}
+                <text
+                  x="15"
+                  y={graphHeight / 2}
+                  fill="#fbbf24"
+                  fontSize="14"
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  transform={`rotate(-90 15 ${graphHeight / 2})`}
+                >
+                  Net Profit ($)
+                </text>
+                
                 {/* Zero line */}
                 <line
-                  x1="0"
+                  x1={leftMargin}
                   y1={getY(0)}
                   x2={graphWidth}
                   y2={getY(0)}
@@ -5484,16 +5550,61 @@ const renderGroupDashboard = () => {
                   strokeWidth="4"
                 />
                 
-                {/* Data points */}
-                {cumulativeData.map((d, i) => (
-                  <circle
-                    key={i}
-                    cx={getX(i)}
-                    cy={getY(d.total)}
-                    r="4"
-                    fill="#fbbf24"
-                  />
-                ))}
+                {/* Data points with hover */}
+                {cumulativeData.map((d, i) => {
+                  const stats = d.monthStats;
+                  const totalBrolays = stats.total.wins + stats.total.losses;
+                  const totalWinPct = totalBrolays > 0 ? ((stats.total.wins / totalBrolays) * 100).toFixed(1) : '0.0';
+                  
+                  return (
+                    <circle
+                      key={i}
+                      cx={getX(i)}
+                      cy={getY(d.total)}
+                      r="6"
+                      fill="#fbbf24"
+                      className="cursor-pointer hover:r-8 transition-all"
+                      onMouseEnter={(e) => {
+                        const tooltip = document.getElementById('month-tooltip');
+                        tooltip.style.display = 'block';
+                        
+                        let playerStatsHTML = players.map(player => {
+                          const pStats = stats.byPlayer[player];
+                          const pTotal = pStats.wins + pStats.losses;
+                          const pWinPct = pTotal > 0 ? ((pStats.wins / pTotal) * 100).toFixed(1) : '0.0';
+                          return `
+                            <div class="flex justify-between gap-4 text-xs border-t border-gray-700 pt-1 mt-1">
+                              <span style="color: ${playerColors[player]}">${player}:</span>
+                              <span>${pStats.wins}-${pStats.losses} (${pWinPct}%) • $${pStats.profit.toFixed(0)}</span>
+                            </div>
+                          `;
+                        }).join('');
+                        
+                        tooltip.innerHTML = `
+                          <div class="bg-gray-900 text-white p-3 rounded-lg border border-gray-700 shadow-xl">
+                            <div class="font-bold text-yellow-400 mb-2">${d.displayMonth}</div>
+                            <div class="text-sm mb-1">
+                              <span class="font-semibold">Group:</span> ${stats.total.wins}-${stats.total.losses} (${totalWinPct}%)
+                            </div>
+                            <div class="text-sm font-bold mb-2">
+                              Net: $${stats.total.profit.toFixed(0)}
+                            </div>
+                            ${playerStatsHTML}
+                          </div>
+                        `;
+                      }}
+                      onMouseMove={(e) => {
+                        const tooltip = document.getElementById('month-tooltip');
+                        tooltip.style.left = e.pageX + 10 + 'px';
+                        tooltip.style.top = e.pageY + 10 + 'px';
+                      }}
+                      onMouseLeave={() => {
+                        const tooltip = document.getElementById('month-tooltip');
+                        tooltip.style.display = 'none';
+                      }}
+                    />
+                  );
+                })}
                 
                 {/* X-axis labels */}
                 {cumulativeData.map((d, i) => {
@@ -5513,6 +5624,9 @@ const renderGroupDashboard = () => {
                 })}
               </svg>
               
+              {/* Tooltip */}
+              <div id="month-tooltip" style={{ display: 'none', position: 'fixed', zIndex: 1000, pointerEvents: 'none' }}></div>
+              
               {/* Legend */}
               <div className="flex flex-wrap gap-4 mt-4 justify-center">
                 <div className="flex items-center gap-2">
@@ -5530,9 +5644,6 @@ const renderGroupDashboard = () => {
           );
         })()}
       </div>
-    </div>
-  );
-};
 const renderAllBrolays = () => {
   const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
     const dateCompare = new Date(b.date) - new Date(a.date);
