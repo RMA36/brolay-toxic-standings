@@ -3600,7 +3600,7 @@ const renderEntry = () => {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4">
   <div>
-    <label className="block text-sm font-medium mb-1">Bet Amount (per person)</label>
+    <label className="block text-sm font-medium mb-1 text-white">Bet Amount (per person)</label>
     <input
       type="number"
       value={newParlay.betAmount}
@@ -3610,7 +3610,7 @@ const renderEntry = () => {
     />
   </div>
   <div>
-    <label className="block text-sm font-medium mb-1">Total Payout</label>
+  <label className="block text-sm font-medium mb-1 text-white">Total Payout</label>
     <input
       type="number"
       value={newParlay.totalPayout || ''}
@@ -3624,7 +3624,7 @@ const renderEntry = () => {
     />
   </div>
   <div>
-    <label className="block text-sm font-medium mb-1">Net Profit</label>
+  <label className="block text-sm font-medium mb-1 text-white">Net Profit</label>
     <input
       type="number"
       value={Math.max(0, (newParlay.totalPayout || 0) - (newParlay.betAmount * Object.keys(newParlay.participants).length))}
@@ -3642,7 +3642,7 @@ const renderEntry = () => {
 </div>
 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
   <div className={isMobile ? 'max-w-full overflow-hidden' : ''}>
-    <label className="block text-sm font-medium mb-1">Date</label>
+    <label className="block text-sm font-medium mb-1 text-white">Date</label>
     <input
       type="date"
       value={newParlay.date}
@@ -3655,7 +3655,7 @@ const renderEntry = () => {
     />
   </div>
   <div>
-    <label className="block text-sm font-medium mb-1">Placed By</label>
+  <label className="block text-sm font-medium mb-1 text-white">Placed By</label>
     <select
       value={newParlay.placedBy}
       onChange={(e) => setNewParlay({...newParlay, placedBy: e.target.value})}
@@ -3692,7 +3692,7 @@ const renderEntry = () => {
           })()}
           
           <div className="flex justify-between items-center">
-            <h3 className="text-base md:text-lg font-semibold">Picks</h3>
+            <h3 className="text-base md:text-lg font-semibold text-yellow-400">Picks</h3>
           </div>
           {Object.entries(newParlay.participants).map(([id, participant]) => (
             <div key={id} className="border border-gray-700 rounded-lg p-4 md:p-6 bg-gray-800/50">
@@ -6760,7 +6760,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
                   <span className="text-2xl font-bold text-gray-400">#{idx + 1}</span>
                   <span className="font-semibold text-white">{player}</span>
                 </div>
-                <span className="text-xl font-bold text-blue-400">{count}</span>
+                <span className="text-xl font-bold text-yellow-400">{count}</span>
               </div>
             ))}
         </div>
@@ -6901,7 +6901,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
 
       {/* Most Picked Teams */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <h3 className="text-lg md:text-xl font-bold mb-4">🎯 Top 5 Most Picked Teams/Players</h3>
+        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">🎯 Top 5 Most Picked Teams/Players</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {topTeams.map((item, idx) => (
             <div key={idx} className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-700 rounded">
@@ -6909,7 +6909,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
                 <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
                 <span className="font-semibold text-white">{item.team}</span>
               </div>
-              <span className="text-lg font-bold text-blue-400">{item.count} picks</span>
+              <span className="text-lg font-bold text-yellow-400">{item.count} picks</span>
             </div>
           ))}
         </div>
