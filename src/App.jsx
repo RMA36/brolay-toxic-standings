@@ -2682,7 +2682,7 @@ return (
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                   <div>
-                    <label className="block text-xs font-medium mb-1">Big Guy</label>
+                    <label className="block text-xs font-medium mb-1 text-white">Big Guy</label>
                     <select
                       value={participant.player}
                       onChange={(e) => {
@@ -2698,7 +2698,7 @@ return (
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">Sport</label>
+                    <label className="block text-xs font-medium mb-1 text-white">Sport</label>
                     <select
                       value={participant.sport}
                       onChange={(e) => {
@@ -2713,7 +2713,7 @@ return (
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">Bet Type</label>
+                    <label className="block text-xs font-medium mb-1 text-white">Bet Type</label>
                     <select
                       value={participant.betType}
                       onChange={(e) => {
@@ -2730,7 +2730,7 @@ return (
                   
                   {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
                     <div>
-                      <label className="block text-xs font-medium mb-1">Team/Player</label>
+                      <label className="block text-xs font-medium mb-1 text-white">Team/Player</label>
                       <input
                         type="text"
                         value={participant.team || ''}
@@ -2749,7 +2749,7 @@ return (
                 {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                     <div>
-                      <label className="block text-xs font-medium mb-1">Away Team</label>
+                      <label className="block text-xs font-medium mb-1 text-white">Away Team</label>
                       <input
                         type="text"
                         value={participant.awayTeam || ''}
@@ -2763,7 +2763,7 @@ return (
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium mb-1">Home Team</label>
+                      <label className="block text-xs font-medium mb-1 text-white">Home Team</label>
                       <input
                         type="text"
                         value={participant.homeTeam || ''}
@@ -2783,7 +2783,7 @@ return (
                   {renderBetSpecificFields(participant, id, true)}
 
                   <div>
-                    <label className="block text-xs font-medium mb-1">Odds (Optional)</label>
+                    <label className="block text-xs font-medium mb-1 text-white">Odds (Optional)</label>
                     <input
                       type="text"
                       value={participant.odds || ''}
@@ -2797,11 +2797,11 @@ return (
                       placeholder="e.g., -120 (Optional)"
                     />
                     {participant.oddsSource && (
-                      <div className="text-xs text-gray-500 mt-1">Source: {participant.oddsSource}</div>
+                      <div className="text-xs text-gray-500 mt-1 text-white">Source: {participant.oddsSource}</div>
                     )}
                   </div>
                   <div>
-                    <label className="block text-xs font-medium mb-1">Result</label>
+                    <label className="block text-xs font-medium mb-1 text-white">Result</label>
                     <select
                       value={participant.result}
                       onChange={(e) => {
