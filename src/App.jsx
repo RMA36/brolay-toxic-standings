@@ -5638,12 +5638,15 @@ const renderGroupDashboard = () => {
                     <div className="w-8 h-1" style={{ backgroundColor: playerColors[player] }}></div>
                     <span className="text-sm text-gray-300">{player}</span>
                   </div>
-                ))}
-              </div>
+                ))}</div>
             </div>
           );
         })()}
       </div>
+    </div>
+  );
+};
+
 const renderAllBrolays = () => {
   const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
     const dateCompare = new Date(b.date) - new Date(a.date);
