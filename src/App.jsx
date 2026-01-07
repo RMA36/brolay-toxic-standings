@@ -5035,15 +5035,41 @@ const renderGroupDashboard = () => {
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-gray-300">Win Rate:</span>
+              <span className="text-gray-300">Net Profit:</span>
               <span className={`font-bold text-lg ${
-                last10Brolays.length > 0 && ((last10Won / last10Brolays.length) * 100) >= 50 
-                  ? 'text-green-400' 
-                  : 'text-red-400'
+                (() => {
+                  const last10NetProfit = last10Brolays.reduce((sum, parlay) => {
+                    const participants = Object.values(parlay.participants);
+                    const losers = participants.filter(p => p.result === 'loss');
+                    const winners = participants.filter(p => p.result === 'win');
+                    const won = losers.length === 0 && winners.length > 0;
+                    
+                    if (won) {
+                      return sum + ((parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
+                    } else if (losers.length > 0) {
+                      return sum - (parlay.betAmount * participants.length);
+                    }
+                    return sum;
+                  }, 0);
+                  return last10NetProfit >= 0 ? 'text-green-400' : 'text-red-400';
+                })()
               }`}>
-                {last10Brolays.length > 0 
-                  ? ((last10Won / last10Brolays.length) * 100).toFixed(1) 
-                  : '0.0'}%
+                ${(() => {
+                  const last10NetProfit = last10Brolays.reduce((sum, parlay) => {
+                    const participants = Object.values(parlay.participants);
+                    const losers = participants.filter(p => p.result === 'loss');
+                    const winners = participants.filter(p => p.result === 'win');
+                    const won = losers.length === 0 && winners.length > 0;
+                    
+                    if (won) {
+                      return sum + ((parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
+                    } else if (losers.length > 0) {
+                      return sum - (parlay.betAmount * participants.length);
+                    }
+                    return sum;
+                  }, 0);
+                  return last10NetProfit.toFixed(2);
+                })()}
               </span>
             </div>
             <div className="flex gap-1 mt-2">
@@ -5105,42 +5131,88 @@ const renderGroupDashboard = () => {
       {/* Sport Distribution Pie Chart */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">📊 Sport Distribution</h3>
-        <div className="space-y-3">
-          {Object.entries(bySport)
-            .sort(([, a], [, b]) => b.total - a.total)
-            .map(([sport, data], idx) => {
-              const totalPicks = Object.values(bySport).reduce((sum, s) => sum + s.total, 0);
-              const percentage = totalPicks > 0 ? ((data.total / totalPicks) * 100).toFixed(1) : '0';
-              const hue = idx * 40; // Spread colors across spectrum
-              
-              return (
-                <div key={sport} className="flex items-center gap-3">
-                  <div className="w-28 text-sm text-gray-300 font-medium">
-                    {sport}
-                  </div>
-                  <div className="flex-1 relative h-8 bg-gray-900/50 rounded-lg overflow-hidden border border-gray-700">
-                    <div 
-                      className="absolute left-0 top-0 h-full transition-all duration-500"
-                      style={{
-                        width: `${percentage}%`,
-                        background: `linear-gradient(90deg, hsl(${hue}, 70%, 50%), hsl(${hue}, 70%, 65%))`
-                      }}
+        <div className="flex flex-col md:flex-row items-center gap-6">
+          {/* Pie Chart */}
+          <div className="relative" style={{ width: '300px', height: '300px' }}>
+            <svg viewBox="0 0 200 200" className="transform -rotate-90">
+              {(() => {
+                const sortedSports = Object.entries(bySport).sort(([, a], [, b]) => b.total - a.total);
+                const totalPicks = sortedSports.reduce((sum, [, data]) => sum + data.total, 0);
+                let cumulativePercent = 0;
+                
+                return sortedSports.map(([sport, data], idx) => {
+                  const percentage = (data.total / totalPicks) * 100;
+                  const hue = idx * 360 / sortedSports.length;
+                  
+                  // Calculate SVG arc
+                  const startAngle = (cumulativePercent / 100) * 360;
+                  const endAngle = ((cumulativePercent + percentage) / 100) * 360;
+                  cumulativePercent += percentage;
+                  
+                  const startRad = (startAngle - 90) * Math.PI / 180;
+                  const endRad = (endAngle - 90) * Math.PI / 180;
+                  
+                  const x1 = 100 + 80 * Math.cos(startRad);
+                  const y1 = 100 + 80 * Math.sin(startRad);
+                  const x2 = 100 + 80 * Math.cos(endRad);
+                  const y2 = 100 + 80 * Math.sin(endRad);
+                  
+                  const largeArcFlag = percentage > 50 ? 1 : 0;
+                  
+                  const pathData = [
+                    `M 100 100`,
+                    `L ${x1} ${y1}`,
+                    `A 80 80 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                    `Z`
+                  ].join(' ');
+                  
+                  return (
+                    <path
+                      key={sport}
+                      d={pathData}
+                      fill={`hsl(${hue}, 70%, 55%)`}
+                      stroke="#1f2937"
+                      strokeWidth="1"
+                      className="hover:opacity-80 transition-opacity cursor-pointer"
                     />
-                  </div>
-                  <div className="w-16 text-right">
-                    <div className="text-base font-bold text-white">
-                      {percentage}%
+                  );
+                });
+              })()}
+            </svg>
+            {/* Center circle for donut effect */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="bg-gray-800 rounded-full" style={{ width: '120px', height: '120px' }} />
+            </div>
+          </div>
+          
+          {/* Legend */}
+          <div className="flex-1 space-y-2">
+            {Object.entries(bySport)
+              .sort(([, a], [, b]) => b.total - a.total)
+              .map(([sport, data], idx) => {
+                const totalPicks = Object.values(bySport).reduce((sum, s) => sum + s.total, 0);
+                const percentage = totalPicks > 0 ? ((data.total / totalPicks) * 100).toFixed(1) : '0';
+                const hue = idx * 360 / Object.keys(bySport).length;
+                
+                return (
+                  <div key={sport} className="flex items-center gap-3">
+                    <div 
+                      className="w-4 h-4 rounded"
+                      style={{ backgroundColor: `hsl(${hue}, 70%, 55%)` }}
+                    />
+                    <div className="flex-1">
+                      <div className="text-sm font-medium text-white">{sport}</div>
+                      <div className="text-xs text-gray-400">
+                        {data.total} picks ({percentage}%)
+                      </div>
                     </div>
                   </div>
-                  <div className="w-16 text-right text-sm text-gray-400">
-                    ({data.total})
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+          </div>
         </div>
       </div>
-
+      
       {/* Rolling 12-Month Stats */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">📅 Rolling 12-Month Performance</h3>
@@ -5203,9 +5275,34 @@ const renderGroupDashboard = () => {
                   </div>
                 </div>
                 <div className="bg-green-900/30 rounded-lg p-4 border border-green-500/30">
-                  <div className="text-sm text-gray-400 mb-1">Total Profit</div>
-                  <div className="text-2xl font-bold text-green-400">
-                    ${recent12Payout.toFixed(0)}
+                  <div className="text-sm text-gray-400 mb-1">Net Profit</div>
+                  <div className={`text-2xl font-bold ${
+                    (() => {
+                      const recent12Lost = recentBrolays
+                        .filter(p => {
+                          const participants = Object.values(p.participants);
+                          return participants.some(part => part.result === 'loss');
+                        })
+                        .reduce((sum, p) => {
+                          const participants = Object.values(p.participants);
+                          return sum + (p.betAmount * participants.length);
+                        }, 0);
+                      const netProfit = recent12Payout - recent12Lost;
+                      return netProfit >= 0 ? 'text-green-400' : 'text-red-400';
+                    })()
+                  }`}>
+                    ${(() => {
+                      const recent12Lost = recentBrolays
+                        .filter(p => {
+                          const participants = Object.values(p.participants);
+                          return participants.some(part => part.result === 'loss');
+                        })
+                        .reduce((sum, p) => {
+                          const participants = Object.values(p.participants);
+                          return sum + (p.betAmount * participants.length);
+                        }, 0);
+                      return (recent12Payout - recent12Lost).toFixed(0);
+                    })()}
                   </div>
                 </div>
               </>
@@ -5213,10 +5310,229 @@ const renderGroupDashboard = () => {
           })()}
         </div>
       </div>
+
+      {/* Net Profit Over Time Line Graph */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">📈 Net Profit Over Time</h3>
+        {(() => {
+          // Group brolays by month
+          const monthlyData = {};
+          const sortedParlays = [...filteredParlays].sort((a, b) => new Date(a.date) - new Date(b.date));
+          
+          sortedParlays.forEach(parlay => {
+            const date = new Date(parlay.date + 'T00:00:00');
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            
+            if (!monthlyData[monthKey]) {
+              monthlyData[monthKey] = {
+                month: monthKey,
+                total: 0,
+                byPlayer: {}
+              };
+              players.forEach(p => {
+                monthlyData[monthKey].byPlayer[p] = 0;
+              });
+            }
+            
+            const participants = Object.values(parlay.participants);
+            const losers = participants.filter(p => p.result === 'loss');
+            const winners = participants.filter(p => p.result === 'win');
+            const won = losers.length === 0 && winners.length > 0;
+            
+            if (won) {
+              const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+              monthlyData[monthKey].total += netProfit;
+              
+              winners.forEach(winner => {
+                if (winner.player && monthlyData[monthKey].byPlayer[winner.player] !== undefined) {
+                  monthlyData[monthKey].byPlayer[winner.player] += netProfit / winners.length;
+                }
+              });
+            } else if (losers.length > 0) {
+              const loss = parlay.betAmount * participants.length;
+              monthlyData[monthKey].total -= loss;
+              
+              losers.forEach(loser => {
+                if (loser.player && monthlyData[monthKey].byPlayer[loser.player] !== undefined) {
+                  monthlyData[monthKey].byPlayer[loser.player] -= loss / losers.length;
+                }
+              });
+            }
+          });
+          
+          // Convert to cumulative data
+          const months = Object.keys(monthlyData).sort();
+          const cumulativeData = [];
+          let cumulativeTotal = 0;
+          const cumulativeByPlayer = {};
+          players.forEach(p => { cumulativeByPlayer[p] = 0; });
+          
+          months.forEach(month => {
+            cumulativeTotal += monthlyData[month].total;
+            players.forEach(p => {
+              cumulativeByPlayer[p] += monthlyData[month].byPlayer[p];
+            });
+            
+            cumulativeData.push({
+              month,
+              displayMonth: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+              total: cumulativeTotal,
+              ...cumulativeByPlayer
+            });
+          });
+          
+          if (cumulativeData.length === 0) {
+            return <p className="text-gray-400 text-center py-8">No data available yet</p>;
+          }
+          
+          // Calculate graph dimensions
+          const maxProfit = Math.max(...cumulativeData.map(d => d.total), ...players.flatMap(p => cumulativeData.map(d => d[p])));
+          const minProfit = Math.min(...cumulativeData.map(d => d.total), ...players.flatMap(p => cumulativeData.map(d => d[p])), 0);
+          const range = maxProfit - minProfit;
+          const padding = range * 0.1;
+          
+          const graphHeight = 300;
+          const graphWidth = Math.max(800, cumulativeData.length * 60);
+          
+          const getY = (value) => {
+            const normalized = (value - (minProfit - padding)) / (range + 2 * padding);
+            return graphHeight - (normalized * graphHeight);
+          };
+          
+          const getX = (index) => {
+            return (index / (cumulativeData.length - 1)) * graphWidth;
+          };
+          
+          // Generate line paths
+          const totalPath = cumulativeData.map((d, i) => 
+            `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d.total)}`
+          ).join(' ');
+          
+          const playerColors = {
+            'Management': 'hsl(0, 70%, 55%)',
+            'CD': 'hsl(60, 70%, 55%)',
+            '914': 'hsl(120, 70%, 55%)',
+            'Junior': 'hsl(180, 70%, 55%)',
+            'Jacoby': 'hsl(240, 70%, 55%)'
+          };
+          
+          return (
+            <div className="overflow-x-auto">
+              <svg viewBox={`0 0 ${graphWidth} ${graphHeight + 60}`} className="w-full" style={{ minWidth: '600px' }}>
+                {/* Grid lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map(ratio => {
+                  const y = graphHeight * ratio;
+                  const value = maxProfit + padding - (ratio * (range + 2 * padding));
+                  return (
+                    <g key={ratio}>
+                      <line
+                        x1="0"
+                        y1={y}
+                        x2={graphWidth}
+                        y2={y}
+                        stroke="#374151"
+                        strokeWidth="1"
+                        strokeDasharray="4"
+                      />
+                      <text
+                        x="-10"
+                        y={y + 5}
+                        fill="#9ca3af"
+                        fontSize="12"
+                        textAnchor="end"
+                      >
+                        ${value.toFixed(0)}
+                      </text>
+                    </g>
+                  );
+                })}
+                
+                {/* Zero line */}
+                <line
+                  x1="0"
+                  y1={getY(0)}
+                  x2={graphWidth}
+                  y2={getY(0)}
+                  stroke="#ef4444"
+                  strokeWidth="2"
+                  strokeDasharray="8"
+                />
+                
+                {/* Player lines */}
+                {players.map(player => {
+                  const path = cumulativeData.map((d, i) => 
+                    `${i === 0 ? 'M' : 'L'} ${getX(i)} ${getY(d[player])}`
+                  ).join(' ');
+                  
+                  return (
+                    <path
+                      key={player}
+                      d={path}
+                      fill="none"
+                      stroke={playerColors[player]}
+                      strokeWidth="2"
+                      opacity="0.6"
+                    />
+                  );
+                })}
+                
+                {/* Total line (bold) */}
+                <path
+                  d={totalPath}
+                  fill="none"
+                  stroke="#fbbf24"
+                  strokeWidth="4"
+                />
+                
+                {/* Data points */}
+                {cumulativeData.map((d, i) => (
+                  <circle
+                    key={i}
+                    cx={getX(i)}
+                    cy={getY(d.total)}
+                    r="4"
+                    fill="#fbbf24"
+                  />
+                ))}
+                
+                {/* X-axis labels */}
+                {cumulativeData.map((d, i) => {
+                  if (cumulativeData.length > 12 && i % 2 !== 0) return null;
+                  return (
+                    <text
+                      key={i}
+                      x={getX(i)}
+                      y={graphHeight + 20}
+                      fill="#9ca3af"
+                      fontSize="12"
+                      textAnchor="middle"
+                    >
+                      {d.displayMonth}
+                    </text>
+                  );
+                })}
+              </svg>
+              
+              {/* Legend */}
+              <div className="flex flex-wrap gap-4 mt-4 justify-center">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-1 bg-yellow-400"></div>
+                  <span className="text-sm text-gray-300 font-bold">Total Group</span>
+                </div>
+                {players.map(player => (
+                  <div key={player} className="flex items-center gap-2">
+                    <div className="w-8 h-1" style={{ backgroundColor: playerColors[player] }}></div>
+                    <span className="text-sm text-gray-300">{player}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+      </div>
     </div>
   );
 };
-
 const renderAllBrolays = () => {
   const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
     const dateCompare = new Date(b.date) - new Date(a.date);
