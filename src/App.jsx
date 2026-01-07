@@ -3318,11 +3318,7 @@ const analyzeSearchQuery = (query) => {
         }
       });
     });
-
-    // Apply relevance filtering for specific queries
-    const filteredPicks = isSport || isPlayer || isBetType ?
-      filterByRelevance(matchingPicks, searchContext, 5) : matchingPicks;
-
+  
     // Apply relevance filtering for specific queries - use lower threshold for team-only searches
     const shouldFilter = isSport || isPlayer || isBetType;
     const filteredPicks = shouldFilter ?
@@ -3336,7 +3332,7 @@ const analyzeSearchQuery = (query) => {
       shouldFilter,
       samplePicks: matchingPicks.slice(0, 3).map(p => ({ team: p.team, opponent: p.opponent }))
     });
-
+  
     const stats = {
       team: searchContext.matchedTeam,
       total: filteredPicks.length,
@@ -3347,9 +3343,9 @@ const analyzeSearchQuery = (query) => {
       byPlayer: {},
       byBetType: {}
     };
-
+  
     stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
-
+  
     filteredPicks.forEach(pick => {
       if (!stats.byPlayer[pick.player]) {
         stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
@@ -3357,30 +3353,31 @@ const analyzeSearchQuery = (query) => {
       if (!stats.byBetType[pick.betType]) {
         stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
-
+  
       if (pick.result === 'win') {
         stats.byPlayer[pick.player].wins++;
+        stats.byBetType[pick.betType].wins++;
       } else if (pick.result === 'loss') {
         stats.byPlayer[pick.player].losses++;
+        stats.byBetType[pick.betType].losses++;
       } else if (pick.result === 'push') {
         stats.byPlayer[pick.player].pushes++;
+        stats.byBetType[pick.betType].pushes++;
       }
       stats.byPlayer[pick.player].total++;
-      stats.byBetType[pick.betType][pick.result]++;
       stats.byBetType[pick.betType].total++;
     });
-
+  
     stats.recentPicks = filteredPicks
       .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
       .slice(0, 10);
-
+  
     results.data = stats;
     results.searchContext = searchContext;
     
     if (filteredPicks.length === 0) return null;
     return results;
   }
-
   // Sport search with strict matching
   if (isSport) {
     results.matchedCategory = 'sport';
