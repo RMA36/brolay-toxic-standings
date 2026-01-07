@@ -3595,7 +3595,7 @@ const renderEntry = () => {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <h2 className="text-xl md:text-2xl font-bold mb-4 text-yellow-400">✨ New Brolay Entry</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-4">
@@ -3695,7 +3695,7 @@ const renderEntry = () => {
             <h3 className="text-base md:text-lg font-semibold">Picks</h3>
           </div>
           {Object.entries(newParlay.participants).map(([id, participant]) => (
-            <div key={id} className="border rounded p-4 md:p-6 bg-gray-50">
+            <div key={id} className="border border-gray-700 rounded-lg p-4 md:p-6 bg-gray-800/50">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                 <div>
                   <label className="block text-xs font-medium mb-1">Big Guy</label>
@@ -4012,6 +4012,24 @@ const renderIndividualDashboard = () => {
     
 return (
     <div className="space-y-4 md:space-y-6">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '1rem' }}>
+        <h2 className="text-xl md:text-2xl font-bold text-yellow-400" style={{ margin: 0 }}>👤 Individual Statistics</h2>
+        <button
+          onClick={() => {
+            setComparisonMode(!comparisonMode);
+            setSelectedForComparison(new Set());
+          }}
+          className={`px-4 py-2 rounded-lg font-semibold transition text-base ${
+            comparisonMode
+              ? 'bg-yellow-500 text-black'
+              : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+          }`}
+          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        >
+          {comparisonMode ? '✓ Comparing' : '🔄 Compare Players'}
+        </button>
+      </div>
+      
       {/* Rotating Insights Ticker */}
       <div className="bg-gradient-to-r from-blue-900/30 via-purple-900/30 to-blue-900/30 rounded-xl p-4 border border-blue-500/30 overflow-hidden">
         <div className="flex items-center gap-3">
@@ -4025,8 +4043,6 @@ return (
         </div>
       </div>
 
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl md:text-2xl font-bold text-yellow-400">👤 Individual Statistics</h2>
         {pendingPicksCount > 0 && (
           <button
             onClick={autoUpdatePendingPicks}
@@ -4191,24 +4207,6 @@ return (
         )}
       </div>
       
-      {/* Comparison Mode Toggle */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => {
-            setComparisonMode(!comparisonMode);
-            setSelectedForComparison(new Set());
-          }}
-          className={`px-4 py-2 rounded-lg font-semibold transition text-base ${
-            comparisonMode
-              ? 'bg-yellow-500 text-black'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
-          }`}
-          style={{ minHeight: isMobile ? '44px' : 'auto' }}
-        >
-          {comparisonMode ? '✓ Comparing' : '🔄 Compare Players'}
-        </button>
-      </div>
-
       {/* Leaderboard */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">🏆 Leaderboard</h3>
@@ -6452,13 +6450,13 @@ const renderGrid = () => {
                     const playerPick = Object.values(participants).find(p => p.player === player);
                     
                     if (!playerPick) {
-                      return <td key={player} className="py-3 px-2 text-center bg-gray-100"></td>;
+                      return <td key={player} className="py-3 px-2 text-center" style={{ background: 'rgba(15, 23, 42, 0.3)' }}></td>;
                     }
                     
-                    let bgColor = 'bg-gray-300';
+                    let bgColor = 'bg-gray-700';
                     if (playerPick.result === 'win') bgColor = 'bg-green-200';
                     else if (playerPick.result === 'loss') bgColor = 'bg-red-200';
-                    else if (playerPick.result === 'push') bgColor = 'bg-gray-400';
+                    else if (playerPick.result === 'push') bgColor = 'bg-gray-200';
                     
                     let teamDisplay = '';
                     if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(playerPick.betType)) {
@@ -6775,9 +6773,9 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           {currentStreaks.hot.length > 0 ? (
             <div className="space-y-2">
               {currentStreaks.hot.slice(0, 3).map((streak, idx) => (
-                <div key={idx} className="p-3 bg-green-50 rounded">
+                <div key={idx} className="p-3 bg-green-900/20 rounded border border-green-500/30">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">{streak.player}</span>
+                    <span className="font-semibold text-gray-800">{streak.player}</span>
                     <span className="text-xl font-bold text-green-400">{streak.count} wins</span>
                   </div>
                   <div className="text-xs text-gray-400">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
@@ -6794,9 +6792,9 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           {currentStreaks.cold.length > 0 ? (
             <div className="space-y-2">
               {currentStreaks.cold.slice(0, 3).map((streak, idx) => (
-                <div key={idx} className="p-3 bg-red-50 rounded">
+                <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold">{streak.player}</span>
+                    <span className="font-semibold text-gray-800">{streak.player}</span>
                     <span className="text-xl font-bold text-red-400">{streak.count} losses</span>
                   </div>
                   <div className="text-xs text-gray-400">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
@@ -6816,9 +6814,9 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           {allTimeStreaks.hot.slice(0, 5).length > 0 ? (
             <div className="space-y-2">
               {allTimeStreaks.hot.slice(0, 5).map((streak, idx) => (
-                <div key={idx} className="p-3 bg-green-50 rounded">
+                <div key={idx} className="p-3 bg-green-900/20 rounded border border-green-500/30">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold">{streak.player}</span>
+                    <span className="font-semibold text-gray-800">{streak.player}</span>
                     <span className="text-lg font-bold text-green-400">{streak.count} wins</span>
                   </div>
                   <div className="text-xs text-gray-400">
@@ -6837,9 +6835,9 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           {allTimeStreaks.cold.slice(0, 5).length > 0 ? (
             <div className="space-y-2">
               {allTimeStreaks.cold.slice(0, 5).map((streak, idx) => (
-                <div key={idx} className="p-3 bg-red-50 rounded">
+                <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold">{streak.player}</span>
+                    <span className="font-semibold text-gray-800">{streak.player}</span>
                     <span className="text-lg font-bold text-red-400">{streak.count} losses</span>
                   </div>
                   <div className="text-xs text-gray-400">
@@ -6862,7 +6860,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           {topCombos.length > 0 ? (
             <div className="space-y-2">
               {topCombos.map((combo, idx) => (
-                <div key={idx} className="p-3 bg-green-50 rounded">
+                <div key={idx} className="p-3 bg-green-900/20 rounded border border-green-500/30">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold">{combo.player} - {combo.sport}</span>
                     <span className="text-lg font-bold text-green-400">{combo.winPct.toFixed(1)}%</span>
@@ -6884,7 +6882,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           {worstCombos.length > 0 ? (
             <div className="space-y-2">
               {worstCombos.map((combo, idx) => (
-                <div key={idx} className="p-3 bg-red-50 rounded">
+                <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold">{combo.player} - {combo.sport}</span>
                     <span className="text-lg font-bold text-red-400">{combo.winPct.toFixed(1)}%</span>
@@ -6945,7 +6943,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           {topPlayerTeamWinPct.length > 0 ? (
             <div className="space-y-2">
               {topPlayerTeamWinPct.map((combo, idx) => (
-                <div key={idx} className="p-3 bg-green-50 rounded">
+                <div key={idx} className="p-3 bg-green-900/20 rounded border border-green-500/30">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold">{combo.player} + {combo.team}</span>
                     <span className="text-lg font-bold text-green-400">{combo.winPct.toFixed(1)}%</span>
@@ -6967,7 +6965,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           {worstPlayerTeamWinPct.length > 0 ? (
             <div className="space-y-2">
               {worstPlayerTeamWinPct.map((combo, idx) => (
-                <div key={idx} className="p-3 bg-red-50 rounded">
+                <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
                   <div className="flex justify-between items-center mb-1">
                     <span className="font-semibold">{combo.player} + {combo.team}</span>
                     <span className="text-lg font-bold text-red-400">{combo.winPct.toFixed(1)}%</span>
@@ -7584,10 +7582,10 @@ const handleSavePickEdit = async () => {
       <h2 className="text-xl md:text-2xl font-bold text-yellow-400">📋 All Individual Picks</h2>
       
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 md:p-6">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
         <button
           onClick={() => setFiltersExpanded(!filtersExpanded)}
-          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2"
+          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
         >
           <span>Filters</span>
           <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
