@@ -3323,6 +3323,15 @@ const analyzeSearchQuery = (query) => {
     const filteredPicks = isSport || isPlayer || isBetType ?
       filterByRelevance(matchingPicks, searchContext, 5) : matchingPicks;
 
+    // TEMPORARY DEBUG - remove after fixing
+    console.log('Team Search Debug:', {
+      searchedTeam: searchContext.matchedTeam,
+      matchingPicksCount: matchingPicks.length,
+      filteredPicksCount: filteredPicks.length,
+      shouldFilter,
+      samplePicks: matchingPicks.slice(0, 3).map(p => ({ team: p.team, opponent: p.opponent }))
+    });
+
     const stats = {
       team: searchContext.matchedTeam,
       total: filteredPicks.length,
