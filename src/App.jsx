@@ -6968,7 +6968,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
               {worstPlayerTeamWinPct.map((combo, idx) => (
                 <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold">{combo.player} + {combo.team}</span>
+                    <span className="font-semibold text-white">{combo.player} + {combo.team}</span>
                     <span className="text-lg font-bold text-red-400">{combo.winPct.toFixed(1)}%</span>
                   </div>
                   <div className="text-xs text-gray-400">
