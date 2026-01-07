@@ -3862,7 +3862,7 @@ const renderEntry = () => {
         <div className="flex justify-end">
           <button
             onClick={addParticipant}
-            className="flex items-center gap-2 px-4 py-3 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold text-base"
+            className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-lg hover:shadow-lg transform hover:scale-105 font-semibold text-base transition"
             style={{ minHeight: isMobile ? '44px' : 'auto' }}
           >
             <PlusCircle size={isMobile ? 24 : 20} />
@@ -3873,10 +3873,10 @@ const renderEntry = () => {
         <button
           onClick={submitParlay}
           disabled={saving}
-          className="w-full py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 text-base"
+          className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-lg transform hover:scale-105 disabled:bg-gray-600 disabled:transform-none text-base transition"
           style={{ minHeight: isMobile ? '44px' : 'auto' }}
         >
-          {saving ? 'Saving...' : 'Submit Parlay'}
+          {saving ? 'Saving...' : 'Submit Brolay'}
         </button>
       </div>
     </div>
@@ -6758,9 +6758,9 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
               <div key={player} className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-700 rounded">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl font-bold text-gray-400">#{idx + 1}</span>
-                  <span className="font-semibold">{player}</span>
+                  <span className="font-semibold text-white">{player}</span>
                 </div>
-                <span className="text-xl font-bold text-blue-600">{count}</span>
+                <span className="text-xl font-bold text-blue-400">{count}</span>
               </div>
             ))}
         </div>
@@ -6775,7 +6775,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
               {currentStreaks.hot.slice(0, 3).map((streak, idx) => (
                 <div key={idx} className="p-3 bg-green-900/20 rounded border border-green-500/30">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-800">{streak.player}</span>
+                    <span className="font-semibold text-white">{streak.player}</span>
                     <span className="text-xl font-bold text-green-400">{streak.count} wins</span>
                   </div>
                   <div className="text-xs text-gray-400">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
@@ -6794,7 +6794,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
               {currentStreaks.cold.slice(0, 3).map((streak, idx) => (
                 <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
                   <div className="flex justify-between items-center">
-                    <span className="font-semibold text-gray-800">{streak.player}</span>
+                    <span className="font-semibold text-white">{streak.player}</span>
                     <span className="text-xl font-bold text-red-400">{streak.count} losses</span>
                   </div>
                   <div className="text-xs text-gray-400">Last pick: {formatDateForDisplay(streak.lastDate)}</div>
@@ -6816,7 +6816,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
               {allTimeStreaks.hot.slice(0, 5).map((streak, idx) => (
                 <div key={idx} className="p-3 bg-green-900/20 rounded border border-green-500/30">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold text-gray-800">{streak.player}</span>
+                    <span className="font-semibold text-white">{streak.player}</span>
                     <span className="text-lg font-bold text-green-400">{streak.count} wins</span>
                   </div>
                   <div className="text-xs text-gray-400">
@@ -6837,7 +6837,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
               {allTimeStreaks.cold.slice(0, 5).map((streak, idx) => (
                 <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold text-gray-800">{streak.player}</span>
+                    <span className="font-semibold text-white">{streak.player}</span>
                     <span className="text-lg font-bold text-red-400">{streak.count} losses</span>
                   </div>
                   <div className="text-xs text-gray-400">
@@ -6862,7 +6862,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
               {topCombos.map((combo, idx) => (
                 <div key={idx} className="p-3 bg-green-900/20 rounded border border-green-500/30">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold">{combo.player} - {combo.sport}</span>
+                    <span className="font-semibold text-white">{combo.player} - {combo.sport}</span>
                     <span className="text-lg font-bold text-green-400">{combo.winPct.toFixed(1)}%</span>
                   </div>
                   <div className="text-xs text-gray-400">
@@ -6884,7 +6884,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
               {worstCombos.map((combo, idx) => (
                 <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold">{combo.player} - {combo.sport}</span>
+                    <span className="font-semibold text-white">{combo.player} - {combo.sport}</span>
                     <span className="text-lg font-bold text-red-400">{combo.winPct.toFixed(1)}%</span>
                   </div>
                   <div className="text-xs text-gray-400">
@@ -6907,21 +6907,22 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
             <div key={idx} className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-700 rounded">
               <div className="flex items-center gap-3">
                 <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
-                <span className="font-semibold">{item.team}</span>
+                <span className="font-semibold text-white">{item.team}</span>
               </div>
-              <span className="text-lg font-bold text-blue-600">{item.count} picks</span>
+              <span className="text-lg font-bold text-blue-400">{item.count} picks</span>
             </div>
           ))}
         </div>
       </div>
+      
       {/* Most Picked Player/Team Combos */}
         <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
           <h3 className="text-lg md:text-xl font-bold mb-4">🤝 Top 5 Most Picked Player/Team Combos</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {topPlayerTeamCombos.map((item, idx) => (
-              <div key={idx} className="p-3 bg-gray-900/50 border border-gray-700 rounded">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-3">
+              <div key={idx} className="p-3 bg-green-900/20 rounded border border-green-500/30">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-semibold text-white">{combo.player} + {combo.team}</span>
                     <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
                     <span className="font-semibold">{item.player} + {item.team}</span>
                   </div>
@@ -6943,9 +6944,9 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           {topPlayerTeamWinPct.length > 0 ? (
             <div className="space-y-2">
               {topPlayerTeamWinPct.map((combo, idx) => (
-                <div key={idx} className="p-3 bg-green-900/20 rounded border border-green-500/30">
+                <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
                   <div className="flex justify-between items-center mb-1">
-                    <span className="font-semibold">{combo.player} + {combo.team}</span>
+                    <span className="font-semibold text-white">{combo.player} + {combo.team}</span>
                     <span className="text-lg font-bold text-green-400">{combo.winPct.toFixed(1)}%</span>
                   </div>
                   <div className="text-xs text-gray-400">
@@ -7388,10 +7389,10 @@ const renderSearch = () => {
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-semibold">{formatDateForDisplay(pick.parlayDate)}</span>
                       <span className={`font-semibold ${
-                        pick.result === 'win' ? 'text-green-600' :
-                        pick.result === 'loss' ? 'text-red-600' :
-                        pick.result === 'push' ? 'text-yellow-600' :
-                        'text-gray-500'
+                        pick.result === 'win' ? 'text-green-400' :
+                        pick.result === 'loss' ? 'text-red-400' :
+                        pick.result === 'push' ? 'text-yellow-400' :
+                        'text-gray-400'
                       }`}>
                         {pick.result.toUpperCase()}
                       </span>
@@ -7763,15 +7764,15 @@ const handleSavePickEdit = async () => {
                       <div className="text-sm text-gray-400 mb-1">
                         {formatDateForDisplay(pick.parlayDate)} • Placed by {pick.parlayPlacedBy || 'Unknown'}
                       </div>
-                      <div className="font-semibold">
-                        <strong>{pick.player}</strong> - {pick.sport} - {teamDisplay} {betDetails}
+                      <div className="font-semibold text-white">
+                        <strong className="text-yellow-400">{pick.player}</strong> - {pick.sport} - {teamDisplay} {betDetails}
                       </div>
                       <div className="text-sm text-gray-400">
                         {pick.betType}
                         {pick.odds && ` • ${pick.odds}`}
                       </div>
                       {pick.actualStats && (
-                        <div className="text-sm text-blue-600 font-semibold mt-1">
+                        <div className="text-sm text-blue-400 font-semibold mt-1">
                           [{pick.actualStats}]
                         </div>
                       )}
@@ -7786,10 +7787,10 @@ const handleSavePickEdit = async () => {
                         </span>
                       )}
                       <span className={`font-semibold text-sm ${
-                        pick.result === 'win' ? 'text-green-600' :
-                        pick.result === 'loss' ? 'text-red-600' :
-                        pick.result === 'push' ? 'text-yellow-600' :
-                        'text-gray-500'
+                        pick.result === 'win' ? 'text-green-400' :
+                        pick.result === 'loss' ? 'text-red-400' :
+                        pick.result === 'push' ? 'text-yellow-400' :
+                        'text-gray-400'
                       }`}>
                         {pick.result.toUpperCase()}
                       </span>
