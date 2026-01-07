@@ -182,6 +182,11 @@ const App = () => {
   const [csvInput, setCsvInput] = useState('');
   const [players] = useState(['Management', 'CD', '914', 'Junior', 'Jacoby']);
   const [parlays, setParlays] = useState([]);
+  const moneyMaker = useMemo(() => findMoneyMaker(parlays, players), [parlays, players]);
+  const dangerZone = useMemo(() => findDangerZone(parlays, players), [parlays, players]);
+  const currentDay = useMemo(() => getCurrentDayOfWeek(), []);
+  const currentSports = useMemo(() => getCurrentSportsInSeason(), []);
+  const seasonalTip = useMemo(() => getSeasonalTip(), []);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -7445,13 +7450,6 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
 };
 
 const renderSearch = () => {
-  // Memoize expensive calculations
-  const moneyMaker = React.useMemo(() => findMoneyMaker(parlays, players), [parlays, players]);
-  const dangerZone = React.useMemo(() => findDangerZone(parlays, players), [parlays, players]);
-  const currentDay = React.useMemo(() => getCurrentDayOfWeek(), []);
-  const currentSports = React.useMemo(() => getCurrentSportsInSeason(), []);
-  const seasonalTip = React.useMemo(() => getSeasonalTip(), []);
-
   const handleSearch = () => {
     const results = analyzeSearchQuery(searchQuery);
     setSearchResults(results);
