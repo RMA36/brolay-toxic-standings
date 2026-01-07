@@ -3121,9 +3121,6 @@ const analyzeSearchQuery = (query) => {
     data: {},
     searchContext: null
   };
-
-  // Import search utilities
-  const { tokenizeQuery, findBestTeamMatch, filterByRelevance, calculateRelevanceScore } = require('./searchUtils');
   
   // Tokenize the search query
   const searchContext = tokenizeQuery(lowerQuery);
