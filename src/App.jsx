@@ -3306,11 +3306,19 @@ const analyzeSearchQuery = (query) => {
       Object.values(parlay.participants || {}).forEach(pick => {
         if (pick.result === 'pending') return;
         
+        // Check ALL possible team-related fields
         const pickTeam = pick.team || '';
         const pickOpp = pick.opponent || '';
+        const pickAwayTeam = pick.awayTeam || '';
+        const pickHomeTeam = pick.homeTeam || '';
+        const pickFavorite = pick.favorite || '';
         
+        // Match if the searched team appears in ANY team field
         if (pickTeam.includes(searchContext.matchedTeam) || 
-            pickOpp.includes(searchContext.matchedTeam)) {
+            pickOpp.includes(searchContext.matchedTeam) ||
+            pickAwayTeam.includes(searchContext.matchedTeam) ||
+            pickHomeTeam.includes(searchContext.matchedTeam) ||
+            pickFavorite.includes(searchContext.matchedTeam)) {
           matchingPicks.push({
             ...pick,
             parlayDate: parlay.date
@@ -3330,7 +3338,13 @@ const analyzeSearchQuery = (query) => {
       matchingPicksCount: matchingPicks.length,
       filteredPicksCount: filteredPicks.length,
       shouldFilter,
-      samplePicks: matchingPicks.slice(0, 3).map(p => ({ team: p.team, opponent: p.opponent }))
+      samplePicks: matchingPicks.slice(0, 3).map(p => ({ 
+        team: p.team, 
+        opponent: p.opponent,
+        awayTeam: p.awayTeam,
+        homeTeam: p.homeTeam,
+        favorite: p.favorite
+      }))
     });
   
     const stats = {
