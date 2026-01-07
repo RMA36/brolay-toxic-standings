@@ -6916,25 +6916,25 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
       </div>
       
       {/* Most Picked Player/Team Combos */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-          <h3 className="text-lg md:text-xl font-bold mb-4">🤝 Top 5 Most Picked Player/Team Combos</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {topPlayerTeamCombos.map((item, idx) => (
-              <div key={idx} className="p-3 bg-green-900/20 rounded border border-green-500/30">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-semibold text-white">{combo.player} + {combo.team}</span>
-                    <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
-                    <span className="font-semibold">{item.player} + {item.team}</span>
-                  </div>
-                  <span className="text-lg font-bold text-blue-600">{item.total}</span>
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">🤝 Top 5 Most Picked Player/Team Combos</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {topPlayerTeamCombos.map((item, idx) => (
+            <div key={idx} className="p-3 bg-gray-900/50 border border-gray-700 rounded">
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
+                  <span className="font-semibold text-white">{item.player} + {item.team}</span>
                 </div>
-                <div className="text-xs text-gray-400 ml-8">
-                  {item.wins}-{item.losses}{item.pushes > 0 ? `-${item.pushes}` : ''} ({item.total > 0 ? ((item.wins / item.total) * 100).toFixed(1) : 0}%)
-                </div>
+                <span className="text-lg font-bold text-blue-400">{item.total}</span>
               </div>
-            ))}
-          </div>
+              <div className="text-xs text-gray-400 ml-8">
+                {item.wins}-{item.losses}{item.pushes > 0 ? `-${item.pushes}` : ''} ({item.total > 0 ? ((item.wins / item.total) * 100).toFixed(1) : 0}%)
+              </div>
+            </div>
+          ))}
         </div>
+      </div>
       
       {/* Best/Worst Player/Team Win Percentages */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
