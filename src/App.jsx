@@ -4012,24 +4012,6 @@ const renderIndividualDashboard = () => {
     
 return (
     <div className="space-y-4 md:space-y-6">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '1rem' }}>
-        <h2 className="text-xl md:text-2xl font-bold text-yellow-400" style={{ margin: 0 }}>👤 Individual Statistics</h2>
-        <button
-          onClick={() => {
-            setComparisonMode(!comparisonMode);
-            setSelectedForComparison(new Set());
-          }}
-          className={`px-4 py-2 rounded-lg font-semibold transition text-base ${
-            comparisonMode
-              ? 'bg-yellow-500 text-black'
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
-          }`}
-          style={{ minHeight: isMobile ? '44px' : 'auto' }}
-        >
-          {comparisonMode ? '✓ Comparing' : '🔄 Compare Players'}
-        </button>
-      </div>
-      
       {/* Rotating Insights Ticker */}
       <div className="bg-gradient-to-r from-blue-900/30 via-purple-900/30 to-blue-900/30 rounded-xl p-4 border border-blue-500/30 overflow-hidden">
         <div className="flex items-center gap-3">
@@ -4043,17 +4025,35 @@ return (
         </div>
       </div>
 
-        {pendingPicksCount > 0 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '1rem' }}>
+        <h2 className="text-xl md:text-2xl font-bold text-yellow-400" style={{ margin: 0 }}>👤 Individual Statistics</h2>
+        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+          {pendingPicksCount > 0 && (
+            <button
+              onClick={autoUpdatePendingPicks}
+              disabled={autoUpdating}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 text-base"
+              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            >
+              <RefreshCw size={isMobile ? 20 : 16} className={autoUpdating ? 'animate-spin' : ''} />
+              {autoUpdating ? 'Updating...' : `Auto-Update ${pendingPicksCount} Pending`}
+            </button>
+          )}
           <button
-            onClick={autoUpdatePendingPicks}
-            disabled={autoUpdating}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 text-base"
+            onClick={() => {
+              setComparisonMode(!comparisonMode);
+              setSelectedForComparison(new Set());
+            }}
+            className={`px-4 py-2 rounded-lg font-semibold transition text-base ${
+              comparisonMode
+                ? 'bg-yellow-500 text-black'
+                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
+            }`}
             style={{ minHeight: isMobile ? '44px' : 'auto' }}
           >
-            <RefreshCw size={isMobile ? 20 : 16} className={autoUpdating ? 'animate-spin' : ''} />
-            {autoUpdating ? 'Updating...' : `Auto-Update ${pendingPicksCount} Pending`}
+            {comparisonMode ? '✓ Comparing' : '🔄 Compare Players'}
           </button>
-        )}
+        </div>
       </div>
       
       {/* Filters - Collapsible */}
