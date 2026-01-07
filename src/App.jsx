@@ -1,14 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { PlusCircle, TrendingUp, Users, Award, AlertCircle, Loader, Menu, X, RefreshCw } from 'lucide-react';
 
-import { 
-  findMoneyMaker, 
-  findDangerZone, 
-  formatComboDescription, 
-  getCurrentDayOfWeek,
-  getCurrentSportsInSeason,
-  getSeasonalTip 
-} from './insightsHelper';
+import { getCurrentSportsInSeason, getCurrentDayOfWeek, findMoneyMaker, findDangerZone, getSeasonalTip, formatComboDescription } from './insightsHelper';
+import { tokenizeQuery, findBestTeamMatch, filterByRelevance, calculateRelevanceScore, teamAliases } from './searchUtils';
 
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, deleteField } from 'firebase/firestore';
@@ -199,6 +193,8 @@ const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
   const [lastSearchedQuery, setLastSearchedQuery] = useState('');
+  const [searchTimeout, setSearchTimeout] = useState(null);
+  const [searchCache, setSearchCache] = useState({});
   const [editingPick, setEditingPick] = useState(null);
   const [picksToShow, setPicksToShow] = useState(20); 
   const [calendarView, setCalendarView] = useState(true); // Toggle between calendar and list view
@@ -1594,22 +1590,23 @@ const autoUpdatePendingPicks = async () => {
 };
   
   useEffect(() => {
-  if (authenticated) {
-    // Set up real-time listener
-    const parlaysCollection = collection(db, 'parlays');
-    const unsubscribe = onSnapshot(parlaysCollection, (snapshot) => {
-      const parlayList = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        firestoreId: doc.id
-      }));
-      setParlays(parlayList);
-      setLoading(false);
-    });
-
-    // Cleanup listener on unmount
-    return () => unsubscribe();
-  }
-}, [authenticated]);
+    if (authenticated) {
+      const parlaysCollection = collection(db, 'parlays');
+      const unsubscribe = onSnapshot(parlaysCollection, (snapshot) => {
+        const parlayList = snapshot.docs.map(doc => ({
+          ...doc.data(),
+          firestoreId: doc.id
+        }));
+        setParlays(parlayList);
+        setLoading(false);
+        
+        // Clear search cache when data updates
+        setSearchCache({});
+      });
+  
+      return () => unsubscribe();
+    }
+  }, [authenticated]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -3112,7 +3109,7 @@ const importFromCSV = async (csvText) => {
     );
   }
 
-  const analyzeSearchQuery = (query) => {
+const analyzeSearchQuery = (query) => {
   if (!query || query.trim().length < 3) {
     return null;
   }
@@ -3121,10 +3118,26 @@ const importFromCSV = async (csvText) => {
   const results = {
     query: query,
     matchedCategory: null,
-    data: {}
+    data: {},
+    searchContext: null
   };
 
-  // Detect what they're searching for
+  // Import search utilities
+  const { tokenizeQuery, findBestTeamMatch, filterByRelevance, calculateRelevanceScore } = require('./searchUtils');
+  
+  // Tokenize the search query
+  const searchContext = tokenizeQuery(lowerQuery);
+  
+  // Add players to context
+  searchContext.players = players.filter(player => 
+    lowerQuery.includes(player.toLowerCase())
+  );
+  
+  // Try to find team match with fuzzy matching
+  const allTeams = [...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])];
+  searchContext.matchedTeam = findBestTeamMatch(lowerQuery, allTeams);
+
+  // Detect what they're searching for - with stricter matching
   const isPropType = commonPropTypes.some(prop => 
     lowerQuery.includes(prop.toLowerCase())
   ) || lowerQuery.includes('prop') || lowerQuery.includes('touchdown') || 
@@ -3134,413 +3147,470 @@ const importFromCSV = async (csvText) => {
     lowerQuery.includes(sport.toLowerCase())
   );
 
-  const isPlayer = players.some(player => 
-    lowerQuery.includes(player.toLowerCase())
-  );
+  const isPlayer = searchContext.players.length > 0;
 
-  const isTeam = [...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])].some(team =>
-    lowerQuery.includes(team.toLowerCase())
-  );
+  const isTeam = searchContext.matchedTeam !== null;
 
   const isBetType = betTypes.some(type => 
     lowerQuery.includes(type.toLowerCase())
   );
 
-// Check if searching by day of week
-const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-const isDayOfWeek = daysOfWeek.some(day => lowerQuery.includes(day));
+  // Check if searching by day of week
+  const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const isDayOfWeek = daysOfWeek.some(day => lowerQuery.includes(day));
 
-if (isDayOfWeek) {
-  results.matchedCategory = 'dayOfWeek';
-  
-  const matchedDay = daysOfWeek.find(day => lowerQuery.includes(day));
-  const dayIndex = daysOfWeek.indexOf(matchedDay);
-  
-  // Collect all picks on this day of week
-  const matchingPicks = [];
-  parlays.forEach(parlay => {
-    const date = new Date(parlay.date + 'T00:00:00');
-    const pickDayIndex = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  if (isDayOfWeek) {
+    results.matchedCategory = 'dayOfWeek';
     
-    // Convert to our array indexing (Monday = 0)
-    const adjustedDayIndex = pickDayIndex === 0 ? 6 : pickDayIndex - 1;
+    const matchedDay = daysOfWeek.find(day => lowerQuery.includes(day));
+    const dayIndex = daysOfWeek.indexOf(matchedDay);
     
-    if (adjustedDayIndex === dayIndex) {
-      Object.entries(parlay.participants).forEach(([id, pick]) => {
-        matchingPicks.push({
-          ...pick,
-          parlayDate: parlay.date,
-          parlayId: parlay.id,
-          participantId: id
+    // Collect all picks on this day of week
+    const matchingPicks = [];
+    parlays.forEach(parlay => {
+      const date = new Date(parlay.date + 'T00:00:00');
+      const pickDayIndex = date.getDay();
+      
+      const adjustedDayIndex = pickDayIndex === 0 ? 6 : pickDayIndex - 1;
+      
+      if (adjustedDayIndex === dayIndex) {
+        Object.values(parlay.participants || {}).forEach(pick => {
+          if (pick.result !== 'pending') {
+            matchingPicks.push({
+              ...pick,
+              parlayDate: parlay.date
+            });
+          }
         });
-      });
-    }
-  });
+      }
+    });
 
-  const wins = matchingPicks.filter(p => p.result === 'win').length;
-  const losses = matchingPicks.filter(p => p.result === 'loss').length;
-  const pushes = matchingPicks.filter(p => p.result === 'push').length;
-  const pending = matchingPicks.filter(p => p.result === 'pending').length;
-  const total = matchingPicks.length;
+    // Apply relevance filtering if other criteria specified
+    const filteredPicks = searchContext.hasNFL || searchContext.hasNBA || 
+                          searchContext.hasMLB || searchContext.hasNHL ||
+                          searchContext.hasCollege || isPlayer ?
+      filterByRelevance(matchingPicks, searchContext, 8) : matchingPicks;
 
-  // By player
-  const byPlayer = {};
-  matchingPicks.forEach(pick => {
-    if (!byPlayer[pick.player]) {
-      byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-    }
-    byPlayer[pick.player].total++;
-    if (pick.result === 'win') byPlayer[pick.player].wins++;
-    else if (pick.result === 'loss') byPlayer[pick.player].losses++;
-    else if (pick.result === 'push') byPlayer[pick.player].pushes++;
-  });
+    const stats = {
+      total: filteredPicks.length,
+      wins: filteredPicks.filter(p => p.result === 'win').length,
+      losses: filteredPicks.filter(p => p.result === 'loss').length,
+      pushes: filteredPicks.filter(p => p.result === 'push').length,
+      winPct: 0,
+      byPlayer: {},
+      bySport: {}
+    };
 
-  // By sport
-  const bySport = {};
-  matchingPicks.forEach(pick => {
-    if (!bySport[pick.sport]) {
-      bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-    }
-    bySport[pick.sport].total++;
-    if (pick.result === 'win') bySport[pick.sport].wins++;
-    else if (pick.result === 'loss') bySport[pick.sport].losses++;
-    else if (pick.result === 'push') bySport[pick.sport].pushes++;
-  });
+    stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
 
-  // By bet type
-  const byBetType = {};
-  matchingPicks.forEach(pick => {
-    if (!byBetType[pick.betType]) {
-      byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-    }
-    byBetType[pick.betType].total++;
-    if (pick.result === 'win') byBetType[pick.betType].wins++;
-    else if (pick.result === 'loss') byBetType[pick.betType].losses++;
-    else if (pick.result === 'push') byBetType[pick.betType].pushes++;
-  });
+    filteredPicks.forEach(pick => {
+      if (!stats.byPlayer[pick.player]) {
+        stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+      }
+      if (!stats.bySport[pick.sport]) {
+        stats.bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+      }
 
-  results.data = {
-    dayOfWeek: matchedDay.charAt(0).toUpperCase() + matchedDay.slice(1),
-    total,
-    wins,
-    losses,
-    pushes,
-    pending,
-    winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
-    byPlayer,
-    bySport,
-    byBetType,
-    recentPicks: matchingPicks
+      stats.byPlayer[pick.player][pick.result]++;
+      stats.byPlayer[pick.player].total++;
+      stats.bySport[pick.sport][pick.result]++;
+      stats.bySport[pick.sport].total++;
+    });
+
+    stats.recentPicks = filteredPicks
       .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
-      .slice(0, 10)
-  };
-  
-  return results;
-}
+      .slice(0, 10);
+
+    results.data = stats;
+    results.searchContext = searchContext;
     
-  // Determine primary search category
+    if (filteredPicks.length === 0) return null;
+    return results;
+  }
+
+  // Prop Type search with relevance filtering
   if (isPropType) {
     results.matchedCategory = 'propType';
     
-// Find the specific prop type
-let matchedProp = commonPropTypes.find(prop => 
-  lowerQuery.includes(prop.toLowerCase())
-);
+    const matchedPropType = commonPropTypes.find(prop => 
+      lowerQuery.includes(prop.toLowerCase())
+    );
 
-// Special handling for "anytime touchdown scorer" vs other touchdown props
-if (!matchedProp && (lowerQuery.includes('anytime touchdown') || lowerQuery.includes('anytime td'))) {
-  matchedProp = 'Anytime Touchdown Scorer';
-}
-
-if (matchedProp) {
-  const normalizedProp = normalizePropType(matchedProp);
-  
-  // Collect all picks matching this prop type
-  const matchingPicks = [];
-  parlays.forEach(parlay => {
-    Object.entries(parlay.participants).forEach(([id, pick]) => {
-      if (pick.betType === 'Prop Bet' && pick.propType) {
-        const pickPropNormalized = normalizePropType(pick.propType);
+    const matchingPicks = [];
+    parlays.forEach(parlay => {
+      Object.values(parlay.participants || {}).forEach(pick => {
+        if (pick.result === 'pending') return;
         
-        // Exact match or very close match
-        if (pickPropNormalized === normalizedProp) {
+        const pickPropLower = (pick.propType || pick.betType || '').toLowerCase();
+        const matchesProp = pickPropLower.includes(lowerQuery) || 
+                           lowerQuery.includes(pickPropLower) ||
+                           (matchedPropType && pickPropLower.includes(matchedPropType.toLowerCase()));
+        
+        if (matchesProp) {
           matchingPicks.push({
             ...pick,
-            parlayDate: parlay.date,
-            parlayId: parlay.id,
-            participantId: id
+            parlayDate: parlay.date
           });
         }
-      }
+      });
     });
-  });
-  
-      // Calculate stats
-      const wins = matchingPicks.filter(p => p.result === 'win').length;
-      const losses = matchingPicks.filter(p => p.result === 'loss').length;
-      const pushes = matchingPicks.filter(p => p.result === 'push').length;
-      const pending = matchingPicks.filter(p => p.result === 'pending').length;
-      const total = matchingPicks.length;
 
-      // By player
-      const byPlayer = {};
-      matchingPicks.forEach(pick => {
-        if (!byPlayer[pick.player]) {
-          byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-        }
-        byPlayer[pick.player].total++;
-        if (pick.result === 'win') byPlayer[pick.player].wins++;
-        else if (pick.result === 'loss') byPlayer[pick.player].losses++;
-        else if (pick.result === 'push') byPlayer[pick.player].pushes++;
-      });
+    // Apply relevance filtering for more specific queries
+    const filteredPicks = isSport || isPlayer ?
+      filterByRelevance(matchingPicks, searchContext, 10) : matchingPicks;
 
-      // By day of week
-      const byDayOfWeek = {};
-      matchingPicks.forEach(pick => {
-        const day = pick.parlayDayOfWeek || getDayOfWeek(pick.parlayDate);
-        if (!byDayOfWeek[day]) {
-          byDayOfWeek[day] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-        }
-        byDayOfWeek[day].total++;
-        if (pick.result === 'win') byDayOfWeek[day].wins++;
-        else if (pick.result === 'loss') byDayOfWeek[day].losses++;
-        else if (pick.result === 'push') byDayOfWeek[day].pushes++;
-      });
-  
-      // Most common players picked
-      const playerCounts = {};
-      matchingPicks.forEach(pick => {
-        const playerName = pick.team || 'Unknown';
-        playerCounts[playerName] = (playerCounts[playerName] || 0) + 1;
-      });
-      const topPlayers = Object.entries(playerCounts)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 5)
-        .map(([player, count]) => ({ player, count }));
+    const stats = {
+      total: filteredPicks.length,
+      wins: filteredPicks.filter(p => p.result === 'win').length,
+      losses: filteredPicks.filter(p => p.result === 'loss').length,
+      pushes: filteredPicks.filter(p => p.result === 'push').length,
+      winPct: 0,
+      byPlayer: {}
+    };
 
-      results.data = {
-        propType: matchedProp,
-        total,
-        wins,
-        losses,
-        pushes,
-        pending,
-        winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
-        byPlayer,
-        topPlayers,
-        recentPicks: matchingPicks
-          .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
-          .slice(0, 10)
-      };
-    }
-  } else if (isBetType) {
-    results.matchedCategory = 'betType';
+    stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
+
+    filteredPicks.forEach(pick => {
+      if (!stats.byPlayer[pick.player]) {
+        stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+      }
+      stats.byPlayer[pick.player][pick.result]++;
+      stats.byPlayer[pick.player].total++;
+    });
+
+    stats.recentPicks = filteredPicks
+      .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+      .slice(0, 10);
+
+    results.data = stats;
+    results.searchContext = searchContext;
     
-    const matchedBetType = betTypes.find(type => 
-      lowerQuery.includes(type.toLowerCase())
-    );
-
-    if (matchedBetType) {
-      const matchingPicks = [];
-      parlays.forEach(parlay => {
-        Object.entries(parlay.participants).forEach(([id, pick]) => {
-          if (pick.betType === matchedBetType) {
-            matchingPicks.push({
-              ...pick,
-              parlayDate: parlay.date,
-              parlayId: parlay.id
-            });
-          }
-        });
-      });
-
-      const wins = matchingPicks.filter(p => p.result === 'win').length;
-      const losses = matchingPicks.filter(p => p.result === 'loss').length;
-      const pushes = matchingPicks.filter(p => p.result === 'push').length;
-      const total = matchingPicks.length;
-
-      const byPlayer = {};
-      matchingPicks.forEach(pick => {
-        if (!byPlayer[pick.player]) {
-          byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-        }
-        byPlayer[pick.player].total++;
-        if (pick.result === 'win') byPlayer[pick.player].wins++;
-        else if (pick.result === 'loss') byPlayer[pick.player].losses++;
-        else if (pick.result === 'push') byPlayer[pick.player].pushes++;
-      });
-
-      results.data = {
-        betType: matchedBetType,
-        total,
-        wins,
-        losses,
-        pushes,
-        winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
-        byPlayer,
-        recentPicks: matchingPicks
-          .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
-          .slice(0, 10)
-      };
-    }
-  } else if (isSport) {
-    results.matchedCategory = 'sport';
-    
-    const matchedSport = sports.find(sport => 
-      lowerQuery.includes(sport.toLowerCase())
-    );
-
-    if (matchedSport) {
-      const matchingPicks = [];
-      parlays.forEach(parlay => {
-        Object.entries(parlay.participants).forEach(([id, pick]) => {
-          if (pick.sport === matchedSport) {
-            matchingPicks.push({
-              ...pick,
-              parlayDate: parlay.date,
-              parlayId: parlay.id
-            });
-          }
-        });
-      });
-
-      const wins = matchingPicks.filter(p => p.result === 'win').length;
-      const losses = matchingPicks.filter(p => p.result === 'loss').length;
-      const pushes = matchingPicks.filter(p => p.result === 'push').length;
-      const total = matchingPicks.length;
-
-      const byPlayer = {};
-      matchingPicks.forEach(pick => {
-        if (!byPlayer[pick.player]) {
-          byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-        }
-        byPlayer[pick.player].total++;
-        if (pick.result === 'win') byPlayer[pick.player].wins++;
-        else if (pick.result === 'loss') byPlayer[pick.player].losses++;
-        else if (pick.result === 'push') byPlayer[pick.player].pushes++;
-      });
-
-      results.data = {
-        sport: matchedSport,
-        total,
-        wins,
-        losses,
-        pushes,
-        winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
-        byPlayer,
-        recentPicks: matchingPicks
-          .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
-          .slice(0, 10)
-      };
-    }
-  } else if (isTeam) {
-    results.matchedCategory = 'team';
-    
-    const allTeams = [...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])];
-    const matchedTeam = allTeams.find(team =>
-      lowerQuery.includes(team.toLowerCase())
-    );
-
-    if (matchedTeam) {
-      const matchingPicks = [];
-      parlays.forEach(parlay => {
-        Object.entries(parlay.participants).forEach(([id, pick]) => {
-          if (pick.team === matchedTeam || pick.awayTeam === matchedTeam || 
-              pick.homeTeam === matchedTeam) {
-            matchingPicks.push({
-              ...pick,
-              parlayDate: parlay.date,
-              parlayId: parlay.id
-            });
-          }
-        });
-      });
-
-      const wins = matchingPicks.filter(p => p.result === 'win').length;
-      const losses = matchingPicks.filter(p => p.result === 'loss').length;
-      const pushes = matchingPicks.filter(p => p.result === 'push').length;
-      const total = matchingPicks.length;
-
-      const byPlayer = {};
-      matchingPicks.forEach(pick => {
-        if (!byPlayer[pick.player]) {
-          byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-        }
-        byPlayer[pick.player].total++;
-        if (pick.result === 'win') byPlayer[pick.player].wins++;
-        else if (pick.result === 'loss') byPlayer[pick.player].losses++;
-        else if (pick.result === 'push') byPlayer[pick.player].pushes++;
-      });
-
-      results.data = {
-        team: matchedTeam,
-        total,
-        wins,
-        losses,
-        pushes,
-        winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
-        byPlayer,
-        recentPicks: matchingPicks
-          .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
-          .slice(0, 10)
-      };
-    }
-  } else if (isPlayer) {
-    results.matchedCategory = 'player';
-    
-    const matchedPlayer = players.find(player => 
-      lowerQuery.includes(player.toLowerCase())
-    );
-
-    if (matchedPlayer) {
-      const matchingPicks = [];
-      parlays.forEach(parlay => {
-        Object.entries(parlay.participants).forEach(([id, pick]) => {
-          if (pick.player === matchedPlayer) {
-            matchingPicks.push({
-              ...pick,
-              parlayDate: parlay.date,
-              parlayId: parlay.id
-            });
-          }
-        });
-      });
-
-      const wins = matchingPicks.filter(p => p.result === 'win').length;
-      const losses = matchingPicks.filter(p => p.result === 'loss').length;
-      const pushes = matchingPicks.filter(p => p.result === 'push').length;
-      const total = matchingPicks.length;
-
-      const bySport = {};
-      matchingPicks.forEach(pick => {
-        if (!bySport[pick.sport]) {
-          bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-        }
-        bySport[pick.sport].total++;
-        if (pick.result === 'win') bySport[pick.sport].wins++;
-        else if (pick.result === 'loss') bySport[pick.sport].losses++;
-        else if (pick.result === 'push') bySport[pick.sport].pushes++;
-      });
-
-      results.data = {
-        player: matchedPlayer,
-        total,
-        wins,
-        losses,
-        pushes,
-        winPct: total > 0 ? ((wins / total) * 100).toFixed(1) : 0,
-        bySport,
-        recentPicks: matchingPicks
-          .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
-          .slice(0, 10)
-      };
-    }
+    if (filteredPicks.length === 0) return null;
+    return results;
   }
 
-  return results.matchedCategory ? results : null;
+  // Team search with fuzzy matching
+  if (isTeam) {
+    results.matchedCategory = 'team';
+    
+    const matchingPicks = [];
+    parlays.forEach(parlay => {
+      Object.values(parlay.participants || {}).forEach(pick => {
+        if (pick.result === 'pending') return;
+        
+        const pickTeam = pick.team || '';
+        const pickOpp = pick.opponent || '';
+        
+        if (pickTeam.includes(searchContext.matchedTeam) || 
+            pickOpp.includes(searchContext.matchedTeam)) {
+          matchingPicks.push({
+            ...pick,
+            parlayDate: parlay.date
+          });
+        }
+      });
+    });
+
+    // Apply relevance filtering for specific queries
+    const filteredPicks = isSport || isPlayer || isBetType ?
+      filterByRelevance(matchingPicks, searchContext, 8) : matchingPicks;
+
+    const stats = {
+      team: searchContext.matchedTeam,
+      total: filteredPicks.length,
+      wins: filteredPicks.filter(p => p.result === 'win').length,
+      losses: filteredPicks.filter(p => p.result === 'loss').length,
+      pushes: filteredPicks.filter(p => p.result === 'push').length,
+      winPct: 0,
+      byPlayer: {},
+      byBetType: {}
+    };
+
+    stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
+
+    filteredPicks.forEach(pick => {
+      if (!stats.byPlayer[pick.player]) {
+        stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+      }
+      if (!stats.byBetType[pick.betType]) {
+        stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+      }
+
+      stats.byPlayer[pick.player][pick.result]++;
+      stats.byPlayer[pick.player].total++;
+      stats.byBetType[pick.betType][pick.result]++;
+      stats.byBetType[pick.betType].total++;
+    });
+
+    stats.recentPicks = filteredPicks
+      .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+      .slice(0, 10);
+
+    results.data = stats;
+    results.searchContext = searchContext;
+    
+    if (filteredPicks.length === 0) return null;
+    return results;
+  }
+
+  // Sport search with strict matching
+  if (isSport) {
+    results.matchedCategory = 'sport';
+    
+    const matchedSport = sports.find(sport => lowerQuery.includes(sport.toLowerCase()));
+    
+    const matchingPicks = [];
+    parlays.forEach(parlay => {
+      Object.values(parlay.participants || {}).forEach(pick => {
+        if (pick.result === 'pending') return;
+        if (pick.sport === matchedSport) {
+          matchingPicks.push({
+            ...pick,
+            parlayDate: parlay.date
+          });
+        }
+      });
+    });
+
+    // Apply relevance filtering for specific queries
+    const filteredPicks = isPlayer || isBetType ?
+      filterByRelevance(matchingPicks, searchContext, 10) : matchingPicks;
+
+    const stats = {
+      sport: matchedSport,
+      total: filteredPicks.length,
+      wins: filteredPicks.filter(p => p.result === 'win').length,
+      losses: filteredPicks.filter(p => p.result === 'loss').length,
+      pushes: filteredPicks.filter(p => p.result === 'push').length,
+      winPct: 0,
+      byPlayer: {},
+      byBetType: {}
+    };
+
+    stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
+
+    filteredPicks.forEach(pick => {
+      if (!stats.byPlayer[pick.player]) {
+        stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+      }
+      if (!stats.byBetType[pick.betType]) {
+        stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+      }
+
+      stats.byPlayer[pick.player][pick.result]++;
+      stats.byPlayer[pick.player].total++;
+      stats.byBetType[pick.betType][pick.result]++;
+      stats.byBetType[pick.betType].total++;
+    });
+
+    stats.recentPicks = filteredPicks
+      .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+      .slice(0, 10);
+
+    results.data = stats;
+    results.searchContext = searchContext;
+    
+    if (filteredPicks.length === 0) return null;
+    return results;
+  }
+
+  // Player search with relevance filtering
+  if (isPlayer) {
+    results.matchedCategory = 'player';
+    
+    const targetPlayer = searchContext.players[0];
+    
+    const matchingPicks = [];
+    parlays.forEach(parlay => {
+      Object.values(parlay.participants || {}).forEach(pick => {
+        if (pick.result === 'pending') return;
+        if (pick.player === targetPlayer) {
+          matchingPicks.push({
+            ...pick,
+            parlayDate: parlay.date
+          });
+        }
+      });
+    });
+
+    // Apply relevance filtering for specific queries
+    const filteredPicks = isSport || isBetType ?
+      filterByRelevance(matchingPicks, searchContext, 8) : matchingPicks;
+
+    const stats = {
+      player: targetPlayer,
+      total: filteredPicks.length,
+      wins: filteredPicks.filter(p => p.result === 'win').length,
+      losses: filteredPicks.filter(p => p.result === 'loss').length,
+      pushes: filteredPicks.filter(p => p.result === 'push').length,
+      winPct: 0,
+      bySport: {},
+      byBetType: {}
+    };
+
+    stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
+
+    filteredPicks.forEach(pick => {
+      if (!stats.bySport[pick.sport]) {
+        stats.bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+      }
+      if (!stats.byBetType[pick.betType]) {
+        stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+      }
+
+      stats.bySport[pick.sport][pick.result]++;
+      stats.bySport[pick.sport].total++;
+      stats.byBetType[pick.betType][pick.result]++;
+      stats.byBetType[pick.betType].total++;
+    });
+
+    stats.recentPicks = filteredPicks
+      .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+      .slice(0, 10);
+
+    results.data = stats;
+    results.searchContext = searchContext;
+    
+    if (filteredPicks.length === 0) return null;
+    return results;
+  }
+
+  return null;
 };
 
-const renderEntry = () => {
+const generateSearchInsights = (searchResults) => {
+  if (!searchResults || !searchResults.data) return [];
+  
+  const insights = [];
+  const { data, matchedCategory, searchContext } = searchResults;
+  
+  // Determine if search is specific or general
+  const isSpecific = (searchContext.players.length > 0 && 
+                     (searchContext.hasNFL || searchContext.hasNBA || 
+                      searchContext.hasMLB || searchContext.hasNHL)) ||
+                     (searchContext.matchedTeam && 
+                      (searchContext.hasMoneyline || searchContext.hasSpread));
+  
+  if (matchedCategory === 'player') {
+    // Player-specific insights
+    if (data.total >= 10) {
+      const bestSport = Object.entries(data.bySport)
+        .sort((a, b) => {
+          const aRate = a[1].total > 0 ? (a[1].wins / a[1].total) : 0;
+          const bRate = b[1].total > 0 ? (b[1].wins / b[1].total) : 0;
+          return bRate - aRate;
+        })[0];
+      
+      if (bestSport && bestSport[1].total >= 5) {
+        const winRate = ((bestSport[1].wins / bestSport[1].total) * 100).toFixed(1);
+        insights.push(`🎯 ${data.player} performs best in ${bestSport[0]} with a ${winRate}% win rate`);
+      }
+    }
+    
+    const bestBetType = Object.entries(data.byBetType)
+      .sort((a, b) => {
+        const aRate = a[1].total > 0 ? (a[1].wins / a[1].total) : 0;
+        const bRate = b[1].total > 0 ? (b[1].wins / b[1].total) : 0;
+        return bRate - aRate;
+      })[0];
+    
+    if (bestBetType && bestBetType[1].total >= 3) {
+      const winRate = ((bestBetType[1].wins / bestBetType[1].total) * 100).toFixed(1);
+      insights.push(`💡 ${bestBetType[0]}s are ${data.player}'s strength at ${winRate}%`);
+    }
+    
+  } else if (matchedCategory === 'sport') {
+    // Sport-specific insights
+    const bestPlayer = Object.entries(data.byPlayer)
+      .filter(([_, stats]) => stats.total >= 5)
+      .sort((a, b) => {
+        const aRate = (a[1].wins / a[1].total);
+        const bRate = (b[1].wins / b[1].total);
+        return bRate - aRate;
+      })[0];
+    
+    if (bestPlayer) {
+      const winRate = ((bestPlayer[1].wins / bestPlayer[1].total) * 100).toFixed(1);
+      insights.push(`⭐ ${bestPlayer[0]} leads in ${data.sport} with ${winRate}% win rate`);
+    }
+    
+    const mostActiveBetType = Object.entries(data.byBetType)
+      .sort((a, b) => b[1].total - a[1].total)[0];
+    
+    if (mostActiveBetType) {
+      insights.push(`📊 ${mostActiveBetType[0]} is the most popular bet type for ${data.sport} (${mostActiveBetType[1].total} picks)`);
+    }
+    
+  } else if (matchedCategory === 'team') {
+    // Team-specific insights
+    if (data.total >= 5) {
+      const bestPlayer = Object.entries(data.byPlayer)
+        .sort((a, b) => {
+          const aRate = a[1].total > 0 ? (a[1].wins / a[1].total) : 0;
+          const bRate = b[1].total > 0 ? (b[1].wins / b[1].total) : 0;
+          return bRate - aRate;
+        })[0];
+      
+      if (bestPlayer && bestPlayer[1].total >= 3) {
+        const winRate = ((bestPlayer[1].wins / bestPlayer[1].total) * 100).toFixed(1);
+        insights.push(`🔥 ${bestPlayer[0]} has the best record on ${data.team} at ${winRate}%`);
+      }
+    }
+    
+  } else if (matchedCategory === 'propType') {
+    // Prop type insights
+    const dominantPlayer = Object.entries(data.byPlayer)
+      .sort((a, b) => b[1].total - a[1].total)[0];
+    
+    if (dominantPlayer && dominantPlayer[1].total >= 3) {
+      insights.push(`👑 ${dominantPlayer[0]} picks this prop type most often (${dominantPlayer[1].total} times)`);
+    }
+    
+    if (data.winPct >= 60) {
+      insights.push(`💰 This prop type has been profitable at ${data.winPct}% win rate!`);
+    } else if (data.winPct <= 40) {
+      insights.push(`⚠️ Caution: This prop type is below 50% at ${data.winPct}%`);
+    }
+    
+  } else if (matchedCategory === 'dayOfWeek') {
+    // Day-specific insights
+    const bestSport = Object.entries(data.bySport)
+      .filter(([_, stats]) => stats.total >= 3)
+      .sort((a, b) => {
+        const aRate = a[1].total > 0 ? (a[1].wins / a[1].total) : 0;
+        const bRate = b[1].total > 0 ? (b[1].wins / b[1].total) : 0;
+        return bRate - aRate;
+      })[0];
+    
+    if (bestSport) {
+      const winRate = ((bestSport[1].wins / bestSport[1].total) * 100).toFixed(1);
+      insights.push(`🏆 ${bestSport[0]} performs best on this day at ${winRate}%`);
+    }
+  }
+  
+  // General insights based on sample size
+  if (data.total >= 20) {
+    insights.push(`📈 Strong sample size of ${data.total} picks for reliable analysis`);
+  } else if (data.total < 10 && data.total > 0) {
+    insights.push(`⚠️ Limited data (${data.total} picks) - insights may vary with more samples`);
+  }
+  
+  // Streak detection
+  if (data.recentPicks && data.recentPicks.length >= 5) {
+    const lastFive = data.recentPicks.slice(0, 5);
+    const recentWins = lastFive.filter(p => p.result === 'win').length;
+    
+    if (recentWins >= 4) {
+      insights.push(`🔥 Hot streak! ${recentWins}/5 wins in recent picks`);
+    } else if (recentWins <= 1) {
+      insights.push(`📉 Cold stretch: ${recentWins}/5 wins in last 5 picks`);
+    }
+  }
+  
+  return insights;
+};
+  
+  const renderEntry = () => {
   // Calculate who is currently out
   const getPlayerOut = () => {
     // Get all brolays sorted by date (most recent first)
@@ -3660,36 +3730,36 @@ const renderEntry = () => {
       className="w-full px-3 py-2 border rounded text-base"
       style={{ fontSize: isMobile ? '16px' : '14px' }}
       placeholder="Or enter net profit"
-    />
+      />
+    </div>
   </div>
-</div>
-<div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
-  <div className={isMobile ? 'max-w-full overflow-hidden' : ''}>
-    <label className="block text-sm font-medium mb-1 text-white">Date</label>
-    <input
-      type="date"
-      value={newParlay.date}
-      onChange={(e) => setNewParlay({...newParlay, date: e.target.value})}
-      className="w-full px-3 py-2 border rounded text-base"
-      style={{ 
-        fontSize: isMobile ? '16px' : '14px',
-        maxWidth: '100%'
-      }}
-    />
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-4">
+    <div className={isMobile ? 'max-w-full overflow-hidden' : ''}>
+      <label className="block text-sm font-medium mb-1 text-white">Date</label>
+      <input
+        type="date"
+        value={newParlay.date}
+        onChange={(e) => setNewParlay({...newParlay, date: e.target.value})}
+        className="w-full px-3 py-2 border rounded text-base"
+        style={{ 
+          fontSize: isMobile ? '16px' : '14px',
+          maxWidth: '100%'
+        }}
+      />
+    </div>
+    <div>
+    <label className="block text-sm font-medium mb-1 text-white">Placed By</label>
+      <select
+        value={newParlay.placedBy}
+        onChange={(e) => setNewParlay({...newParlay, placedBy: e.target.value})}
+        className="w-full px-3 py-2 border rounded text-base"
+        style={{ fontSize: isMobile ? '16px' : '14px' }}
+      >
+        <option value="">Select Big Guy</option>
+        {players.map(p => <option key={p} value={p}>{p}</option>)}
+      </select>
+    </div>
   </div>
-  <div>
-  <label className="block text-sm font-medium mb-1 text-white">Placed By</label>
-    <select
-      value={newParlay.placedBy}
-      onChange={(e) => setNewParlay({...newParlay, placedBy: e.target.value})}
-      className="w-full px-3 py-2 border rounded text-base"
-      style={{ fontSize: isMobile ? '16px' : '14px' }}
-    >
-      <option value="">Select Big Guy</option>
-      {players.map(p => <option key={p} value={p}>{p}</option>)}
-    </select>
-  </div>
-</div>
         
         <div className="space-y-4 mb-6">
           {(() => {
@@ -7455,8 +7525,24 @@ const renderSearch = () => {
     const trimmedQuery = searchQuery.trim();
     if (trimmedQuery.length >= 3) {
       setLastSearchedQuery(trimmedQuery);
+      
+      // Check cache first
+      const cacheKey = trimmedQuery.toLowerCase();
+      if (searchCache[cacheKey]) {
+        setSearchResults(searchCache[cacheKey]);
+        return;
+      }
+      
       const results = analyzeSearchQuery(trimmedQuery);
       setSearchResults(results);
+      
+      // Cache the results
+      if (results) {
+        setSearchCache(prev => ({
+          ...prev,
+          [cacheKey]: results
+        }));
+      }
     }
   };
 
@@ -7470,7 +7556,21 @@ const renderSearch = () => {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              
+              // Clear existing timeout
+              if (searchTimeout) clearTimeout(searchTimeout);
+              
+              // Set new timeout for auto-search (500ms delay)
+              const timeout = setTimeout(() => {
+                if (e.target.value.trim().length >= 3) {
+                  handleSearch();
+                }
+              }, 500);
+              
+              setSearchTimeout(timeout);
+            }}
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             placeholder='Try: "Anytime Touchdown Scorer record" or "Chiefs record" or "Management NBA stats"'
             className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
@@ -7617,7 +7717,23 @@ const renderSearch = () => {
           <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">
             Results for: "{searchResults.query}"
           </h3>
-
+          
+          {(() => {
+            const insights = generateSearchInsights(searchResults);
+            return insights.length > 0 ? (
+              <div className="mb-6 space-y-2">
+                <h4 className="font-semibold text-sm text-gray-400">💡 Key Insights</h4>
+                <div className="space-y-2">
+                  {insights.map((insight, idx) => (
+                    <div key={idx} className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-3">
+                      <p className="text-sm text-blue-200">{insight}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null;
+          })()}
+          
           {searchResults.matchedCategory === 'propType' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
