@@ -7647,12 +7647,7 @@ const renderSearch = () => {
                   ))}
                 </div>
               </div>
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
+                      
               {searchResults.data.topPlayers.length > 0 && (
                 <div className="mb-6">
                   <h4 className="font-semibold text-lg mb-3">🎯 Most Common Players Picked</h4>
