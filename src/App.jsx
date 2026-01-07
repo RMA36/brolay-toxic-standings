@@ -7505,6 +7505,21 @@ const renderSearch = () => {
         </div>
       </div>
 
+      {/* No Results Message - Show immediately after search bar */}
+      {searchResults === null && searchQuery.trim().length >= 3 && (
+        <div className="bg-gradient-to-br from-red-900/30 to-gray-800 rounded-xl p-4 md:p-6 border border-red-500/30">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">❌</span>
+            <p className="text-red-400 font-semibold">
+              No results found for "{searchQuery}"
+            </p>
+          </div>
+          <p className="text-gray-400 text-sm mt-2">
+            Try searching for a specific prop type, team, player, sport, or bet type.
+          </p>
+        </div>
+      )}
+
 {/* Dynamic Featured Insights - Only show if no search results */}
       {!searchResults && (
         <div className="space-y-4">
@@ -7593,40 +7608,40 @@ const renderSearch = () => {
       )}
       
       {searchResults && (
-        <div className="bg-white rounded-lg shadow p-4 md:p-6">
-          <h3 className="text-lg md:text-xl font-bold mb-4">
+        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+          <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">
             Results for: "{searchResults.query}"
           </h3>
 
           {searchResults.matchedCategory === 'propType' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-600">Total Picks</div>
-                  <div className="text-2xl font-bold text-blue-600">{searchResults.data.total}</div>
+                <div className="bg-blue-900/40 p-4 rounded-lg border border-blue-500/30">
+                  <div className="text-sm text-blue-300">Total Picks</div>
+                  <div className="text-2xl font-bold text-blue-400">{searchResults.data.total}</div>
                 </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-600">Wins</div>
-                  <div className="text-2xl font-bold text-green-600">{searchResults.data.wins}</div>
+                <div className="bg-green-900/40 p-4 rounded-lg border border-green-500/30">
+                  <div className="text-sm text-green-300">Wins</div>
+                  <div className="text-2xl font-bold text-green-400">{searchResults.data.wins}</div>
                 </div>
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-600">Losses</div>
-                  <div className="text-2xl font-bold text-red-600">{searchResults.data.losses}</div>
+                <div className="bg-red-900/40 p-4 rounded-lg border border-red-500/30">
+                  <div className="text-sm text-red-300">Losses</div>
+                  <div className="text-2xl font-bold text-red-400">{searchResults.data.losses}</div>
                 </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-600">Win %</div>
-                  <div className="text-2xl font-bold text-purple-600">{searchResults.data.winPct}%</div>
+                <div className="bg-purple-900/40 p-4 rounded-lg border border-purple-500/30">
+                  <div className="text-sm text-purple-300">Win %</div>
+                  <div className="text-2xl font-bold text-purple-400">{searchResults.data.winPct}%</div>
                 </div>
               </div>
 
               <div className="mb-6">
-                <h4 className="font-semibold text-lg mb-3">📊 By Big Guy</h4>
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Big Guy</h4>
                 <div className="space-y-2">
                   {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => (
-                    <div key={player} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                      <span className="font-semibold">{player}</span>
-                      <span className="text-sm">
-                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                    <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{player}</span>
+                      <span className="text-sm text-gray-300">
+                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ?
                       </span>
                     </div>
                   ))}
@@ -7827,12 +7842,12 @@ const renderSearch = () => {
 
           {searchResults.data.recentPicks && searchResults.data.recentPicks.length > 0 && (
             <div>
-              <h4 className="font-semibold text-lg mb-3">📅 Recent Picks</h4>
+              <h4 className="font-semibold text-lg mb-3 text-yellow-400">📅 Recent Picks</h4>
               <div className="space-y-2">
                 {searchResults.data.recentPicks.map((pick, idx) => (
-                  <div key={idx} className="p-3 bg-gray-50 rounded text-sm">
+                  <div key={idx} className="p-3 bg-gray-900/50 rounded text-sm border border-gray-700">
                     <div className="flex justify-between items-start mb-1">
-                      <span className="font-semibold">{formatDateForDisplay(pick.parlayDate)}</span>
+                      <span className="font-semibold text-white">{formatDateForDisplay(pick.parlayDate)}</span>
                       <span className={`font-semibold ${
                         pick.result === 'win' ? 'text-green-400' :
                         pick.result === 'loss' ? 'text-red-400' :
@@ -7842,12 +7857,12 @@ const renderSearch = () => {
                         {pick.result.toUpperCase()}
                       </span>
                     </div>
-                    <div className="text-gray-700">
+                    <div className="text-gray-300">
                       {pick.player} - {pick.sport} - {pick.team || `${pick.awayTeam} @ ${pick.homeTeam}`}
                       {pick.betType === 'Prop Bet' && ` - ${pick.propType} ${pick.overUnder} ${pick.line}`}
                     </div>
                     {pick.actualStats && (
-                      <div className="text-blue-600 mt-1">[{pick.actualStats}]</div>
+                      <div className="text-blue-400 mt-1">[{pick.actualStats}]</div>
                     )}
                   </div>
                 ))}
@@ -7856,11 +7871,6 @@ const renderSearch = () => {
           )}
         </div>
       )}
-
-      {searchResults === null && searchQuery.trim().length >= 3 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 md:p-6">
-          <p className="text-yellow-800">
-            No results found for "{searchQuery}". Try searching for a specific prop type, team, player, sport, or bet type.
           </p>
         </div>
       )}
