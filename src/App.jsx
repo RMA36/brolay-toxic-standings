@@ -6749,7 +6749,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
       
       {/* Sole Survivors */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <h3 className="text-lg md:text-xl font-bold mb-4">💪 Sole Survivors</h3>
+        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">💪 Sole Survivors</h3>
         <p className="text-sm text-gray-400 mb-4">Only winner when everyone else lost</p>
         <div className="space-y-2">
           {Object.entries(soleSurvivors)
