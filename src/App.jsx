@@ -6575,6 +6575,7 @@ return (
             All-time settlements
           </div>
         </Card>
+      </div>
 
       {/* Who Owes Who Summary Table */}
       {simplifiedPayments.length > 0 && (
