@@ -6053,9 +6053,7 @@ const renderAllBrolays = () => {
             )}
           </Card>
         )}
-      </div>
-    )}
-      
+            
       {/* List View (existing code) */}
       {!calendarView && (
         <>
@@ -6368,7 +6366,8 @@ const renderAllBrolays = () => {
     </div>
   );
 };
-  const renderPayments = () => {
+      
+const renderPayments = () => {
   const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
     const dateCompare = new Date(a.date) - new Date(b.date);
     if (dateCompare !== 0) return dateCompare;
