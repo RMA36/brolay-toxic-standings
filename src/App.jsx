@@ -6379,6 +6379,7 @@ const renderPayments = () => {
     return String(aKey).localeCompare(String(bKey));
   });
   const unsettledParlays = filteredParlays.filter(p => !p.settled);
+  const settledParlays = filteredParlays.filter(p => p.settled);
   const lostParlays = unsettledParlays.filter(p => {
     const participants = Object.values(p.participants);
     return participants.some(part => part.result === 'loss');
