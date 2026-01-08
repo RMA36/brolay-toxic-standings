@@ -20,6 +20,7 @@ import {
 } from './constants/sports';
 
 import LoadingSpinner from './components/common/LoadingSpinner';
+import Button from './components/common/Button';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -2703,21 +2704,21 @@ return (
 
           {/* Action Buttons */}
           <div className="flex gap-3 justify-end">
-            <button
+            <Button 
+              variant="secondary" 
               onClick={() => setEditingParlay(null)}
-              className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              className={isMobile ? 'min-h-[44px]' : ''}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button 
+              variant="primary" 
               onClick={() => saveEditedParlay(editingParlay)}
               disabled={saving}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              className={isMobile ? 'min-h-[44px]' : ''}
             >
               {saving ? 'Saving...' : 'Save Changes'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -2920,13 +2921,13 @@ const importFromCSV = async (csvText) => {
               placeholder="Password"
               className="w-full px-4 py-3 border rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <button
+            <Button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="primary"
+              className={`w-full ${isMobile ? 'min-h-[44px]' : ''}`}
             >
               Login
-            </button>
+            </Button>
           </form>
         </div>
       </div>
@@ -3818,36 +3819,37 @@ const generateSearchInsights = (searchResults) => {
                   </select>
                 </div>
               </div>
-              <button
+              <Button
                 onClick={() => removeParticipant(id)}
-                className="text-red-600 text-sm hover:text-red-800 text-base"
-                style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                variant="danger"
+                size="small"
+                className={isMobile ? 'min-h-[44px]' : ''}
               >
                 Remove Pick
-              </button>
+              </Button>
             </div>
           ))}
         </div>
 
         <div className="flex justify-end">
-          <button
+          <Button
             onClick={addParticipant}
-            className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-lg hover:shadow-lg transform hover:scale-105 font-semibold text-base transition"
-            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            variant="primary"
+            className={`flex items-center gap-2 ${isMobile ? 'min-h-[44px]' : ''}`}
           >
             <PlusCircle size={isMobile ? 24 : 20} />
             Add Pick
-          </button>
+          </Button>
         </div>
         
-        <button
+        <Button
           onClick={submitParlay}
           disabled={saving}
-          className="w-full py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-lg transform hover:scale-105 disabled:bg-gray-600 disabled:transform-none text-base transition"
-          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          variant="success"
+          className={`w-full ${isMobile ? 'min-h-[44px]' : ''}`}
         >
-          {saving ? 'Saving...' : 'Submit Brolay'}
-        </button>
+          {saving ? 'Submitting...' : 'Submit Brolay'}
+        </Button>
       </div>
     </div>
   );
@@ -3999,42 +4001,39 @@ return (
         <h2 className="text-xl md:text-2xl font-bold text-yellow-400" style={{ margin: 0 }}>👤 Individual Statistics</h2>
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           {pendingPicksCount > 0 && (
-            <button
+            <Button
               onClick={autoUpdatePendingPicks}
               disabled={autoUpdating}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="primary"
+              className={`flex items-center gap-2 ${isMobile ? 'min-h-[44px]' : ''}`}
             >
               <RefreshCw size={isMobile ? 20 : 16} className={autoUpdating ? 'animate-spin' : ''} />
               {autoUpdating ? 'Updating...' : `Auto-Update ${pendingPicksCount} Pending`}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             onClick={() => {
               setComparisonMode(!comparisonMode);
               setSelectedForComparison(new Set());
             }}
-            className={`px-4 py-2 rounded-lg font-semibold transition text-base ${
-              comparisonMode
-                ? 'bg-yellow-500 text-black'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600 border border-gray-600'
-            }`}
-            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            variant={comparisonMode ? 'primary' : 'secondary'}
+            className={isMobile ? 'min-h-[44px]' : ''}
           >
             {comparisonMode ? '✓ Comparing' : '🔄 Compare Players'}
-          </button>
+          </Button>
         </div>
       </div>
       
       {/* Filters - Collapsible */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <button
+        <Button
           onClick={() => setFiltersExpanded(!filtersExpanded)}
+          variant="ghost"
           className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
         >
           <span>Filters</span>
           <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
-        </button>
+        </Button>
         
         {filtersExpanded && (
           <>
@@ -4163,16 +4162,16 @@ return (
                 </datalist>
               </div>
             </div>
-            <button
+            <Button
               onClick={() => setFilters({
                 dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
                 placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
               })}
-              className="mt-4 px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 hover:text-yellow-400 transition border border-gray-600 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="secondary"
+              className={`mt-4 ${isMobile ? 'min-h-[44px]' : ''}`}
             >
               Clear Filters
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -4239,7 +4238,7 @@ return (
                           <div className="text-xs text-gray-400">Rank #{index + 1}</div>
                         </div>
                       </div>
-                      <button
+                      <Button
                         onClick={() => {
                           const newExpanded = new Set(expandedPlayers);
                           if (isExpanded) {
@@ -4249,10 +4248,12 @@ return (
                           }
                           setExpandedPlayers(newExpanded);
                         }}
-                        className="text-yellow-400 hover:text-yellow-300 transition"
+                        variant="ghost"
+                        size="small"
+                        className="text-yellow-400 hover:text-yellow-300"
                       >
                         {isExpanded ? '▲' : '▼'}
-                      </button>
+                      </Button>
                     </div>
 
                     {/* Quick Stats - Always Visible */}
@@ -4369,12 +4370,14 @@ return (
             <h3 className="text-lg font-bold text-purple-400">
               📊 Comparing {selectedForComparison.size} Players
             </h3>
-            <button
+            <Button
               onClick={() => setSelectedForComparison(new Set())}
-              className="text-sm text-gray-400 hover:text-red-400 transition"
+              variant="ghost"
+              size="small"
+              className="text-gray-400 hover:text-red-400"
             >
               Clear Selection
-            </button>
+            </Button>
           </div>
           
           {(() => {
@@ -4749,27 +4752,28 @@ const renderGroupDashboard = () => {
       <div className="flex justify-between items-center">
         <h2 className="text-xl md:text-2xl font-bold text-yellow-400">👥 Group Statistics</h2>
         {pendingPicksCount > 0 && (
-          <button
+          <Button
             onClick={autoUpdatePendingPicks}
             disabled={autoUpdating}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 text-base"
-            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            variant="primary"
+            className={`flex items-center gap-2 ${isMobile ? 'min-h-[44px]' : ''}`}
           >
             <RefreshCw size={isMobile ? 20 : 16} className={autoUpdating ? 'animate-spin' : ''} />
             {autoUpdating ? 'Updating...' : `Auto-Update ${pendingPicksCount} Pending`}
-          </button>
+          </Button>
         )}
       </div>
       
       {/* Filters - Collapsible */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <button
+        <Button
           onClick={() => setFiltersExpanded(!filtersExpanded)}
+          variant="ghost"
           className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
         >
           <span>Filters</span>
           <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
-        </button>
+        </Button>
         
         {filtersExpanded && (
           <>
@@ -4898,16 +4902,16 @@ const renderGroupDashboard = () => {
                 </datalist>
               </div>
             </div>
-            <button
+            <Button
               onClick={() => setFilters({
                 dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
                 placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
               })}
-              className="mt-4 px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 hover:text-yellow-400 transition border border-gray-600 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="secondary"
+              className={`mt-4 ${isMobile ? 'min-h-[44px]' : ''}`}
             >
               Clear Filters
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -5707,23 +5711,23 @@ const renderAllBrolays = () => {
         <h2 className="text-xl md:text-2xl font-bold text-yellow-400">📅 All Brolays</h2>
         <div className="flex gap-2">
           {pendingPicksCount > 0 && (
-            <button
+            <Button
               onClick={autoUpdatePendingPicks}
               disabled={autoUpdating}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="primary"
+              className={`flex items-center gap-2 ${isMobile ? 'min-h-[44px]' : ''}`}
             >
               <RefreshCw size={isMobile ? 20 : 16} className={autoUpdating ? 'animate-spin' : ''} />
               {autoUpdating ? 'Updating...' : `Auto-Update ${pendingPicksCount} Pending`}
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             onClick={() => setCalendarView(!calendarView)}
-            className="px-4 py-2 bg-gray-800 text-gray-300 rounded hover:bg-gray-700 border border-gray-700 text-base"
-            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            variant="secondary"
+            className={isMobile ? 'min-h-[44px]' : ''}
           >
             {calendarView ? '📋 List View' : '📅 Calendar View'}
-          </button>
+          </Button>
         </div>
       </div>
       
@@ -5734,24 +5738,27 @@ const renderAllBrolays = () => {
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl md:text-2xl font-bold text-yellow-400">{monthName}</h3>
             <div className="flex gap-2">
-              <button
+              <Button
                 onClick={() => changeMonth(-1)}
-                className="px-3 py-2 bg-gray-700 rounded-lg text-gray-300 hover:text-yellow-400 hover:bg-gray-600 transition border border-gray-600"
+                variant="secondary"
+                size="small"
               >
                 ← Prev
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => setCalendarMonth(new Date())}
-                className="px-3 py-2 bg-gray-700 rounded-lg text-gray-300 hover:text-yellow-400 hover:bg-gray-600 transition border border-gray-600"
+                variant="secondary"
+                size="small"
               >
                 Today
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => changeMonth(1)}
-                className="px-3 py-2 bg-gray-700 rounded-lg text-gray-300 hover:text-yellow-400 hover:bg-gray-600 transition border border-gray-600"
+                variant="secondary"
+                size="small"
               >
                 Next →
-              </button>
+              </Button>
             </div>
           </div>
           
@@ -5972,18 +5979,22 @@ const renderAllBrolays = () => {
                               ⚠️ {pushes.length} Push{pushes.length > 1 ? 'es' : ''}
                             </span>
                           )}
-                          <button
+                          <Button
                             onClick={() => setEditingParlay(parlay)}
-                            className="text-blue-400 text-sm hover:text-blue-300"
+                            variant="ghost"
+                            size="small"
+                            className={`text-blue-400 hover:text-blue-300 ${isMobile ? 'min-h-[44px]' : ''}`}
                           >
                             Edit
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => deleteParlay(parlay.id)}
-                            className="text-red-400 text-sm hover:text-red-300"
+                            variant="ghost"
+                            size="small"
+                            className={`text-red-400 hover:text-red-300 ${isMobile ? 'min-h-[44px]' : ''}`}
                           >
                             Delete
-                          </button>
+                          </Button>
                         </div>
                       </div>
                       
@@ -6053,13 +6064,14 @@ const renderAllBrolays = () => {
         <>
           {/* Filters */}
           <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-            <button
+            <Button
               onClick={() => setFiltersExpanded(!filtersExpanded)}
+              variant="ghost"
               className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
             >
               <span>Filters</span>
               <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
-            </button>
+            </Button>
             
             {filtersExpanded && (
               <>
@@ -6188,17 +6200,17 @@ const renderAllBrolays = () => {
                     </datalist>
                   </div>
                 </div>
-                <button
+                <Button
                   onClick={() => setFilters({
                     dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
                     placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
                     betType: '', propType: ''
                   })}
-                  className="mt-4 px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 text-base"
-                  style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                  variant="secondary"
+                  className={`mt-4 ${isMobile ? 'min-h-[44px]' : ''}`}
                 >
                   Clear Filters
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -6258,20 +6270,22 @@ const renderAllBrolays = () => {
                           {losers.length === 0 && winners.length === 0 && (
                             <span className="text-gray-500 font-semibold">PENDING</span>
                           )}
-                          <button
+                          <Button
                             onClick={() => setEditingParlay(parlay)}
-                            className="text-blue-400 text-sm hover:text-blue-300 text-base"
-                            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                            variant="ghost"
+                            size="small"
+                            className={`text-blue-400 hover:text-blue-300 ${isMobile ? 'min-h-[44px]' : ''}`}
                           >
                             Edit
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             onClick={() => deleteParlay(parlay.id)}
-                            className="text-red-400 text-sm hover:text-red-300 text-base"
-                            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                            variant="ghost"
+                            size="small"
+                            className={`text-red-400 hover:text-red-300 ${isMobile ? 'min-h-[44px]' : ''}`}
                           >
                             Delete
-                          </button>
+                          </Button>
                         </div>
                       </div>
                       
@@ -6335,20 +6349,20 @@ const renderAllBrolays = () => {
             {/* Pagination Controls */}
             {filteredParlays.length > brolaysToShow && (
               <div className="mt-4 flex gap-3 justify-center">
-                <button
+                <Button
                   onClick={() => setBrolaysToShow(prev => prev + 10)}
-                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-base"
-                  style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                  variant="blue"
+                  className={isMobile ? 'min-h-[44px]' : ''}
                 >
                   Show More (10)
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={() => setBrolaysToShow(filteredParlays.length)}
-                  className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-base"
-                  style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                  variant="secondary"
+                  className={isMobile ? 'min-h-[44px]' : ''}
                 >
                   Show All ({filteredParlays.length})
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -6512,16 +6526,16 @@ return (
               {players.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
-          <button
+          <Button
             onClick={() => setFilters({
               dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
               placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
             })}
-            className="px-4 py-2 bg-gray-700 text-gray-300 rounded hover:bg-gray-600 hover:text-yellow-400 transition text-base border border-gray-600"
-            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            variant="secondary"
+            className={isMobile ? 'min-h-[44px]' : ''}
           >
             Clear
-          </button>
+          </Button>
         </div>
       </div>
       
@@ -6631,14 +6645,15 @@ return (
                     <span className="font-medium text-white">{parlay.placedBy || 'Unknown'} pays winners: </span>
                     {winners.map(winner => `${winner.player} ($${amountPerWinner.toFixed(2)})`).join(', ')}
                   </div>
-                  <button
+                  <Button
                     onClick={() => toggleSettlement(parlay.id)}
                     disabled={saving}
-                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400 transition text-base"
-                    style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                    variant="success"
+                    size="small"
+                    className={`mt-2 ${isMobile ? 'min-h-[44px]' : ''}`}
                   >
                     Mark as Settled
-                  </button>
+                  </Button>
                 </div>
               );
             })
@@ -6682,14 +6697,15 @@ return (
                     <span className="font-medium text-white">Losers pay {parlay.placedBy || 'Unknown'}: </span>
                     {losers.map(loser => `${loser.player} ($${amountPerLoser.toFixed(2)})`).join(', ')}
                   </div>
-                  <button
+                  <Button
                     onClick={() => toggleSettlement(parlay.id)}
                     disabled={saving}
-                    className="mt-2 px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:bg-gray-400 transition text-base"
-                    style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                    variant="success"
+                    size="small"
+                    className={`mt-2 ${isMobile ? 'min-h-[44px]' : ''}`}
                   >
                     Mark as Settled
-                  </button>
+                  </Button>
                 </div>
               );
             })
@@ -6728,14 +6744,15 @@ return (
                      : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
               </div>
             </div>
-            <button
+            <Button
               onClick={() => toggleSettlement(parlay.id)}
               disabled={saving}
-              className="ml-3 px-3 py-1 bg-red-600/80 text-white text-xs rounded hover:bg-red-700 disabled:bg-gray-400 whitespace-nowrap border border-red-500/50 transition text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="danger"
+              size="small"
+              className={`ml-3 whitespace-nowrap ${isMobile ? 'min-h-[44px]' : ''}`}
             >
               Unsettle
-            </button>
+            </Button>
           </div>
         </div>
       );
@@ -6762,26 +6779,26 @@ const renderImport = () => (
         placeholder="Paste CSV data here..."
       />
       
-      <button
+      <Button
         onClick={() => {
           if (window.confirm('Import this data? This will add all rows to your database.')) {
             importFromCSV(csvInput);
           }
         }}
         disabled={saving || !csvInput}
-        className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 text-base"
-        style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        variant="primary"
+        className={`mt-4 ${isMobile ? 'min-h-[44px]' : ''}`}
       >
         {saving ? 'Importing...' : 'Import Data'}
-      </button>
-      <button
+      </Button>
+      <Button
         onClick={extractTeamsFromExistingParlays}
         disabled={parlays.length === 0}
-        className="mt-4 ml-4 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 text-base"
-        style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        variant="success"
+        className={`mt-4 ml-4 ${isMobile ? 'min-h-[44px]' : ''}`}
       >
         Extract Teams from Existing Data
-      </button>
+      </Button>
     </div>
     
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 md:p-6">
@@ -7437,13 +7454,13 @@ const renderSearch = () => {
             placeholder='Try: "Anytime Touchdown Scorer record" or "Chiefs record" or "Management NBA stats"'
             className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
           />
-          <button
+          <Button
             onClick={handleSearch}
-            className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-lg font-semibold hover:shadow-lg transform hover:scale-105 transition text-base"
-            style={{ minHeight: isMobile ? '44px' : 'auto' }}
+            variant="primary"
+            className={isMobile ? 'min-h-[44px]' : ''}
           >
             Search
-          </button>
+          </Button>
         </div>
         
         {/* Search Examples */}     
@@ -7457,16 +7474,18 @@ const renderSearch = () => {
               'Management NFL stats',
               'Vanderbilt picks'
             ].map(example => (
-              <button
+              <Button
                 key={example}
                 onClick={() => {
                   setSearchQuery(example);
                   setSearchResults(analyzeSearchQuery(example));
                 }}
-                className="px-3 py-1 bg-gray-800 hover:bg-gray-700 rounded text-xs text-gray-300 hover:text-yellow-400 transition border border-gray-700"
+                variant="ghost"
+                size="small"
+                className="text-xs"
               >
                 {example}
-              </button>
+              </Button>
             ))}
           </div>
         </div>
@@ -8020,13 +8039,14 @@ const handleSavePickEdit = async () => {
       
       {/* Filters */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <button
+        <Button
           onClick={() => setFiltersExpanded(!filtersExpanded)}
+          variant="ghost"
           className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
         >
           <span>Filters</span>
           <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
-        </button>
+        </Button>
         
         {filtersExpanded && (
           <>
@@ -8156,17 +8176,17 @@ const handleSavePickEdit = async () => {
                 </datalist>
               </div>
             </div>
-            <button
+            <Button
               onClick={() => setFilters({
                 dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
                 placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
                 betType: '', propType: ''
               })}
-              className="mt-4 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="secondary"
+              className={`mt-4 ${isMobile ? 'min-h-[44px]' : ''}`}
             >
               Clear Filters
-            </button>
+            </Button>
           </>
         )}
       </div>
@@ -8230,12 +8250,14 @@ const handleSavePickEdit = async () => {
                       }`}>
                         {pick.result.toUpperCase()}
                       </span>
-                      <button
+                      <Button
                         onClick={() => setEditingPick(pick)}
-                        className="text-blue-400 text-sm hover:text-blue-300"
+                        variant="ghost"
+                        size="small"
+                        className="text-blue-400 hover:text-blue-300"
                       >
                         Edit
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -8247,20 +8269,20 @@ const handleSavePickEdit = async () => {
         {/* Pagination */}
         {sortedPicks.length > picksToShow && (
           <div className="mt-4 flex gap-3 justify-center">
-            <button
+            <Button
               onClick={() => setPicksToShow(prev => prev + 20)}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="blue"
+              className={isMobile ? 'min-h-[44px]' : ''}
             >
               Show More (20)
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setPicksToShow(sortedPicks.length)}
-              className="px-6 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="secondary"
+              className={isMobile ? 'min-h-[44px]' : ''}
             >
               Show All ({sortedPicks.length})
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -8443,21 +8465,21 @@ const handleSavePickEdit = async () => {
               </div>
 
               <div className="flex gap-3 justify-end mt-6">
-                <button
+                <Button
                   onClick={() => setEditingPick(null)}
-                  className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-base"
-                  style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                  variant="secondary"
+                  className={isMobile ? 'min-h-[44px]' : ''}
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handleSavePickEdit}
                   disabled={saving}
-                  className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 text-base"
-                  style={{ minHeight: isMobile ? '44px' : 'auto' }}
+                  variant="primary"
+                  className={isMobile ? 'min-h-[44px]' : ''}
                 >
                   {saving ? 'Saving...' : 'Save Changes'}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -8513,12 +8535,13 @@ const renderSettings = () => {
             {learnedPropTypes.sort().map((propType, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
                 <span className="text-sm">{propType}</span>
-                <button
+                <Button
                   onClick={() => handleRemovePropType(propType)}
-                  className="ml-3 text-red-600 hover:text-red-800 text-sm font-semibold"
+                  variant="danger"
+                  size="small"
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -8539,12 +8562,13 @@ const renderSettings = () => {
             {learnedTeams.sort().map((team, idx) => (
               <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded border">
                 <span className="text-sm">{team}</span>
-                <button
+                <Button
                   onClick={() => handleRemoveTeam(team)}
-                  className="ml-3 text-red-600 hover:text-red-800 text-sm font-semibold"
+                  variant="danger"
+                  size="small"
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -8555,22 +8579,22 @@ const renderSettings = () => {
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 md:p-6">
           <h3 className="text-lg font-bold text-red-900 mb-4">⚠️ Danger Zone</h3>
           <div className="flex flex-col md:flex-row gap-4">
-            <button
+            <Button
               onClick={handleClearAllLearnedData}
-              className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="danger"
+              className={isMobile ? 'min-h-[44px]' : ''}
             >
               Clear All Learned Data
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={extractTeamsFromExistingParlays}
               disabled={parlays.length === 0}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="blue"
+              className={isMobile ? 'min-h-[44px]' : ''}
             >
-              Re-extract From Existing Brolays
-            </button>
-            <button
+              Extract Teams
+            </Button>
+            <Button
               onClick={async () => {
                 if (window.confirm('Add day of week to all existing brolays? This will update all records in the database.')) {
                   setSaving(true);
@@ -8597,11 +8621,11 @@ const renderSettings = () => {
                 }
               }}
               disabled={parlays.length === 0 || saving}
-              className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 disabled:bg-gray-400 text-base"
-              style={{ minHeight: isMobile ? '44px' : 'auto' }}
+              variant="success"
+              className={isMobile ? 'min-h-[44px]' : ''}
             >
               Backfill Day of Week
-            </button>
+            </Button>
           </div>
         <p className="text-sm text-red-800 mt-3">
           Clear all will remove all learned teams and prop types. Re-extract will scan all your brolays and rebuild the learned data.
@@ -8640,13 +8664,13 @@ const renderSettings = () => {
     <div className="bg-gradient-to-r from-gray-900/80 to-gray-800/80 backdrop-blur-md text-white p-4 md:p-6 shadow-2xl border-b border-yellow-500/20 animate-slideInLeft">
   <div className="flex items-center justify-between">
     {isMobile && (
-      <button
+      <Button
         onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="p-2 text-base hover:bg-gray-700 rounded-lg transition"
-        style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        variant="ghost"
+        className={isMobile ? 'min-h-[44px]' : ''}
       >
         {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-      </button>
+      </Button>
     )}
     <div className="flex items-center gap-3 flex-1">
       <div className="bg-gradient-to-br from-yellow-500 to-amber-600 rounded-xl p-2 md:p-3 shadow-lg">
@@ -8688,26 +8712,24 @@ const renderSettings = () => {
       isMobile ? 'space-y-2' : 'bg-gray-900/80 backdrop-blur-md rounded-xl p-2 border border-gray-700 shadow-xl flex gap-2 flex-wrap animate-slideInRight'
     }`}>
       {/* New Brolay Button */}
-      <button
+      <Button
         onClick={() => {
           const newTab = 'entry';
           setActiveTab(newTab);
           localStorage.setItem('currentActiveTab', newTab);
           if (isMobile) setSidebarOpen(false);
         }}
-        className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
-          activeTab === 'entry' 
-            ? 'bg-gradient-to-r from-yellow-500 to-amber-600 text-black shadow-lg' 
-            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
-        } transition-all transform hover:scale-105 text-base`}
-        style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        variant="primary"
+        className={`${isMobile ? 'w-full min-h-[44px]' : ''} ${
+          activeTab === 'entry' ? 'shadow-lg' : ''
+        }`}
       >
         ✨ New Brolay
-      </button>
+      </Button>
       
       {/* Brolay Data Dropdown */}
       <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
-        <button
+        <Button
           onClick={() => {
             if (isMobile) {
               const newState = mobileDropdownOpen === 'brolayData' ? null : 'brolayData';
@@ -8715,77 +8737,75 @@ const renderSettings = () => {
             }
           }}
           onMouseEnter={(e) => !isMobile && e.currentTarget.parentElement.classList.add('dropdown-open')}
-          className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
-            ['allBrolays', 'allPicks'].includes(activeTab)
-              ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
-          } transition text-base`}
-          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          variant={['allBrolays', 'allPicks'].includes(activeTab) ? 'primary' : 'secondary'}
+          className={isMobile ? 'w-full min-h-[44px]' : ''}
         >
           📚 Brolay Data {isMobile ? (mobileDropdownOpen === 'brolayData' ? '▲' : '▼') : '▼'}
-        </button>
+        </Button>
         {!isMobile && (
           <div 
             className="dropdown-content"
             onMouseLeave={(e) => e.currentTarget.parentElement.classList.remove('dropdown-open')}
           >
             <div className="bg-gray-800 rounded-lg border border-yellow-500/30 shadow-2xl overflow-hidden">
-              <button
+              <Button
                 onClick={() => {
                   const newTab = 'allBrolays';
                   setActiveTab(newTab);
                   localStorage.setItem('currentActiveTab', newTab);
                   if (isMobile) setSidebarOpen(false);
                 }}
-                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
+                variant="ghost"
+                className="w-full text-left"
               >
                 📅 All Brolays
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   const newTab = 'allPicks';
                   setActiveTab(newTab);
                   localStorage.setItem('currentActiveTab', newTab);
                   if (isMobile) setSidebarOpen(false);
                 }}
-                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition"
+                variant="ghost"
+                className="w-full text-left"
               >
                 📊 All Picks
-              </button>
+              </Button>
             </div>
           </div>
         )}
         {isMobile && mobileDropdownOpen === 'brolayData' && (
           <div className="ml-4 mt-2 space-y-2">
-            <button
+            <Button
               onClick={() => {
                 setActiveTab('allBrolays');
                 setSidebarOpen(false);
                 setMobileDropdownOpen(null);
               }}
-              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
-              style={{ minHeight: '44px' }}
+              variant="ghost"
+              className="w-full text-left min-h-[44px]"
             >
               📅 All Brolays
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 setActiveTab('allPicks');
                 setSidebarOpen(false);
                 setMobileDropdownOpen(null);
               }}
-              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
-              style={{ minHeight: '44px' }}
+              variant="ghost"
+              className="w-full text-left min-h-[44px]"
             >
               📊 All Picks
-            </button>
+            </Button>
           </div>
         )}
       </div>
       
       {/* Analytics Dropdown */}
       <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
-        <button
+        <Button
           onClick={() => {
             if (isMobile) {
               const newState = mobileDropdownOpen === 'analytics' ? null : 'analytics';
@@ -8793,192 +8813,181 @@ const renderSettings = () => {
             }
           }}
           onMouseEnter={(e) => !isMobile && e.currentTarget.parentElement.classList.add('dropdown-open')}
-          className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
-            ['search', 'individual', 'group', 'rankings', 'grid'].includes(activeTab)
-              ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
-          } transition text-base`}
-          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          variant={['search', 'individual', 'group', 'rankings', 'grid'].includes(activeTab) ? 'primary' : 'secondary'}
+          className={isMobile ? 'w-full min-h-[44px]' : ''}
         >
           📈 Analytics {isMobile ? (mobileDropdownOpen === 'analytics' ? '▲' : '▼') : '▼'}
-        </button>
+        </Button>
         {!isMobile && (
           <div 
             className="dropdown-content"
             onMouseLeave={(e) => e.currentTarget.parentElement.classList.remove('dropdown-open')}
           >
             <div className="bg-gray-800 rounded-lg border border-yellow-500/30 shadow-2xl overflow-hidden">
-              <button
+              <Button
                 onClick={() => {
                   const newTab = 'search';
                   setActiveTab(newTab);
                   localStorage.setItem('currentActiveTab', newTab);
                   if (isMobile) setSidebarOpen(false);
                 }}
-                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
+                variant="ghost"
+                className="w-full text-left"
               >
                 🔍 Insights
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   const newTab = 'individual';
                   setActiveTab(newTab);
                   localStorage.setItem('currentActiveTab', newTab);
                   if (isMobile) setSidebarOpen(false);
                 }}
-                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
+                variant="ghost"
+                className="w-full text-left"
               >
                 👤 Individual Stats
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   const newTab = 'group';
                   setActiveTab(newTab);
                   localStorage.setItem('currentActiveTab', newTab);
                   if (isMobile) setSidebarOpen(false);
                 }}
-                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
+                variant="ghost"
+                className="w-full text-left"
               >
                 👥 Group Stats
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   const newTab = 'rankings';
                   setActiveTab(newTab);
                   localStorage.setItem('currentActiveTab', newTab);
                   if (isMobile) setSidebarOpen(false);
                 }}
-                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border-b border-gray-700"
+                variant="ghost"
+                className="w-full text-left"
               >
                 🏆 Rankings
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={() => {
                   const newTab = 'grid';
                   setActiveTab(newTab);
                   localStorage.setItem('currentActiveTab', newTab);
                   if (isMobile) setSidebarOpen(false);
                 }}
-                className="block w-full text-left px-4 py-3 text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition"
+                variant="ghost"
+                className="w-full text-left"
               >
                 🎯 Grid View
-              </button>
+              </Button>
             </div>
           </div>
         )}
         {isMobile && mobileDropdownOpen === 'analytics' && (
           <div className="ml-4 mt-2 space-y-2">
-            <button
+            <Button
               onClick={() => {
                 setActiveTab('search');
                 setSidebarOpen(false);
                 setMobileDropdownOpen(null);
               }}
-              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
-              style={{ minHeight: '44px' }}
+              variant="ghost"
+              className="w-full text-left min-h-[44px]"
             >
               🔍 Insights
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 setActiveTab('individual');
                 setSidebarOpen(false);
                 setMobileDropdownOpen(null);
               }}
-              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
-              style={{ minHeight: '44px' }}
+              variant="ghost"
+              className="w-full text-left min-h-[44px]"
             >
               👤 Individual Stats
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 setActiveTab('group');
                 setSidebarOpen(false);
                 setMobileDropdownOpen(null);
               }}
-              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
-              style={{ minHeight: '44px' }}
+              variant="ghost"
+              className="w-full text-left min-h-[44px]"
             >
               👥 Group Stats
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 setActiveTab('rankings');
                 setSidebarOpen(false);
                 setMobileDropdownOpen(null);
               }}
-              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
-              style={{ minHeight: '44px' }}
+              variant="ghost"
+              className="w-full text-left min-h-[44px]"
             >
               🏆 Rankings
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 setActiveTab('grid');
                 setSidebarOpen(false);
                 setMobileDropdownOpen(null);
               }}
-              className="block w-full text-left px-4 py-2 rounded-lg text-gray-300 hover:bg-gray-700 hover:text-yellow-400 transition border border-gray-700"
-              style={{ minHeight: '44px' }}
+              variant="ghost"
+              className="w-full text-left min-h-[44px]"
             >
               🎯 Grid View
-            </button>
+            </Button>
           </div>
         )}
       </div>
       
       {/* Payments Button */}
-      <button
+      <Button
         onClick={() => {
           const newTab = 'payments';
           setActiveTab(newTab);
           localStorage.setItem('currentActiveTab', newTab);
           if (isMobile) setSidebarOpen(false);
         }}
-        className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
-          activeTab === 'payments'
-            ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
-            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
-        } transition text-base`}
-        style={{ minHeight: isMobile ? '44px' : 'auto' }}
+        variant={activeTab === 'payments' ? 'primary' : 'secondary'}
+        className={isMobile ? 'w-full min-h-[44px]' : ''}
       >
         💰 Payments
-      </button>
+      </Button>
       
       {/* Settings (if enabled) */}
       {SHOW_SETTINGS_TAB && (
-        <button
+        <Button
           onClick={() => {
             setActiveTab('settings');
             if (isMobile) setSidebarOpen(false);
           }}
-          className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
-            activeTab === 'settings'
-              ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
-          } transition text-base`}
-          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          variant={activeTab === 'settings' ? 'primary' : 'secondary'}
+          className={isMobile ? 'w-full min-h-[44px]' : ''}
         >
           ⚙️ Settings
-        </button>
+        </Button>
       )}
       
       {/* Import (if enabled) */}
       {SHOW_IMPORT_TAB && (
-        <button
+        <Button
           onClick={() => {
             setActiveTab('import');
             if (isMobile) setSidebarOpen(false);
           }}
-          className={`${isMobile ? 'w-full' : ''} px-4 py-2 rounded-lg font-semibold ${
-            activeTab === 'import'
-              ? 'bg-gray-700 text-yellow-400 border border-yellow-500/50'
-              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700'
-          } transition text-base`}
-          style={{ minHeight: isMobile ? '44px' : 'auto' }}
+          variant={activeTab === 'import' ? 'primary' : 'secondary'}
+          className={isMobile ? 'w-full min-h-[44px]' : ''}
         >
           📥 Import Data
-        </button>
+        </Button>
       )}
     </div>
   </div>
