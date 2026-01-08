@@ -21,6 +21,7 @@ import {
 
 import LoadingSpinner from './components/common/LoadingSpinner';
 import Button from './components/common/Button';
+import Card from './components/common/Card';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -4918,7 +4919,7 @@ const renderGroupDashboard = () => {
       
       {/* Main Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
-        <div className="bg-gradient-to-br from-blue-900/30 to-gray-800 rounded-xl p-5 border border-blue-500/30 shadow-xl">
+        <Card variant="info" padding="default">
           <div className="flex items-center gap-3 mb-2">
             <Users className="text-blue-400" size={28} />
             <h3 className="text-base md:text-lg font-semibold text-blue-400">Total Brolays</h3>
@@ -4927,9 +4928,9 @@ const renderGroupDashboard = () => {
           <p className="text-sm text-gray-400 mt-1">
             {wonParlays}W-{lostParlays}L
           </p>
-        </div>
+        </Card>
         
-        <div className="bg-gradient-to-br from-green-900/30 to-gray-800 rounded-xl p-5 border border-green-500/30 shadow-xl">
+        <Card variant="success" padding="default">
           <div className="flex items-center gap-3 mb-2">
             <TrendingUp className="text-green-400" size={28} />
             <h3 className="text-base md:text-lg font-semibold text-green-400">Win Rate</h3>
@@ -4938,9 +4939,9 @@ const renderGroupDashboard = () => {
           <p className="text-sm text-gray-400 mt-1">
             {wonParlays} wins out of {totalParlays}
           </p>
-        </div>
+        </Card>
         
-        <div className="bg-gradient-to-br from-yellow-900/30 to-gray-800 rounded-xl p-5 border border-yellow-500/30 shadow-xl">
+        <Card variant="warning" padding="default">
           <div className="flex items-center gap-3 mb-2">
             <Award className="text-yellow-400" size={28} />
             <h3 className="text-base md:text-lg font-semibold text-yellow-400">Net Profit</h3>
@@ -4953,21 +4954,17 @@ const renderGroupDashboard = () => {
           <p className="text-sm text-gray-400 mt-1">
             ${totalMoneyWon.toFixed(0)} won, ${totalMoneyLost.toFixed(0)} lost
           </p>
-        </div>
+        </Card>
 
-        <div className="bg-gradient-to-br from-purple-900/30 to-gray-800 rounded-xl p-5 border border-purple-500/30 shadow-xl">
+        <Card variant="info" padding="default" className="bg-gradient-to-br from-purple-900/30 to-gray-800 border-purple-500/30">
           <div className="flex items-center gap-3 mb-2">
             <AlertCircle className="text-purple-400" size={28} />
             <h3 className="text-base md:text-lg font-semibold text-purple-400">Avg Payout</h3>
           </div>
           <p className="text-3xl md:text-4xl font-bold text-white">
-            ${wonParlays > 0 ? ((totalMoneyWon / wonParlays) / 4).toFixed(0) : '0'}
+            ${wonParlays > 0 ? (totalMoneyWon / wonParlays).toFixed(0) : 0}
           </p>
-          <p className="text-sm text-gray-400 mt-1">
-            Per person per win
-          </p>
-        </div>
-      </div>
+        </Card>
 
       {/* Recent Performance */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -5733,7 +5730,7 @@ const renderAllBrolays = () => {
       
       {/* Calendar View */}
       {calendarView && (
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20 animate-fadeInUp">
+        <Card padding="default" className="animate-fadeInUp">
           {/* Calendar Header */}
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xl md:text-2xl font-bold text-yellow-400">{monthName}</h3>
@@ -5931,10 +5928,7 @@ const renderAllBrolays = () => {
           
           {/* Selected Day Details */}
           {selectedCalendarDate && (
-            <div className="mt-6 pt-6 border-t border-gray-700 animate-fadeInUp">
-              <h4 className="text-lg font-bold text-yellow-400 mb-4">
-                📊 {formatDateForDisplay(selectedCalendarDate)} - {getBrolaysForDate(selectedCalendarDate).length} Brolay{getBrolaysForDate(selectedCalendarDate).length !== 1 ? 's' : ''}
-              </h4>
+            <div className="mt-6">
               <div className="space-y-4">
                 {getBrolaysForDate(selectedCalendarDate).map(parlay => {
                   const participants = Object.values(parlay.participants);
@@ -6054,10 +6048,12 @@ const renderAllBrolays = () => {
                   );
                 })}
               </div>
-            </div>
-          )}
-        </div>
-      )}
+             </div>
+            )}
+          </Card>
+        )}
+      </div>
+    )}
       
       {/* List View (existing code) */}
       {!calendarView && (
@@ -6541,7 +6537,7 @@ return (
       
       {/* Visual Summary Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-yellow-900/30 to-gray-800 rounded-xl p-5 border border-yellow-500/30 shadow-xl">
+        <Card variant="warning" padding="default">
           <div className="flex items-center gap-3 mb-2">
             <AlertCircle className="text-yellow-400" size={24} />
             <h3 className="text-yellow-400 font-bold text-lg">Unsettled</h3>
@@ -6552,9 +6548,9 @@ return (
           <div className="text-sm text-gray-400">
             {lostParlays.length} lost • {wonParlays.length} won
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-gradient-to-br from-red-900/30 to-gray-800 rounded-xl p-5 border border-red-500/30 shadow-xl">
+        <Card variant="danger" padding="default">
           <div className="flex items-center gap-3 mb-2">
             <span className="text-2xl">💸</span>
             <h3 className="text-red-400 font-bold text-lg">Total Owed</h3>
@@ -6565,9 +6561,9 @@ return (
           <div className="text-sm text-gray-400">
             {simplifiedPayments.length} payment{simplifiedPayments.length !== 1 ? 's' : ''} pending
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-gradient-to-br from-green-900/30 to-gray-800 rounded-xl p-5 border border-green-500/30 shadow-xl">
+        <Card variant="success" padding="default">
           <div className="flex items-center gap-3 mb-2">
             <span className="text-2xl">✅</span>
             <h3 className="text-green-400 font-bold text-lg">Recently Settled</h3>
@@ -6578,13 +6574,11 @@ return (
           <div className="text-sm text-gray-400">
             All-time settlements
           </div>
-        </div>
-      </div>
+        </Card>
 
       {/* Who Owes Who Summary Table */}
       {simplifiedPayments.length > 0 && (
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">💰 Who Owes Who (Net Summary)</h3>
+        <Card title="💰 Who Owes Who (Net Summary)">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -6607,24 +6601,23 @@ return (
               </tbody>
             </table>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Won Brolays */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <h3 className="text-base md:text-lg font-bold mb-3 text-green-400">✅ Won Brolays</h3>
-        <div className="space-y-3">
-          {wonParlays.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No won brolays to settle</p>
-          ) : (
-            wonParlays.map(parlay => {
-              const participants = Object.values(parlay.participants);
-              const winners = participants.filter(p => p.result === 'win');
-              const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
-              const amountPerWinner = winners.length > 0 ? netProfit / winners.length : 0;
-
-              return (
-                <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 md:p-6 bg-green-900/10 hover:bg-green-900/20 transition">
+        <Card title="✅ Won Brolays" className="text-green-400">
+          <div className="space-y-3">
+            {wonParlays.length === 0 ? (
+              <p className="text-gray-500 text-center py-4">No won brolays to settle</p>
+            ) : (
+              wonParlays.map(parlay => {
+                const participants = Object.values(parlay.participants);
+                const winners = participants.filter(p => p.result === 'win');
+                const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
+                const amountPerWinner = winners.length > 0 ? (netProfit / winners.length).toFixed(2) : 0;
+                
+                return (
+                  <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="font-semibold text-white">{formatDateForDisplay(parlay.date)}</div>
@@ -6659,11 +6652,10 @@ return (
             })
           )}
         </div>
-      </div>
+      </Card>
       
       {/* Lost Brolays */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <h3 className="text-base md:text-lg font-bold mb-3 text-red-400">❌ Lost Brolays</h3>
+      <Card title="❌ Lost Brolays" className="text-red-400">
         <div className="space-y-3">
           {lostParlays.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No lost brolays to settle</p>
@@ -6671,14 +6663,11 @@ return (
             lostParlays.map(parlay => {
               const participants = Object.values(parlay.participants);
               const losers = participants.filter(p => p.result === 'loss');
-              const winners = participants.filter(p => p.result === 'win');
-              const and1 = losers.length === 1 && winners.length === participants.length - 1;
-              const amountPerLoser = and1 
-                ? parlay.betAmount * participants.length 
-                : (parlay.betAmount * participants.length) / losers.length;
-
+              const totalLost = parlay.betAmount * losers.length;
+              const amountPerLoser = losers.length > 0 ? (totalLost / losers.length).toFixed(2) : 0;
+              
               return (
-                <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 md:p-6 bg-red-900/10 hover:bg-red-900/20 transition">
+                <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
                   <div className="flex justify-between items-start mb-2">
                     <div>
                       <div className="font-semibold text-white">{formatDateForDisplay(parlay.date)}</div>
@@ -6706,59 +6695,50 @@ return (
                   >
                     Mark as Settled
                   </Button>
+                  </div>
+              );
+            })
+          )}
+        </div>
+      </Card>
+
+      {/* Recently Settled */}
+      <Card title="✅ Recently Settled" className="text-gray-400">
+        <div className="space-y-3">
+          {settledParlays.length === 0 ? (
+            <p className="text-gray-500 text-center py-4">No recently settled brolays</p>
+          ) : (
+            settledParlays.slice(0, 10).map(parlay => {
+              const participants = Object.values(parlay.participants);
+              const winners = participants.filter(p => p.result === 'win');
+              const losers = participants.filter(p => p.result === 'loss');
+              
+              return (
+                <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm text-white">{formatDateForDisplay(parlay.date)}</div>
+                      <div className="text-xs text-gray-400">
+                        {won ? `Winners paid by ${parlay.placedBy || 'Unknown'}: ${winners.map(w => w.player).join(', ')}` 
+                             : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => toggleSettlement(parlay.id)}
+                      disabled={saving}
+                      variant="danger"
+                      size="small"
+                      className={`ml-3 whitespace-nowrap ${isMobile ? 'min-h-[44px]' : ''}`}
+                    >
+                      Unsettle
+                    </Button>
+                  </div>
                 </div>
               );
             })
           )}
         </div>
-      </div>
-
-      {/* Recently Settled */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <h3 className="text-base md:text-lg font-bold mb-3 text-gray-300">Recently Settled</h3>
-        <div className="space-y-2">
-          {parlays
-            .filter(p => p.settled)
-            .sort((a, b) => {
-              // Sort by settledAt timestamp if available, otherwise by date
-              if (a.settledAt && b.settledAt) {
-                return new Date(b.settledAt) - new Date(a.settledAt);
-              }
-              // Fall back to parlay date
-              return new Date(b.date) - new Date(a.date);
-            })
-            .slice(0, 5)
-            .map(parlay => {
-      const participants = Object.values(parlay.participants);
-      const losers = participants.filter(p => p.result === 'loss');
-      const winners = participants.filter(p => p.result === 'win');
-      const won = losers.length === 0 && winners.length > 0;
-      
-      return (
-        <div key={parlay.id} className="border border-gray-700 rounded-lg p-3 bg-gray-800/50 hover:bg-gray-800/70 transition">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <div className="font-semibold text-sm text-white">{formatDateForDisplay(parlay.date)}</div>
-              <div className="text-xs text-gray-400">
-                {won ? `Winners paid by ${parlay.placedBy || 'Unknown'}: ${winners.map(w => w.player).join(', ')}` 
-                     : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
-              </div>
-            </div>
-            <Button
-              onClick={() => toggleSettlement(parlay.id)}
-              disabled={saving}
-              variant="danger"
-              size="small"
-              className={`ml-3 whitespace-nowrap ${isMobile ? 'min-h-[44px]' : ''}`}
-            >
-              Unsettle
-            </Button>
-          </div>
-        </div>
-      );
-    })}
-  </div>
-</div>
+      </Card>
     </div>
   );
 };
@@ -7176,9 +7156,7 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
       <h2 className="text-xl md:text-2xl font-bold text-yellow-400">🏆 Rankings & Records</h2>
       
       {/* Sole Survivors */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">💪 Sole Survivors</h3>
-        <p className="text-sm text-gray-400 mb-4">Only winner when everyone else lost</p>
+      <Card title="💪 Sole Survivors" subtitle="Only winner when everyone else lost">
         <div className="space-y-2">
           {Object.entries(soleSurvivors)
             .sort(([, a], [, b]) => b - a)
@@ -7192,12 +7170,11 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
               </div>
             ))}
         </div>
-      </div>
+      </Card>
 
       {/* Current Streaks */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-400">🔥 Current Hot Streak</h3>
+        <Card title="🔥 Current Hot Streak" className="text-green-400">
           {currentStreaks.hot.length > 0 ? (
             <div className="space-y-2">
               {currentStreaks.hot.slice(0, 3).map((streak, idx) => (
@@ -7213,10 +7190,9 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           ) : (
             <p className="text-gray-300 text-center py-4">No active hot streaks</p>
           )}
-        </div>
+        </Card>
         
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-400">❄️ Current Cold Streak</h3>
+        <Card title="❄️ Current Cold Streak" className="text-red-400">
           {currentStreaks.cold.length > 0 ? (
             <div className="space-y-2">
               {currentStreaks.cold.slice(0, 3).map((streak, idx) => (
@@ -7232,13 +7208,12 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           ) : (
             <p className="text-gray-300 text-center py-4">No active cold streaks</p>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* All-Time Streaks */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-400">📈 Top 5 Hot Streaks (All-Time)</h3>
+        <Card title="📈 Top 5 Hot Streaks (All-Time)" className="text-green-400">
           {allTimeStreaks.hot.slice(0, 5).length > 0 ? (
             <div className="space-y-2">
               {allTimeStreaks.hot.slice(0, 5).map((streak, idx) => (
@@ -7256,10 +7231,9 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           ) : (
             <p className="text-gray-300 text-center py-4">No streaks of 3+ yet</p>
           )}
-        </div>
+        </Card>
         
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-400">📉 Top 5 Cold Streaks (All-Time)</h3>
+        <Card title="📉 Top 5 Cold Streaks (All-Time)" className="text-red-400">
           {allTimeStreaks.cold.slice(0, 5).length > 0 ? (
             <div className="space-y-2">
               {allTimeStreaks.cold.slice(0, 5).map((streak, idx) => (
@@ -7277,14 +7251,12 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           ) : (
             <p className="text-gray-300 text-center py-4">No streaks of 3+ yet</p>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* Player/Sport Combinations */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-green-400">⭐ Top 5 Player/Sport Combos</h3>
-          <p className="text-sm text-gray-400 mb-4">Minimum 10 picks</p>
+        <Card title="⭐ Top 5 Player/Sport Combos" subtitle="Minimum 10 picks" className="text-green-400">
           {topCombos.length > 0 ? (
             <div className="space-y-2">
               {topCombos.map((combo, idx) => (
@@ -7302,11 +7274,9 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           ) : (
             <p className="text-gray-300 text-center py-4">Not enough data yet</p>
           )}
-        </div>
+        </Card>
         
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-red-400">💩 Worst 5 Player/Sport Combos</h3>
-          <p className="text-sm text-gray-400 mb-4">Minimum 10 picks</p>
+        <Card title="💩 Worst 5 Player/Sport Combos" subtitle="Minimum 10 picks" className="text-red-400">
           {worstCombos.length > 0 ? (
             <div className="space-y-2">
               {worstCombos.map((combo, idx) => (
@@ -7324,45 +7294,50 @@ const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
           ) : (
             <p className="text-gray-300 text-center py-4">Not enough data yet</p>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* Most Picked Teams */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">🎯 Top 5 Most Picked Teams/Players</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {topTeams.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between p-3 bg-gray-900/50 border border-gray-700 rounded">
-              <div className="flex items-center gap-3">
-                <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
-                <span className="font-semibold text-white">{item.team}</span>
+      <Card title="🌟 Top 5 Player/Team Win %" subtitle="Minimum 5 picks" className="text-green-400">
+        {topPlayerTeamWinPct.length > 0 ? (
+          <div className="space-y-2">
+            {topPlayerTeamWinPct.map((combo, idx) => (
+              <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-semibold text-white">{combo.player} + {combo.team}</span>
+                  <span className="text-lg font-bold text-green-400">{combo.winPct.toFixed(1)}%</span>
+                </div>
+                <div className="text-xs text-gray-400">
+                  {combo.wins}-{combo.losses}{combo.pushes > 0 ? `-${combo.pushes}` : ''} ({combo.total} picks)
+                </div>
               </div>
-              <span className="text-lg font-bold text-yellow-400">{item.count} picks</span>
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-300 text-center py-4">Not enough data yet</p>
+        )}
+      </Card>
       
       {/* Most Picked Player/Team Combos */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">🤝 Top 5 Most Picked Player/Team Combos</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {topPlayerTeamCombos.map((item, idx) => (
-            <div key={idx} className="p-3 bg-gray-900/50 border border-gray-700 rounded">
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl font-bold text-gray-400">#{idx + 1}</span>
-                  <span className="font-semibold text-white">{item.player} + {item.team}</span>
+      <Card title="💀 Worst 5 Player/Team Win %" subtitle="Minimum 5 picks" className="text-red-400">
+        {worstPlayerTeamWinPct.length > 0 ? (
+          <div className="space-y-2">
+            {worstPlayerTeamWinPct.map((combo, idx) => (
+              <div key={idx} className="p-3 bg-red-900/20 rounded border border-red-500/30">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="font-semibold text-white">{combo.player} + {combo.team}</span>
+                  <span className="text-lg font-bold text-red-400">{combo.winPct.toFixed(1)}%</span>
                 </div>
-                <span className="text-lg font-bold text-blue-400">{item.total}</span>
+                <div className="text-xs text-gray-400">
+                  {combo.wins}-{combo.losses}{combo.pushes > 0 ? `-${combo.pushes}` : ''} ({combo.total} picks)
+                </div>
               </div>
-              <div className="text-xs text-gray-400 ml-8">
-                {item.wins}-{item.losses}{item.pushes > 0 ? `-${item.pushes}` : ''} ({item.total > 0 ? ((item.wins / item.total) * 100).toFixed(1) : 0}%)
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-300 text-center py-4">Not enough data yet</p>
+        )}
+      </Card>
       
       {/* Best/Worst Player/Team Win Percentages */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -7524,13 +7499,17 @@ const renderSearch = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Money Maker */}
             {moneyMaker ? (
-              <div className="bg-gradient-to-br from-green-900/30 to-gray-800 rounded-xl p-5 border border-green-500/30 transform hover:scale-105 transition shadow-xl">
+              <Card 
+                variant="success" 
+                padding="default"
+                className="transform hover:scale-105 transition"
+              >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="text-green-400 font-bold text-lg">💰 Money Maker Alert</h3>
-                    <p className="text-gray-400 text-sm">Highest win rate combo right now</p>
+                    <h3 className="text-green-400 font-bold text-lg">💰 Money Maker</h3>
+                    <p className="text-gray-400 text-sm">Your best combo</p>
                   </div>
-                  <span className="text-2xl">🚀</span>
+                  <span className="text-2xl">🎯</span>
                 </div>
                 <p className="text-white text-lg mb-2">{formatComboDescription(moneyMaker)}</p>
                 <div className="flex gap-4 text-sm">
@@ -7540,7 +7519,7 @@ const renderSearch = () => {
                 <div className="mt-3 text-xs text-gray-400">
                   {moneyMaker.wins}-{moneyMaker.losses} record
                 </div>
-              </div>
+              </Card>
             ) : (
               <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-5 border border-gray-700">
                 <div className="flex items-start justify-between mb-3">
@@ -7558,7 +7537,11 @@ const renderSearch = () => {
             
             {/* Danger Zone */}
             {dangerZone ? (
-              <div className="bg-gradient-to-br from-red-900/30 to-gray-800 rounded-xl p-5 border border-red-500/30 transform hover:scale-105 transition shadow-xl">
+              <Card 
+                variant="danger" 
+                padding="default"
+                className="transform hover:scale-105 transition"
+              >
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="text-red-400 font-bold text-lg">⚠️ Danger Zone</h3>
@@ -7574,9 +7557,9 @@ const renderSearch = () => {
                 <div className="mt-3 text-xs text-gray-400">
                   {dangerZone.wins}-{dangerZone.losses} record
                 </div>
-              </div>
+              </Card>
             ) : (
-              <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-5 border border-gray-700">
+              <Card variant="default" padding="default">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h3 className="text-red-400 font-bold text-lg">⚠️ Danger Zone</h3>
@@ -7587,18 +7570,14 @@ const renderSearch = () => {
                 <p className="text-gray-400 text-sm">
                   No concerning patterns detected yet. Keep tracking!
                 </p>
-              </div>
+              </Card>
             )}
           </div>
         </div>
       )}
       
       {searchResults && (
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-          <h3 className="text-lg md:text-xl font-bold mb-4 text-yellow-400">
-            Results for: "{searchResults.query}"
-          </h3>
-          
+        <Card title={`Results for: "${searchResults.query}"`} className="text-yellow-400">
           {(() => {
             const insights = generateSearchInsights(searchResults);
             return insights.length > 0 ? (
@@ -7635,7 +7614,7 @@ const renderSearch = () => {
                   <div className="text-2xl font-bold text-purple-400">{searchResults.data.winPct}%</div>
                 </div>
               </div>
-
+      
               <div className="mb-6">
                 <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Big Guy</h4>
                 <div className="space-y-2">
@@ -7665,7 +7644,7 @@ const renderSearch = () => {
               )}
             </>
           )}
-
+      
           {(searchResults.matchedCategory === 'betType' || searchResults.matchedCategory === 'sport') && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -7686,7 +7665,7 @@ const renderSearch = () => {
                   <div className="text-2xl font-bold text-purple-400">{searchResults.data.winPct}%</div>
                 </div>
               </div>
-
+      
               <div className="mb-6">
                 <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Big Guy</h4>
                 <div className="space-y-2">
@@ -7702,7 +7681,7 @@ const renderSearch = () => {
               </div>
             </>
           )}
-
+      
           {searchResults.matchedCategory === 'team' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -7723,7 +7702,7 @@ const renderSearch = () => {
                   <div className="text-2xl font-bold text-purple-400">{searchResults.data.winPct}%</div>
                 </div>
               </div>
-
+      
               <div className="mb-6">
                 <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 Who Picks {searchResults.data.team}?</h4>
                 <div className="space-y-2">
@@ -7739,7 +7718,7 @@ const renderSearch = () => {
               </div>
             </>
           )}
-
+      
           {searchResults.matchedCategory === 'dayOfWeek' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -7760,7 +7739,7 @@ const renderSearch = () => {
                   <div className="text-2xl font-bold text-purple-400">{searchResults.data.winPct}%</div>
                 </div>
               </div>
-
+      
               <div className="mb-6">
                 <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Big Guy</h4>
                 <div className="space-y-2">
@@ -7774,7 +7753,7 @@ const renderSearch = () => {
                   ))}
                 </div>
               </div>
-
+      
               <div className="mb-6">
                 <h4 className="font-semibold text-lg mb-3 text-yellow-400">🏈 By Sport</h4>
                 <div className="space-y-2">
@@ -7788,7 +7767,7 @@ const renderSearch = () => {
                   ))}
                 </div>
               </div>
-
+      
               <div className="mb-6">
                 <h4 className="font-semibold text-lg mb-3 text-yellow-400">🎲 By Bet Type</h4>
                 <div className="space-y-2">
@@ -7842,7 +7821,7 @@ const renderSearch = () => {
               </div>
             </>
           )}
-
+      
           {searchResults.data.recentPicks && searchResults.data.recentPicks.length > 0 && (
             <div>
               <h4 className="font-semibold text-lg mb-3 text-yellow-400">📅 Recent Picks</h4>
@@ -7872,7 +7851,7 @@ const renderSearch = () => {
               </div>
             </div>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );
