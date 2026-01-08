@@ -2940,7 +2940,7 @@ const importFromCSV = async (csvText) => {
         </div>
       </div>
     );
-  };
+  }
 
 const analyzeSearchQuery = (query) => {
   if (!query || query.trim().length < 3) {
