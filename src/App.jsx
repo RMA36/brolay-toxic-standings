@@ -8719,10 +8719,8 @@ const renderSettings = () => {
           localStorage.setItem('currentActiveTab', newTab);
           if (isMobile) setSidebarOpen(false);
         }}
-        variant="primary"
-        className={`${isMobile ? 'w-full min-h-[44px]' : ''} ${
-          activeTab === 'entry' ? 'shadow-lg' : ''
-        }`}
+        variant={activeTab === 'entry' ? 'primary' : 'secondary'}
+        className={`${isMobile ? 'w-full min-h-[44px]' : ''}
       >
         ✨ New Brolay
       </Button>
