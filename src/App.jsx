@@ -6667,7 +6667,7 @@ return (
               const winners = participants.filter(p => p.result === 'win');
               const and1 = losers.length === 1 && winners.length === participants.length - 1;
               const totalLost = parlay.betAmount * losers.length;
-              const amountPerLoser = losers.length > 0 ? (totalLost / losers.length).toFixed(2) : 0;
+              const amountPerLoser = losers.length > 0 ? (totalLost / losers.length) : 0;
               
               return (
                 <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
@@ -6687,7 +6687,7 @@ return (
                   </div>
                   <div className="text-sm mb-2 text-gray-300">
                     <span className="font-medium text-white">Losers pay {parlay.placedBy || 'Unknown'}: </span>
-                    {losers.map(loser => `${loser.player} ($${amountPerLoser.toFixed(2)})`).join(', ')}
+                    {losers.map(loser => `${loser.player} ($${Number(amountPerLoser).toFixed(2)})`).join(', ')}
                   </div>
                   <Button
                     onClick={() => toggleSettlement(parlay.id)}
