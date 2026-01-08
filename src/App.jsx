@@ -8979,7 +8979,6 @@ const renderSettings = () => {
       )}
     </div>
   </div>
-</div>
   <div className="container mx-auto p-4 md:p-6">
     {activeTab === 'entry' && renderEntry()}
     {activeTab === 'search' && renderSearch()}
