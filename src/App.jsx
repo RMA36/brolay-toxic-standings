@@ -3208,15 +3208,17 @@ const analyzeSearchQuery = (query) => {
       }
 
       if (pick.result === 'win') {
-        stats.byPlayer[pick.player].wins++;
+        stats.bySport[pick.sport].wins++;
+        stats.byBetType[pick.betType].wins++;
       } else if (pick.result === 'loss') {
-        stats.byPlayer[pick.player].losses++;
+        stats.bySport[pick.sport].losses++;
+        stats.byBetType[pick.betType].losses++;
       } else if (pick.result === 'push') {
-        stats.byPlayer[pick.player].pushes++;
+        stats.bySport[pick.sport].pushes++;
+        stats.byBetType[pick.betType].pushes++;
       }
-      stats.byPlayer[pick.player].total++;
-      stats.bySport[pick.sport][pick.result]++;
       stats.bySport[pick.sport].total++;
+      stats.byBetType[pick.betType].total++;
     });
 
     stats.recentPicks = filteredPicks
@@ -3332,21 +3334,6 @@ const analyzeSearchQuery = (query) => {
     const filteredPicks = shouldFilter ?
       filterByRelevance(matchingPicks, searchContext, 3) : matchingPicks;
     
-    // TEMPORARY DEBUG - remove after fixing
-    console.log('Team Search Debug:', {
-      searchedTeam: searchContext.matchedTeam,
-      matchingPicksCount: matchingPicks.length,
-      filteredPicksCount: filteredPicks.length,
-      shouldFilter,
-      samplePicks: matchingPicks.slice(0, 3).map(p => ({ 
-        team: p.team, 
-        opponent: p.opponent,
-        awayTeam: p.awayTeam,
-        homeTeam: p.homeTeam,
-        favorite: p.favorite
-      }))
-    });
-  
     const stats = {
       team: searchContext.matchedTeam,
       total: filteredPicks.length,
@@ -3503,9 +3490,17 @@ const analyzeSearchQuery = (query) => {
         stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
 
-      stats.bySport[pick.sport][pick.result]++;
+      if (pick.result === 'win') {
+        stats.bySport[pick.sport].wins++;
+        stats.byBetType[pick.betType].wins++;
+      } else if (pick.result === 'loss') {
+        stats.bySport[pick.sport].losses++;
+        stats.byBetType[pick.betType].losses++;
+      } else if (pick.result === 'push') {
+        stats.bySport[pick.sport].pushes++;
+        stats.byBetType[pick.betType].pushes++;
+      }
       stats.bySport[pick.sport].total++;
-      stats.byBetType[pick.betType][pick.result]++;
       stats.byBetType[pick.betType].total++;
     });
 
@@ -7957,32 +7952,33 @@ const renderSearch = () => {
           {searchResults.matchedCategory === 'player' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-600">Total Picks</div>
-                  <div className="text-2xl font-bold text-blue-600">{searchResults.data.total}</div>
+                <div className="bg-blue-900/40 p-4 rounded-lg border border-blue-500/30">
+                  <div className="text-sm text-blue-300">Total Picks</div>
+                  <div className="text-2xl font-bold text-blue-400">{searchResults.data.total}</div>
                 </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-600">Wins</div>
-                  <div className="text-2xl font-bold text-green-600">{searchResults.data.wins}</div>
+                <div className="bg-green-900/40 p-4 rounded-lg border border-green-500/30">
+                  <div className="text-sm text-green-300">Wins</div>
+                  <div className="text-2xl font-bold text-green-400">{searchResults.data.wins}</div>
                 </div>
-                <div className="bg-red-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-600">Losses</div>
-                  <div className="text-2xl font-bold text-red-600">{searchResults.data.losses}</div>
+                <div className="bg-red-900/40 p-4 rounded-lg border border-red-500/30">
+                  <div className="text-sm text-red-300">Losses</div>
+                  <div className="text-2xl font-bold text-red-400">{searchResults.data.losses}</div>
                 </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-600">Win %</div>
-                  <div className="text-2xl font-bold text-purple-600">{searchResults.data.winPct}%</div>
+                <div className="bg-purple-900/40 p-4 rounded-lg border border-purple-500/30">
+                  <div className="text-sm text-purple-300">Win %</div>
+                  <div className="text-2xl font-bold text-purple-400">{searchResults.data.winPct}%</div>
                 </div>
               </div>
-
+          
               <div className="mb-6">
-                <h4 className="font-semibold text-lg mb-3">📊 By Sport</h4>
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Sport</h4>
                 <div className="space-y-2">
                   {Object.entries(searchResults.data.bySport).map(([sport, stats]) => (
-                    <div key={sport} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                      <span className="font-semibold">{sport}</span>
-                      <span className="text-sm">
-                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                    <div key={sport} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{sport}</span>
+                      <span className="text-sm text-gray-300">
+                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ?
+                        ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
                       </span>
                     </div>
                   ))}
