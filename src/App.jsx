@@ -8720,7 +8720,7 @@ const renderSettings = () => {
           if (isMobile) setSidebarOpen(false);
         }}
         variant={activeTab === 'entry' ? 'primary' : 'secondary'}
-        className={`${isMobile ? 'w-full min-h-[44px]' : ''}
+        className={isMobile ? 'w-full min-h-[44px]' : ''}
       >
         ✨ New Brolay
       </Button>
