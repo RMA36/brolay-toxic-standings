@@ -8995,6 +8995,6 @@ const renderSettings = () => {
   </div>
   </div>
 );
-};
+}
 
 export default App;
