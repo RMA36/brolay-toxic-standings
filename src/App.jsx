@@ -6664,6 +6664,8 @@ return (
             lostParlays.map(parlay => {
               const participants = Object.values(parlay.participants);
               const losers = participants.filter(p => p.result === 'loss');
+              const winners = participants.filter(p => p.result === 'win');
+              const and1 = losers.length === 1 && winners.length === participants.length - 1;
               const totalLost = parlay.betAmount * losers.length;
               const amountPerLoser = losers.length > 0 ? (totalLost / losers.length).toFixed(2) : 0;
               
@@ -6713,6 +6715,7 @@ return (
               const participants = Object.values(parlay.participants);
               const winners = participants.filter(p => p.result === 'win');
               const losers = participants.filter(p => p.result === 'loss');
+              const won = losers.length === 0 && winners.length > 0;
               
               return (
                 <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
