@@ -4965,6 +4965,7 @@ const renderGroupDashboard = () => {
             ${wonParlays > 0 ? (totalMoneyWon / wonParlays).toFixed(0) : 0}
           </p>
         </Card>
+      </div>
 
       {/* Recent Performance */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
