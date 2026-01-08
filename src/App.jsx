@@ -352,6 +352,9 @@ const normalizePropType = (propType) => {
   
   const mappings = PROP_TYPE_VARIATIONS; // Now imported from constants/sports
 
+  return mappings[normalized] || normalized;
+};
+
 const getStatValue = (stats, propType, sport, labels) => {
   if (!stats || !labels) return null;
   
