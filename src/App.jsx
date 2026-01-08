@@ -19,6 +19,8 @@ import {
   ESPN_STAT_MAPPINGS 
 } from './constants/sports';
 
+import LoadingSpinner from './components/common/LoadingSpinner';
+
 // Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDWhm77FUPJUHt7Bdb9R1NHH9PoAorkxlc",
@@ -2932,10 +2934,9 @@ const importFromCSV = async (csvText) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center">
         <div className="text-center">
-          <Loader className="animate-spin mx-auto mb-4" size={48} />
-          <p className="text-gray-600">Loading your parlays...</p>
+          <LoadingSpinner size="large" message="Loading Toxic Standings..." />
         </div>
       </div>
     );
