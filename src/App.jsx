@@ -23,6 +23,8 @@ import LoadingSpinner from './components/common/LoadingSpinner';
 import Button from './components/common/Button';
 import Card from './components/common/Card';
 
+import { useBrolays } from './hooks/useBrolays';
+
 // Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDWhm77FUPJUHt7Bdb9R1NHH9PoAorkxlc",
@@ -191,7 +193,13 @@ const App = () => {
   });
   const [csvInput, setCsvInput] = useState('');
   const [players] = useState(['Management', 'CD', '914', 'Junior', 'Jacoby']);
-  const [parlays, setParlays] = useState([]);
+  const { 
+    parlays, 
+    loading: brolaysLoading, 
+    addBrolay, 
+    updateBrolay, 
+    deleteBrolay 
+  } = useBrolays(authenticated ? db : null);
   const moneyMaker = useMemo(() => findMoneyMaker(parlays, players), [parlays, players]);
   const dangerZone = useMemo(() => findDangerZone(parlays, players), [parlays, players]);
   const currentDay = useMemo(() => getCurrentDayOfWeek(), []);
@@ -1404,8 +1412,7 @@ const autoUpdatePendingPicks = async () => {
 
       if (parlayUpdated && parlay.firestoreId) {
         try {
-          const parlayDoc = doc(db, 'parlays', parlay.firestoreId);
-          await updateDoc(parlayDoc, {
+          await updateBrolay(parlay.firestoreId, {
             participants: updatedParticipants
           });
         } catch (error) {
@@ -1428,24 +1435,17 @@ const autoUpdatePendingPicks = async () => {
   }
 };
   
-  useEffect(() => {
-    if (authenticated) {
-      const parlaysCollection = collection(db, 'parlays');
-      const unsubscribe = onSnapshot(parlaysCollection, (snapshot) => {
-        const parlayList = snapshot.docs.map(doc => ({
-          ...doc.data(),
-          firestoreId: doc.id
-        }));
-        setParlays(parlayList);
-        setLoading(false);
-        
-        // Clear search cache when data updates
-        setSearchCache({});
-      });
-  
-      return () => unsubscribe();
-    }
-  }, [authenticated]);
+  // Handle loading state
+useEffect(() => {
+  if (!brolaysLoading) {
+    setLoading(false);
+  }
+}, [brolaysLoading]);
+
+// Clear search cache when parlays update
+useEffect(() => {
+  setSearchCache({});
+}, [parlays]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -1823,12 +1823,12 @@ const submitParlay = async () => {
   saveLearnedData(newTeams, newPropTypes);
   
   try {
-    // Save to Firebase
-    const parlaysCollection = collection(db, 'parlays');
-    const docRef = await addDoc(parlaysCollection, parlayWithId);
+    // Save to Firebase using the hook
+    const result = await addBrolay(parlayWithId);
     
-    const updatedParlays = [...parlays, { ...parlayWithId, firestoreId: docRef.id }];
-    setParlays(updatedParlays);
+    if (!result.success) {
+      throw result.error;
+    }
     
     // Show success message with odds info
     let message = 'Brolay saved successfully!';
@@ -1932,8 +1932,7 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
     const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
     if (parlayToUpdate && parlayToUpdate.firestoreId) {
       try {
-        const parlayDoc = doc(db, 'parlays', parlayToUpdate.firestoreId);
-        await updateDoc(parlayDoc, {
+        await updateBrolay(parlayToUpdate.firestoreId, {
           participants: parlayToUpdate.participants
         });
       } catch (error) {
@@ -1961,10 +1960,8 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
   const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
   if (parlayToUpdate && parlayToUpdate.firestoreId) {
     try {
-      const parlayDoc = doc(db, 'parlays', parlayToUpdate.firestoreId);
-      await updateDoc(parlayDoc, {
-        settled: parlayToUpdate.settled,
-        settledAt: parlayToUpdate.settledAt
+      await updateBrolay(parlayToUpdate.firestoreId, {
+        participants: parlayToUpdate.participants
       });
     } catch (error) {
       console.error('Error updating settlement:', error);
@@ -1981,8 +1978,7 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
     // Delete from Firebase
     if (parlayToDelete && parlayToDelete.firestoreId) {
       try {
-        const parlayDoc = doc(db, 'parlays', parlayToDelete.firestoreId);
-        await deleteDoc(parlayDoc);
+        await deleteBrolay(parlay.firestoreId);
       } catch (error) {
         console.error('Error deleting parlay:', error);
       }
@@ -2021,8 +2017,6 @@ const saveEditedParlay = async (editedParlay) => {
     
     // Update in Firebase
     if (cleanedParlay.firestoreId) {
-      const parlayDoc = doc(db, 'parlays', cleanedParlay.firestoreId);
-      
       // Build update object that explicitly deletes actualStats fields
       const updateObject = {};
       
@@ -2040,7 +2034,7 @@ const saveEditedParlay = async (editedParlay) => {
         }
       });
       
-      await updateDoc(parlayDoc, updateObject);
+      await updateBrolay(cleanedParlay.firestoreId, updateObject);
     }
     
     setEditingParlay(null);
@@ -7975,10 +7969,8 @@ const handleSavePickEdit = async () => {
     // Update in Firebase
     if (parlay.firestoreId) {
       console.log('Updating Firebase document:', parlay.firestoreId);
-      const parlayDoc = doc(db, 'parlays', parlay.firestoreId);
-      
       try {
-        await updateDoc(parlayDoc, {
+        await updateBrolay(parlay.firestoreId, {
           participants: updatedParticipants
         });
         console.log('Firebase update successful');
@@ -8588,8 +8580,7 @@ const renderSettings = () => {
                       if (!parlay.dayOfWeek && parlay.date) {
                         const dayOfWeek = getDayOfWeek(parlay.date);
                         if (parlay.firestoreId) {
-                          const parlayDoc = doc(db, 'parlays', parlay.firestoreId);
-                          await updateDoc(parlayDoc, { dayOfWeek });
+                          await updateBrolay(parlay.firestoreId, { dayOfWeek });
                           updatedCount++;
                         }
                       }
