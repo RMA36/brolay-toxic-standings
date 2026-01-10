@@ -53,7 +53,7 @@ export const useBrolays = (db) => {
   // Update an existing brolay
   const updateBrolay = async (brolayId, updates) => {
     try {
-      const brolayRef = doc(db, 'brolays', brolayId);
+      const brolayRef = doc(db, 'parlays', brolayId);
       await updateDoc(brolayRef, updates);
       return { success: true };
     } catch (err) {
@@ -65,7 +65,7 @@ export const useBrolays = (db) => {
   // Delete a brolay
   const deleteBrolay = async (brolayId) => {
     try {
-      const brolayRef = doc(db, 'brolays', brolayId);
+      const brolayRef = doc(db, 'parlays', brolayId);
       await deleteDoc(brolayRef);
       return { success: true };
     } catch (err) {
