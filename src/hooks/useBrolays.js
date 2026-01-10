@@ -14,7 +14,7 @@ export const useBrolays = (db) => {
   useEffect(() => {
     if (!db) return;
 
-    const brolaysRef = collection(db, 'brolays');
+    const brolaysRef = collection(db, 'parlays');
     
     // Set up real-time listener
     const unsubscribe = onSnapshot(
@@ -41,7 +41,7 @@ export const useBrolays = (db) => {
   // Add a new brolay
   const addBrolay = async (brolayData) => {
     try {
-      const brolaysRef = collection(db, 'brolays');
+      const brolaysRef = collection(db, 'parlays');
       const docRef = await addDoc(brolaysRef, brolayData);
       return { success: true, id: docRef.id };
     } catch (err) {
