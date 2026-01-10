@@ -682,7 +682,6 @@ useEffect(() => {
 // Refresh data when switching tabs
 useEffect(() => {
   if (authenticated) {
-    loadParlays();
     // Reset pagination when switching tabs
     if (activeTab === 'allBrolays') {
       setBrolaysToShow(10);
@@ -715,24 +714,6 @@ useEffect(() => {
     return () => clearInterval(interval);
   }
 }, [activeTab, parlays, filters]);
-  
-  const loadParlays = async () => {
-  try {
-    setLoading(true);
-    const parlaysCollection = collection(db, 'parlays');
-    const parlaySnapshot = await getDocs(parlaysCollection);
-    const parlayList = parlaySnapshot.docs.map(doc => ({
-      ...doc.data(),
-      firestoreId: doc.id
-    }));
-    setParlays(parlayList);
-  } catch (error) {
-    console.error('Error loading parlays:', error);
-    setParlays([]);
-  } finally {
-    setLoading(false);
-  }
-};
 
 const extractTeamsFromExistingParlays = () => {
   const newTeams = [...learnedTeams];
@@ -778,7 +759,6 @@ const handleTouchEnd = async () => {
   if (!isMobile) return;
   if (pullDistance > 80) {
     setRefreshing(true);
-    await loadParlays();
     setTimeout(() => {
       setRefreshing(false);
     }, 500);
@@ -1168,7 +1148,8 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
   if (parlayToUpdate && parlayToUpdate.firestoreId) {
     try {
       await updateBrolay(parlayToUpdate.firestoreId, {
-        participants: parlayToUpdate.participants
+        settled: parlayToUpdate.settled,
+        settledAt: parlayToUpdate.settledAt
       });
     } catch (error) {
       console.error('Error updating settlement:', error);
@@ -1185,7 +1166,7 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
     // Delete from Firebase
     if (parlayToDelete && parlayToDelete.firestoreId) {
       try {
-        await deleteBrolay(parlay.firestoreId);
+        await deleteBrolay(parlayToDelete.firestoreId);
       } catch (error) {
         console.error('Error deleting parlay:', error);
       }
@@ -2030,7 +2011,6 @@ const importFromCSV = async (csvText) => {
     saveLearnedData(newTeams, newPropTypes);
     
     alert(`Successfully imported ${importedParlays.length} brolays!`);
-    await loadParlays(); // Refresh the list
     setCsvInput(''); // Clear input
   } catch (error) {
     console.error('Import error:', error);
@@ -7792,7 +7772,6 @@ const renderSettings = () => {
                         }
                       }
                     }
-                    await loadParlays();
                     alert(`Successfully added day of week to ${updatedCount} brolay(s)!`);
                   } catch (error) {
                     console.error('Error backfilling day of week:', error);
