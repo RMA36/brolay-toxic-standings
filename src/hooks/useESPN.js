@@ -265,6 +265,8 @@ export const useESPN = () => {
             
             playerFound = true;
             
+            console.log('✅ Found player in category:', statCategory.name, 'Labels:', statCategory.labels);
+            
             if (isTDScorerProp && sport === 'NFL') {
               const rushingTDs = getStatValue(athlete.stats, 'rushing touchdowns', sport, statCategory.labels) || 0;
               const receivingTDs = getStatValue(athlete.stats, 'receiving touchdowns', sport, statCategory.labels) || 0;
