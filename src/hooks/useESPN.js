@@ -133,9 +133,20 @@ export const useESPN = () => {
 
   // Parse player stat based on prop type
   const parsePlayerStat = (stats, propType, sport) => {
-    if (!stats || stats.length === 0) return null;
+    console.log('🎯 parsePlayerStat called with:', {
+      stats,
+      propType,
+      sport,
+      statsLength: stats?.length
+    });
+    
+    if (!stats || stats.length === 0) {
+      console.log('❌ No stats array or empty');
+      return null;
+    }
     
     const propLower = propType.toLowerCase();
+    console.log('🔍 Looking for prop type:', propLower);
     
     // Touchdown stats
     if (propLower.includes('touchdown') || propLower.includes('td')) {
