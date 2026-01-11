@@ -134,11 +134,12 @@ export const useESPN = () => {
   // Parse player stat based on prop type
   const parsePlayerStat = (stats, propType, sport) => {
     console.log('🎯 parsePlayerStat called with:', {
-      stats,
+      stats: stats,  // This will show the actual array
       propType,
       sport,
       statsLength: stats?.length
     });
+    console.log('📊 Actual stats array:', stats);
     
     if (!stats || stats.length === 0) {
       console.log('❌ No stats array or empty');
