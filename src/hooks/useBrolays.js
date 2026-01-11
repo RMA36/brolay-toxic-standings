@@ -53,7 +53,9 @@ export const useBrolays = (db) => {
   // Update an existing brolay
   const updateBrolay = async (brolayId, updates) => {
     try {
-      const brolayRef = doc(db, 'parlays', brolayId);
+      // Ensure ID is a string
+      const idString = String(brolayId);
+      const brolayRef = doc(db, 'parlays', idString);
       await updateDoc(brolayRef, updates);
       return { success: true };
     } catch (err) {
