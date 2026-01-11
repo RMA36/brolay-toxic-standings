@@ -7155,20 +7155,32 @@ const handleSavePickEdit = async () => {
 
     // Update in Firebase
     if (parlay.firestoreId) {
-      console.log('Updating Firebase document:', parlay.firestoreId);
+      console.log('🔄 Updating Firebase document:', parlay.firestoreId);
+      console.log('📝 Parlay object:', parlay);
+      console.log('📝 Updated participants:', updatedParticipants);
+      
       try {
-        await updateBrolay(parlay.firestoreId, {
+        const result = await updateBrolay(parlay.firestoreId, {
           participants: updatedParticipants
         });
-        console.log('Firebase update successful');
+        
+        console.log('✅ Update result:', result);
+        
+        if (!result.success) {
+          throw new Error(result.error?.message || 'Update failed without error details');
+        }
+        
+        console.log('✅ Firebase update successful');
       } catch (fbError) {
-        console.error('Firebase update error:', fbError);
+        console.error('💥 Firebase update error:', fbError);
         console.error('Error code:', fbError.code);
         console.error('Error message:', fbError.message);
+        console.error('Full error object:', fbError);
         throw fbError;
       }
     } else {
-      console.error('No Firestore ID found for parlay');
+      console.error('❌ No Firestore ID found for parlay');
+      console.log('Parlay object:', parlay);
       alert('Cannot update: Parlay has no Firestore ID');
       return;
     }
