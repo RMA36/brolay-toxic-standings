@@ -971,7 +971,7 @@ const submitParlay = async () => {
     }
   }
   
-  const parlayWithId = {
+  const parlayData = {
     ...newParlay,
     participants: participantsWithOdds,
     totalParticipants: participantCount,
@@ -982,7 +982,7 @@ const submitParlay = async () => {
   const newTeams = [...learnedTeams];
   const newPropTypes = [...learnedPropTypes];
   
-  Object.values(parlayWithId.participants).forEach(p => {
+  Object.values(parlayData.participants).forEach(p => {
     if (p.team && !newTeams.includes(p.team)) {
       newTeams.push(p.team);
     }
