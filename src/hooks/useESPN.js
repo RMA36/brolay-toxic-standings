@@ -94,7 +94,17 @@ export const useESPN = () => {
 
   // Extract player stats from boxscore
   const extractPlayerStat = (boxscore, playerName, propType, sport) => {
-    if (!boxscore || !boxscore.players) return null;
+    console.log('🔎 extractPlayerStat called for:', playerName);
+    console.log('📦 Boxscore structure:', {
+      hasPlayers: !!boxscore?.players,
+      playersCount: boxscore?.players?.length || 0,
+      firstTeamCategories: boxscore?.players?.[0]?.statistics?.length || 0
+    });
+    
+    if (!boxscore || !boxscore.players) {
+      console.log('❌ No boxscore.players found');
+      return null;
+    }
     
     const normalizePlayerName = (name) => {
       return name.toLowerCase()
@@ -105,9 +115,12 @@ export const useESPN = () => {
     const normalizedSearchName = normalizePlayerName(playerName);
     
     for (const team of boxscore.players) {
+      console.log('👥 Checking team with', team.statistics?.length || 0, 'stat categories');
       for (const category of team.statistics || []) {
+        console.log('📊 Category has', category.athletes?.length || 0, 'athletes');
         for (const athlete of category.athletes || []) {
           const athleteName = athlete.athlete?.displayName || '';
+          console.log('🏃 Checking athlete:', athleteName, '(normalized:', normalizePlayerName(athleteName), ') vs search:', normalizedSearchName);
           if (normalizePlayerName(athleteName) === normalizedSearchName) {
             return parsePlayerStat(athlete.stats, propType, sport);
           }
