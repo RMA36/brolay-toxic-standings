@@ -67,7 +67,9 @@ export const useBrolays = (db) => {
   // Delete a brolay
   const deleteBrolay = async (brolayId) => {
     try {
-      const brolayRef = doc(db, 'parlays', brolayId);
+      // Ensure ID is a string
+      const idString = String(brolayId);
+      const brolayRef = doc(db, 'parlays', idString);
       await deleteDoc(brolayRef);
       return { success: true };
     } catch (err) {
