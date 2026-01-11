@@ -767,19 +767,6 @@ const handleTouchEnd = async () => {
   setPullStartY(0);
 };
   
-  const saveParlays = async (updatedParlays) => {
-  try {
-    setSaving(true);
-    setParlays(updatedParlays);
-    // Note: Individual operations (add/update/delete) will handle Firestore sync
-  } catch (error) {
-    console.error('Error saving data:', error);
-    alert('Failed to save data. Please try again.');
-  } finally {
-    setSaving(false);
-  }
-};
-  
   const saveLearnedData = (teams, propTypes) => {
     localStorage.setItem('brolay-learned-data', JSON.stringify({
       teams: teams,
@@ -1114,8 +1101,6 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
       return parlay;
     });
     
-    setParlays(updatedParlays);
-    
     const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
     if (parlayToUpdate && parlayToUpdate.id) {
       try {
@@ -1141,8 +1126,6 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
     return parlay;
   });
   
-  setParlays(updatedParlays);
-  
   // Update in Firebase
   const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
   if (parlayToUpdate && parlayToUpdate.id) {
@@ -1161,7 +1144,6 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
   if (window.confirm('Are you sure you want to delete this parlay?')) {
     const parlayToDelete = parlays.find(p => p.id === parlayId);
     const updatedParlays = parlays.filter(p => p.id !== parlayId);
-    setParlays(updatedParlays);
     
     // Delete from Firebase
     if (parlayToDelete && parlayToDelete.id) {
@@ -7196,7 +7178,6 @@ const handleSavePickEdit = async () => {
         ? { ...p, participants: updatedParticipants }
         : p
     );
-    setParlays(updatedParlays);
     
     setEditingPick(null);
     alert('Pick updated successfully!');
