@@ -1197,13 +1197,7 @@ const saveEditedParlay = async (editedParlay) => {
       )
     };
     
-    // Update in local state
-    const updatedParlays = parlays.map(p => 
-      p.id === cleanedParlay.id ? cleanedParlay : p
-    );
-    setParlays(updatedParlays);
-    
-    // Update in Firebase
+    // Update in Firebase (local state will update automatically via the hook's listener)
     if (cleanedParlay.id) {  // ✅ CHANGED from firestoreId to id
       console.log('🔄 Updating parlay in Firebase:', cleanedParlay.id);
       
