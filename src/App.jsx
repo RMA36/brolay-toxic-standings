@@ -1199,8 +1199,14 @@ const saveEditedParlay = async (editedParlay) => {
         }
       });
       
+      // Add top-level parlay fields to the update
+      updateObject.date = cleanedParlay.date;
+      updateObject.betAmount = cleanedParlay.betAmount;
+      updateObject.totalPayout = cleanedParlay.totalPayout;
+      updateObject.placedBy = cleanedParlay.placedBy;
+      
       console.log('📝 Update object:', updateObject);
-      const result = await updateBrolay(cleanedParlay.id, updateObject);  // ✅ CHANGED from firestoreId to id
+      const result = await updateBrolay(cleanedParlay.id, updateObject);
       console.log('✅ Firebase update result:', result);
       
       if (!result.success) {
@@ -1212,6 +1218,7 @@ const saveEditedParlay = async (editedParlay) => {
     }
     
     setEditingParlay(null);
+    alert('Parlay updated successfully!');
     console.log('✅ Parlay edit saved successfully');
   } catch (error) {
     console.error('💥 Error updating parlay:', error);
