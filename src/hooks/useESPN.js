@@ -169,21 +169,19 @@ export const useESPN = () => {
     
     // Rushing yards
     if (propLower.includes('rushing') && propLower.includes('yard')) {
-      const ydsIndex = stats.findIndex((s, i, arr) => 
-        i > 0 && arr[i-1]?.toLowerCase().includes('rush')
-      );
-      if (ydsIndex !== -1) {
-        return parseFloat(stats[ydsIndex]) || 0;
+      // Rushing stats format: [Carries, Yards, YPC, TD, Long]
+      // Yards is always at index 1
+      if (stats.length >= 2) {
+        return parseFloat(stats[1]) || 0;
       }
     }
     
     // Receiving yards
     if (propLower.includes('receiving') && propLower.includes('yard')) {
-      const ydsIndex = stats.findIndex((s, i, arr) => 
-        i > 0 && arr[i-1]?.toLowerCase().includes('rec')
-      );
-      if (ydsIndex !== -1) {
-        return parseFloat(stats[ydsIndex]) || 0;
+      // Receiving stats format: [Receptions, Yards, YPC, TD, Long, Targets]
+      // Yards is always at index 1
+      if (stats.length >= 2) {
+        return parseFloat(stats[1]) || 0;
       }
     }
     
