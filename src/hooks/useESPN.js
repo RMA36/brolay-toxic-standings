@@ -92,118 +92,198 @@ export const useESPN = () => {
     return 'push';
   };
 
-  // Extract player stats from boxscore
-  const extractPlayerStat = (boxscore, playerName, propType, sport) => {
-    console.log('🔎 extractPlayerStat called for:', playerName);
-    console.log('📦 Boxscore structure:', {
-      hasPlayers: !!boxscore?.players,
-      playersCount: boxscore?.players?.length || 0,
-      firstTeamCategories: boxscore?.players?.[0]?.statistics?.length || 0
-    });
+// Extract player stat from boxscore using labels
+  const getStatValue = (stats, propType, sport, labels) => {
+    if (!stats || !labels) return null;
     
-    if (!boxscore || !boxscore.players) {
-      console.log('❌ No boxscore.players found');
-      return null;
-    }
-    
-    const normalizePlayerName = (name) => {
-      return name.toLowerCase()
-        .replace(/\s+(jr\.?|sr\.?|iii|iv|ii)$/i, '')
-        .replace(/[^a-z]/g, '');
+    const statMappings = {
+      'NFL': {
+        'passing yards': ['YDS', 'Passing Yards'],
+        'passing attempts': ['ATT', 'Attempts'],
+        'passing completions': ['C/ATT', 'COMP', 'Completions'],
+        'interceptions thrown': ['INT', 'Interceptions'],
+        'rushing yards': ['YDS', 'Rushing Yards'],
+        'receiving yards': ['YDS', 'Receiving Yards'],
+        'rushing & receiving yards': ['YDS'],
+        'receptions': ['REC', 'Receptions'],
+        'passing touchdowns': ['TD', 'Passing TDs'],
+        'rushing touchdowns': ['TD', 'Rushing TDs'],
+        'receiving touchdowns': ['TD', 'Receiving TDs'],
+        'total touchdowns': ['TD']
+      },
+      'NBA': {
+        'points': ['PTS', 'Points'],
+        'rebounds': ['REB', 'Rebounds'],
+        'assists': ['AST', 'Assists'],
+        'steals': ['STL', 'Steals'],
+        'blocks': ['BLK', 'Blocks'],
+        'three pointers made': ['3PM', '3PT'],
+        'turnovers': ['TO', 'Turnovers']
+      },
+      'MLB': {
+        'strikeouts': ['K', 'SO', 'Strikeouts'],
+        'hits': ['H', 'Hits'],
+        'home runs': ['HR', 'Home Runs'],
+        'rbis': ['RBI', 'RBIs'],
+        'runs': ['R', 'Runs'],
+        'stolen bases': ['SB', 'Stolen Bases']
+      },
+      'NHL': {
+        'goals': ['G', 'Goals'],
+        'assists': ['A', 'Assists'],
+        'points': ['PTS', 'Points'],
+        'saves': ['SV', 'Saves'],
+        'shots on goal': ['SOG', 'Shots']
+      }
     };
     
-    const normalizedSearchName = normalizePlayerName(playerName);
+    const sportMappings = statMappings[sport] || {};
+    const possibleLabels = sportMappings[propType] || [];
     
-    for (const team of boxscore.players) {
-      console.log('👥 Checking team with', team.statistics?.length || 0, 'stat categories');
-      for (const category of team.statistics || []) {
-        console.log('📊 Category has', category.athletes?.length || 0, 'athletes');
-        for (const athlete of category.athletes || []) {
-          const athleteName = athlete.athlete?.displayName || '';
-          console.log('🏃 Checking athlete:', athleteName, '(normalized:', normalizePlayerName(athleteName), ') vs search:', normalizedSearchName);
-          if (normalizePlayerName(athleteName) === normalizedSearchName) {
-            return parsePlayerStat(athlete.stats, propType, sport);
-          }
-        }
+    if (propType === 'passing completions') {
+      const index = labels.findIndex(label => 
+        label === 'C/ATT' || label.toUpperCase() === 'COMP'
+      );
+      
+      if (index !== -1 && stats[index] !== undefined) {
+        const value = stats[index].toString().split('/')[0];
+        const parsed = parseFloat(value);
+        if (!isNaN(parsed)) return parsed;
+      }
+    }
+    
+    for (const possibleLabel of possibleLabels) {
+      const index = labels.findIndex(label => 
+        label.toUpperCase() === possibleLabel.toUpperCase() ||
+        label.toUpperCase().includes(possibleLabel.toUpperCase())
+      );
+      
+      if (index !== -1 && stats[index] !== undefined) {
+        const value = parseFloat(stats[index]);
+        if (!isNaN(value)) return value;
       }
     }
     
     return null;
   };
 
-  // Parse player stat based on prop type
-  const parsePlayerStat = (stats, propType, sport) => {
-    console.log('🎯 parsePlayerStat called with:', {
-      stats: stats,  // This will show the actual array
-      propType,
-      sport,
-      statsLength: stats?.length
-    });
-    console.log('📊 Actual stats array:', stats);
+  const normalizePropType = (propType) => {
+    if (!propType) return '';
+    const normalized = propType.toLowerCase().trim();
     
-    if (!stats || stats.length === 0) {
-      console.log('❌ No stats array or empty');
-      return null;
+    const mappings = {
+      'passing yards': ['pass yards', 'passing yds', 'pass yds'],
+      'passing completions': ['completions', 'comp', 'pass comp'],
+      'rushing yards': ['rush yards', 'rushing yds', 'rush yds'],
+      'receiving yards': ['rec yards', 'receiving yds', 'rec yds'],
+      'rushing & receiving yards': ['rush + rec yards', 'rush and rec yards', 'rush/rec yards'],
+      'receptions': ['rec', 'catches'],
+      'passing touchdowns': ['pass td', 'pass tds', 'passing td'],
+      'rushing touchdowns': ['rush td', 'rushing td'],
+      'receiving touchdowns': ['rec td', 'receiving td'],
+      'total touchdowns': ['td', 'touchdowns', 'tds'],
+      'anytime touchdown scorer': ['anytime td', 'anytime td scorer', 'to score a td'],
+      'interceptions thrown': ['int', 'ints', 'interceptions'],
+      'points': ['pts'],
+      'rebounds': ['reb', 'rebs'],
+      'assists': ['ast', 'asst'],
+      'steals': ['stl'],
+      'blocks': ['blk'],
+      'three pointers made': ['3pm', '3pt', 'threes', 'three pointers'],
+      'turnovers': ['to'],
+      'strikeouts': ['k', 'ks', 'so'],
+      'hits': ['h'],
+      'home runs': ['hr', 'homers'],
+      'rbis': ['rbi', 'runs batted in'],
+      'runs': ['r'],
+      'stolen bases': ['sb', 'steals'],
+      'goals': ['g'],
+      'saves': ['sv'],
+      'shots on goal': ['sog', 'shots']
+    };
+    
+    for (const [standard, variations] of Object.entries(mappings)) {
+      if (normalized === standard || variations.includes(normalized)) {
+        return standard;
+      }
     }
     
+    return normalized;
+  };
+
+  const matchPlayerName = (pickPlayer, apiPlayer) => {
+    if (!pickPlayer || !apiPlayer) return false;
+    
+    const normalizePlayerName = (name) => {
+      if (!name) return '';
+      return name
+        .toLowerCase()
+        .replace(/\s+(jr\.?|sr\.?|ii|iii|iv)$/i, '')
+        .replace(/[^a-z\s]/g, '')
+        .trim();
+    };
+    
+    const normalizedPick = normalizePlayerName(pickPlayer);
+    const normalizedApi = normalizePlayerName(apiPlayer);
+    
+    if (normalizedPick === normalizedApi) return true;
+    
+    const pickParts = normalizedPick.split(' ');
+    const apiParts = normalizedApi.split(' ');
+    const pickLastName = pickParts[pickParts.length - 1];
+    const apiLastName = apiParts[apiParts.length - 1];
+    
+    if (pickLastName === apiLastName && pickLastName.length > 3) {
+      return true;
+    }
+    
+    return false;
+  };
+
+  const extractPlayerStat = (boxscoreData, playerName, propType, sport) => {
+    if (!boxscoreData || !boxscoreData.players) return null;
+    
+    const normalizedPropType = normalizePropType(propType);
     const propLower = propType.toLowerCase();
-    console.log('🔍 Looking for prop type:', propLower);
     
-    // Touchdown stats
-    if (propLower.includes('touchdown') || propLower.includes('td')) {
-      const tdIndex = stats.findIndex(s => s.toLowerCase().includes('td'));
-      if (tdIndex !== -1) {
-        return parseFloat(stats[tdIndex]) || 0;
+    const isTDScorerProp = propLower.includes('anytime') || 
+                           propLower.includes('2+') || 
+                           propLower.includes('multiple td');
+    
+    try {
+      let totalTDs = 0;
+      let playerFound = false;
+      
+      for (const team of boxscoreData.players) {
+        if (!team.statistics) continue;
+        
+        for (const statCategory of team.statistics) {
+          if (!statCategory.athletes) continue;
+          
+          for (const athlete of statCategory.athletes) {
+            if (!matchPlayerName(playerName, athlete.athlete?.displayName)) continue;
+            
+            playerFound = true;
+            
+            if (isTDScorerProp && sport === 'NFL') {
+              const rushingTDs = getStatValue(athlete.stats, 'rushing touchdowns', sport, statCategory.labels) || 0;
+              const receivingTDs = getStatValue(athlete.stats, 'receiving touchdowns', sport, statCategory.labels) || 0;
+              totalTDs += rushingTDs + receivingTDs;
+              continue;
+            }
+            
+            const stat = getStatValue(athlete.stats, normalizedPropType, sport, statCategory.labels);
+            if (stat !== null) return stat;
+          }
+        }
       }
-    }
-    
-    // Passing yards
-    if (propLower.includes('passing') && propLower.includes('yard')) {
-      const ydsIndex = stats.findIndex((s, i, arr) => 
-        i > 0 && arr[i-1]?.toLowerCase().includes('pass')
-      );
-      if (ydsIndex !== -1) {
-        return parseFloat(stats[ydsIndex]) || 0;
+      
+      if (isTDScorerProp && playerFound) {
+        return totalTDs;
       }
-    }
-    
-    // Rushing yards
-    if (propLower.includes('rushing') && propLower.includes('yard')) {
-      // Rushing stats format: [Carries, Yards, YPC, TD, Long]
-      // Yards is always at index 1
-      if (stats.length >= 2) {
-        return parseFloat(stats[1]) || 0;
-      }
-    }
-    
-    // Receiving yards
-    if (propLower.includes('receiving') && propLower.includes('yard')) {
-      // Receiving stats format: [Receptions, Yards, YPC, TD, Long, Targets]
-      // Yards is always at index 1
-      if (stats.length >= 2) {
-        return parseFloat(stats[1]) || 0;
-      }
-    }
-    
-    // Points (basketball)
-    if (propLower.includes('point') && (sport === 'NBA' || sport === 'College Basketball')) {
-      return parseFloat(stats[0]) || 0;
-    }
-    
-    // Rebounds
-    if (propLower.includes('rebound')) {
-      const rebIndex = stats.findIndex(s => !isNaN(parseFloat(s)));
-      if (rebIndex !== -1) {
-        return parseFloat(stats[rebIndex]) || 0;
-      }
-    }
-    
-    // Assists
-    if (propLower.includes('assist')) {
-      const astIndex = stats.findIndex(s => !isNaN(parseFloat(s)));
-      if (astIndex !== -1) {
-        return parseFloat(stats[astIndex]) || 0;
-      }
+      
+    } catch (error) {
+      console.error('Error extracting player stat:', error);
     }
     
     return null;
