@@ -974,7 +974,6 @@ const submitParlay = async () => {
   const parlayWithId = {
     ...newParlay,
     participants: participantsWithOdds,
-    id: Date.now(),
     totalParticipants: participantCount,
     dayOfWeek: getDayOfWeek(newParlay.date)
   };
@@ -998,7 +997,7 @@ const submitParlay = async () => {
   
   try {
     // Save to Firebase using the hook
-    const result = await addBrolay(parlayWithId);
+    const result = await addBrolay(parlayData);
     
     if (!result.success) {
       throw result.error;
