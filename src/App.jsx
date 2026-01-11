@@ -1117,9 +1117,9 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
     setParlays(updatedParlays);
     
     const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
-    if (parlayToUpdate && parlayToUpdate.firestoreId) {
+    if (parlayToUpdate && parlayToUpdate.id) {
       try {
-        await updateBrolay(parlayToUpdate.firestoreId, {
+        await updateBrolay(parlayToUpdate.id, {
           participants: parlayToUpdate.participants
         });
       } catch (error) {
@@ -1145,9 +1145,9 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
   
   // Update in Firebase
   const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
-  if (parlayToUpdate && parlayToUpdate.firestoreId) {
+  if (parlayToUpdate && parlayToUpdate.id) {
     try {
-      await updateBrolay(parlayToUpdate.firestoreId, {
+      await updateBrolay(parlayToUpdate.id, {
         settled: parlayToUpdate.settled,
         settledAt: parlayToUpdate.settledAt
       });
@@ -1164,9 +1164,9 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
     setParlays(updatedParlays);
     
     // Delete from Firebase
-    if (parlayToDelete && parlayToDelete.firestoreId) {
+    if (parlayToDelete && parlayToDelete.id) {
       try {
-        await deleteBrolay(parlayToDelete.firestoreId);
+        await deleteBrolay(parlayToDelete.id);
       } catch (error) {
         console.error('Error deleting parlay:', error);
       }
@@ -1204,7 +1204,9 @@ const saveEditedParlay = async (editedParlay) => {
     setParlays(updatedParlays);
     
     // Update in Firebase
-    if (cleanedParlay.firestoreId) {
+    if (cleanedParlay.id) {  // ✅ CHANGED from firestoreId to id
+      console.log('🔄 Updating parlay in Firebase:', cleanedParlay.id);
+      
       // Build update object that explicitly deletes actualStats fields
       const updateObject = {};
       
@@ -1222,12 +1224,22 @@ const saveEditedParlay = async (editedParlay) => {
         }
       });
       
-      await updateBrolay(cleanedParlay.firestoreId, updateObject);
+      console.log('📝 Update object:', updateObject);
+      const result = await updateBrolay(cleanedParlay.id, updateObject);  // ✅ CHANGED from firestoreId to id
+      console.log('✅ Firebase update result:', result);
+      
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Update failed');
+      }
+    } else {
+      console.error('❌ No ID found for parlay');
+      throw new Error('Parlay has no ID');
     }
     
     setEditingParlay(null);
+    console.log('✅ Parlay edit saved successfully');
   } catch (error) {
-    console.error('Error updating parlay:', error);
+    console.error('💥 Error updating parlay:', error);
     alert('Failed to update parlay. Please try again.');
   } finally {
     setSaving(false);
@@ -2677,8 +2689,8 @@ const generateSearchInsights = (searchResults) => {
     const sortedParlays = [...parlays].sort((a, b) => {
       const dateCompare = new Date(b.date) - new Date(a.date);
       if (dateCompare !== 0) return dateCompare;
-      const aKey = a.firestoreId || a.id;
-      const bKey = b.firestoreId || b.id;
+      const aKey = a.id || a.id;
+      const bKey = b.id || b.id;
       return String(bKey).localeCompare(String(aKey));
     });
 
@@ -3870,8 +3882,8 @@ const renderGroupDashboard = () => {
     .sort((a, b) => {
       const dateCompare = new Date(b.date) - new Date(a.date);
       if (dateCompare !== 0) return dateCompare;
-      const aKey = a.firestoreId || a.id;
-      const bKey = b.firestoreId || b.id;
+      const aKey = a.id || a.id;
+      const bKey = b.id || b.id;
       return String(bKey).localeCompare(String(aKey));
     })
     .slice(0, 10);
@@ -4808,8 +4820,8 @@ const renderAllBrolays = () => {
     if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
       return b.sortOrder - a.sortOrder;
     }
-    const aKey = a.firestoreId || a.id;
-    const bKey = b.firestoreId || b.id;
+    const aKey = a.id || a.id;
+    const bKey = b.id || b.id;
     return String(bKey).localeCompare(String(aKey));
   });
 
@@ -5555,8 +5567,8 @@ const renderPayments = () => {
     if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
       return a.sortOrder - b.sortOrder;
     }
-    const aKey = a.firestoreId || a.id;
-    const bKey = b.firestoreId || b.id;
+    const aKey = a.id || a.id;
+    const bKey = b.id || b.id;
     return String(aKey).localeCompare(String(bKey));
   });
   const unsettledParlays = filteredParlays.filter(p => !p.settled);
@@ -6001,8 +6013,8 @@ const renderGrid = () => {
     if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
       return b.sortOrder - a.sortOrder;
     }
-    const aKey = a.firestoreId || a.id;
-    const bKey = b.firestoreId || b.id;
+    const aKey = a.id || a.id;
+    const bKey = b.id || b.id;
     return String(bKey).localeCompare(String(aKey));
   });
 
@@ -6108,8 +6120,8 @@ const renderRankings = () => {
         if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
           return a.sortOrder - b.sortOrder;
         }
-        const aKey = a.firestoreId || a.id;
-        const bKey = b.firestoreId || b.id;
+        const aKey = a.id || a.id;
+        const bKey = b.id || b.id;
         return String(aKey).localeCompare(String(bKey));
       });
     
@@ -7055,8 +7067,7 @@ const renderAllPicks = () => {
         parlayDate: parlay.date,
         parlayBetAmount: parlay.betAmount,
         parlayTotalPayout: parlay.totalPayout,
-        parlayPlacedBy: parlay.placedBy,
-        firestoreId: parlay.firestoreId
+        parlayPlacedBy: parlay.placedBy
       });
     });
   });
@@ -7154,13 +7165,13 @@ const handleSavePickEdit = async () => {
     console.log('Updated participant data:', updatedParticipants[editingPick.participantId]);
 
     // Update in Firebase
-    if (parlay.firestoreId) {
-      console.log('🔄 Updating Firebase document:', parlay.firestoreId);
+    if (parlay.id) {
+      console.log('🔄 Updating Firebase document:', parlay.id);
       console.log('📝 Parlay object:', parlay);
       console.log('📝 Updated participants:', updatedParticipants);
       
       try {
-        const result = await updateBrolay(parlay.firestoreId, {
+        const result = await updateBrolay(parlay.id, {
           participants: updatedParticipants
         });
         
@@ -7778,8 +7789,8 @@ const renderSettings = () => {
                     for (const parlay of parlays) {
                       if (!parlay.dayOfWeek && parlay.date) {
                         const dayOfWeek = getDayOfWeek(parlay.date);
-                        if (parlay.firestoreId) {
-                          await updateBrolay(parlay.firestoreId, { dayOfWeek });
+                        if (parlay.id) {
+                          await updateBrolay(parlay.id, { dayOfWeek });
                           updatedCount++;
                         }
                       }
