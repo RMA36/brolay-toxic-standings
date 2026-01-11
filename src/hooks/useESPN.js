@@ -720,12 +720,12 @@ export const useESPN = () => {
           }
         }
         
-        if (parlayUpdated && parlay.firestoreId) {
+        if (parlayUpdated && parlay.id) {
           try {
-            console.log('🔄 Attempting to update parlay:', parlay.firestoreId);
+            console.log('🔄 Attempting to update parlay:', parlay.id);
             console.log('📝 Update data:', { participants: updatedParticipants });
             
-            const result = await updateBrolay(parlay.firestoreId, {
+            const result = await updateBrolay(parlay.id, {
               participants: updatedParticipants
             });
             
@@ -740,7 +740,7 @@ export const useESPN = () => {
             console.error('Error message:', error.message);
           }
         } else {
-          console.warn('⚠️ Parlay not updated - parlayUpdated:', parlayUpdated, 'firestoreId:', parlay.firestoreId);
+          console.warn('⚠️ Parlay not updated - parlayUpdated:', parlayUpdated, 'id:', parlay.id);
         }
       }
       
