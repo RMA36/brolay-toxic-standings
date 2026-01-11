@@ -225,7 +225,17 @@ export const useESPN = () => {
   const checkPropBetResult = async (participant, gameDate) => {
     const { sport, team: playerName, propType, overUnder, line } = participant;
     
+    console.log('🏈 checkPropBetResult called with:', {
+      sport,
+      playerName,
+      propType,
+      overUnder,
+      line,
+      gameDate
+    });
+    
     if (!playerName || !propType || !line) {
+      console.log('❌ Missing required fields for prop bet');
       return { result: 'pending', stats: null };
     }
     
@@ -246,7 +256,10 @@ export const useESPN = () => {
       const response = await fetch(url);
       const data = await response.json();
       
+      console.log('📡 ESPN API returned', data.events?.length || 0, 'events for date', gameDate);
+      
       if (!data.events || data.events.length === 0) {
+        console.log('❌ No events found');
         return { result: 'pending', stats: null };
       }
       
@@ -464,7 +477,10 @@ export const useESPN = () => {
       const response = await fetch(url);
       const data = await response.json();
       
+      console.log('📡 ESPN API returned', data.events?.length || 0, 'events for date', gameDate);
+      
       if (!data.events || data.events.length === 0) {
+        console.log('❌ No events found');
         return { result: 'pending', stats: null };
       }
       
@@ -600,7 +616,10 @@ export const useESPN = () => {
       const response = await fetch(url);
       const data = await response.json();
       
+      console.log('📡 ESPN API returned', data.events?.length || 0, 'events for date', gameDate);
+      
       if (!data.events || data.events.length === 0) {
+        console.log('❌ No events found');
         return { result: 'pending', stats: null };
       }
       
