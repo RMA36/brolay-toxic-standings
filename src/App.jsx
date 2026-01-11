@@ -7092,7 +7092,13 @@ const renderAllPicks = () => {
   );
 
 const handleSavePickEdit = async () => {
-  if (!editingPick) return;
+  console.log('🎯 handleSavePickEdit called');
+  console.log('📋 editingPick:', editingPick);
+  
+  if (!editingPick) {
+    console.log('❌ No editingPick found, exiting');
+    return;
+  }
   
   try {
     setSaving(true);
@@ -7171,15 +7177,10 @@ const handleSavePickEdit = async () => {
       return;
     }
 
-    // Update local state
-    const updatedParlays = parlays.map(p => 
-      p.id === editingPick.parlayId 
-        ? { ...p, participants: updatedParticipants }
-        : p
-    );
-    
+    // Close the modal and show success
     setEditingPick(null);
     alert('Pick updated successfully!');
+    console.log('✅ Edit complete, modal closed');
   } catch (error) {
     console.error('Error updating pick:', error);
     console.error('Error details:', {
