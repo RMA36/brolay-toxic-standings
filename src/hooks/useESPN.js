@@ -267,7 +267,15 @@ export const useESPN = () => {
       for (const event of data.events) {
         const competition = event.competitions?.[0];
         
+        console.log('🎮 Checking event:', {
+          eventId: event.id,
+          teams: competition?.competitors?.map(c => c.team.displayName).join(' vs '),
+          status: competition?.status?.type?.name,
+          completed: competition?.status?.type?.completed
+        });
+        
         if (!competition || competition.status?.type?.completed !== true) {
+          console.log('⏭️ Skipping - game not completed');
           continue;
         }
         
@@ -278,15 +286,20 @@ export const useESPN = () => {
           const boxscoreResponse = await fetch(boxscoreUrl);
           const boxscoreData = await boxscoreResponse.json();
           
+          console.log('📦 Fetched boxscore for game', gameId);
+          
           // Double-check completion status
           const boxscoreStatus = boxscoreData.header?.competitions?.[0]?.status?.type?.name?.toLowerCase();
+          console.log('📊 Boxscore status:', boxscoreStatus);
           if (boxscoreStatus !== 'final' && boxscoreStatus !== 'status_final') {
             console.log(`Boxscore for game ${gameId} status is ${boxscoreStatus}, not final, skipping`);
             continue;
           }
           
           if (boxscoreData.boxscore) {
+            console.log('🔍 Searching for player:', playerName, 'in boxscore');
             const playerStat = extractPlayerStat(boxscoreData.boxscore, playerName, propType, sport);
+            console.log('📈 Player stat found:', playerStat);
             
             if (playerStat !== null) {
               const propLower = propType.toLowerCase();
