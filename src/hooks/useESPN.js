@@ -722,12 +722,25 @@ export const useESPN = () => {
         
         if (parlayUpdated && parlay.firestoreId) {
           try {
-            await updateBrolay(parlay.firestoreId, {
+            console.log('🔄 Attempting to update parlay:', parlay.firestoreId);
+            console.log('📝 Update data:', { participants: updatedParticipants });
+            
+            const result = await updateBrolay(parlay.firestoreId, {
               participants: updatedParticipants
             });
+            
+            console.log('✅ Update result:', result);
+            
+            if (!result.success) {
+              console.error('❌ Update failed:', result.error);
+            }
           } catch (error) {
-            console.error('Error updating parlay in Firebase:', error);
+            console.error('💥 Error updating parlay in Firebase:', error);
+            console.error('Error code:', error.code);
+            console.error('Error message:', error.message);
           }
+        } else {
+          console.warn('⚠️ Parlay not updated - parlayUpdated:', parlayUpdated, 'firestoreId:', parlay.firestoreId);
         }
       }
       
