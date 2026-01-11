@@ -260,17 +260,33 @@ export const useESPN = () => {
         for (const statCategory of team.statistics) {
           if (!statCategory.athletes) continue;
           
+          // Match the stat category to the prop type
+          const categoryName = statCategory.name?.toLowerCase() || '';
+          const shouldCheckCategory = 
+            (normalizedPropType.includes('passing') && categoryName.includes('passing')) ||
+            (normalizedPropType.includes('rushing') && categoryName.includes('rushing')) ||
+            (normalizedPropType.includes('receiving') && categoryName.includes('receiving')) ||
+            (normalizedPropType.includes('receptions') && categoryName.includes('receiving')) ||
+            (!normalizedPropType.includes('passing') && !normalizedPropType.includes('rushing') && !normalizedPropType.includes('receiving'));
+          
           for (const athlete of statCategory.athletes) {
             if (!matchPlayerName(playerName, athlete.athlete?.displayName)) continue;
             
             playerFound = true;
             
             console.log('✅ Found player in category:', statCategory.name, 'Labels:', statCategory.labels);
+            console.log('🔍 Prop type:', normalizedPropType, 'Should check this category?', shouldCheckCategory);
             
             if (isTDScorerProp && sport === 'NFL') {
               const rushingTDs = getStatValue(athlete.stats, 'rushing touchdowns', sport, statCategory.labels) || 0;
               const receivingTDs = getStatValue(athlete.stats, 'receiving touchdowns', sport, statCategory.labels) || 0;
               totalTDs += rushingTDs + receivingTDs;
+              continue;
+            }
+            
+            // Only check this category if it matches the prop type
+            if (!shouldCheckCategory) {
+              console.log('⏭️ Skipping category - does not match prop type');
               continue;
             }
             
