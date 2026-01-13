@@ -22,6 +22,7 @@ import {
 import LoadingSpinner from './components/common/LoadingSpinner';
 import Button from './components/common/Button';
 import Card from './components/common/Card';
+import PickEntry from './components/forms/PickEntry';
 
 import { useBrolays } from './hooks/useBrolays';
 import { useESPN } from './hooks/useESPN';
@@ -1228,321 +1229,6 @@ const saveEditedParlay = async (editedParlay) => {
   }
 };
   
-  // Helper function to render bet-specific fields
-const renderBetSpecificFields = (participant, id, isEditMode = false) => {
-  const updateFunc = isEditMode 
-    ? (field, value) => {
-        const updated = {...editingParlay};
-        updated.participants[id][field] = value;
-        setEditingParlay(updated);
-      }
-    : (field, value) => updateParticipant(id, field, value);
-
-  const inputStyle = { fontSize: isMobile ? '16px' : '14px' };
-
-  switch(participant.betType) {
-    case 'Spread':
-      return (
-        <>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Favorite/Dog</label>
-            <select
-              value={participant.favorite || 'Favorite'}
-              onChange={(e) => updateFunc('favorite', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-            >
-              <option value="Favorite">Favorite</option>
-              <option value="Dog">Dog</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Spread</label>
-            <input
-              type="text"
-              value={participant.spread || ''}
-              onChange={(e) => updateFunc('spread', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-              placeholder="e.g., 7.5"
-            />
-          </div>
-        </>
-      );
-
-    case 'Total':
-      return (
-        <>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
-            <select
-              value={participant.overUnder || 'Over'}
-              onChange={(e) => updateFunc('overUnder', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-            >
-              <option value="Over">Over</option>
-              <option value="Under">Under</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Total</label>
-            <input
-              type="text"
-              value={participant.total || ''}
-              onChange={(e) => updateFunc('total', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-              placeholder="e.g., 45.5"
-            />
-          </div>
-        </>
-      );
-
-    case 'First Half Total':
-      return (
-        <>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
-            <select
-              value={participant.overUnder || 'Over'}
-              onChange={(e) => updateFunc('overUnder', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-            >
-              <option value="Over">Over</option>
-              <option value="Under">Under</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">1H Total</label>
-            <input
-              type="text"
-              value={participant.total || ''}
-              onChange={(e) => updateFunc('total', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-              placeholder="e.g., 23.5"
-            />
-          </div>
-        </>
-      );
-
-    case 'First Half Team Total':
-      return (
-        <>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
-            <select
-              value={participant.overUnder || 'Over'}
-              onChange={(e) => updateFunc('overUnder', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-            >
-              <option value="Over">Over</option>
-              <option value="Under">Under</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Team Total</label>
-            <input
-              type="text"
-              value={participant.total || ''}
-              onChange={(e) => updateFunc('total', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-              placeholder="e.g., 13.5"
-            />
-          </div>
-        </>
-      );
-
-    case 'First Inning Runs':
-      return (
-        <div>
-          <label className="block text-xs font-medium mb-1 text-white">Yes/No Runs</label>
-          <select
-            value={participant.yesNoRuns || 'Yes'}
-            onChange={(e) => updateFunc('yesNoRuns', e.target.value)}
-            className="w-full px-2 py-1 border rounded text-base"
-            style={inputStyle}
-          >
-            <option value="Yes">Yes Runs (YRFI)</option>
-            <option value="No">No Runs (NRFI)</option>
-          </select>
-        </div>
-      );
-
-    case 'Quarter Moneyline':
-      return (
-        <div>
-          <label className="block text-xs font-medium mb-1 text-white">Quarter</label>
-          <select
-            value={participant.quarter || '1Q'}
-            onChange={(e) => updateFunc('quarter', e.target.value)}
-            className="w-full px-2 py-1 border rounded text-base"
-            style={inputStyle}
-          >
-            <option value="1Q">1st Quarter</option>
-            <option value="2Q">2nd Quarter</option>
-            <option value="3Q">3rd Quarter</option>
-            <option value="4Q">4th Quarter</option>
-          </select>
-        </div>
-      );
-
-    case 'Quarter Total':
-      return (
-        <>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Quarter</label>
-            <select
-              value={participant.quarter || '1Q'}
-              onChange={(e) => updateFunc('quarter', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-            >
-              <option value="1Q">1st Quarter</option>
-              <option value="2Q">2nd Quarter</option>
-              <option value="3Q">3rd Quarter</option>
-              <option value="4Q">4th Quarter</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
-            <select
-              value={participant.overUnder || 'Over'}
-              onChange={(e) => updateFunc('overUnder', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-            >
-              <option value="Over">Over</option>
-              <option value="Under">Under</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Quarter Total</label>
-            <input
-              type="text"
-              value={participant.total || ''}
-              onChange={(e) => updateFunc('total', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-              placeholder="e.g., 10.5"
-            />
-          </div>
-        </>
-      );
-
-    case 'Quarter Team Total':
-      return (
-        <>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Quarter</label>
-            <select
-              value={participant.quarter || '1Q'}
-              onChange={(e) => updateFunc('quarter', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-            >
-              <option value="1Q">1st Quarter</option>
-              <option value="2Q">2nd Quarter</option>
-              <option value="3Q">3rd Quarter</option>
-              <option value="4Q">4th Quarter</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
-            <select
-              value={participant.overUnder || 'Over'}
-              onChange={(e) => updateFunc('overUnder', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-            >
-              <option value="Over">Over</option>
-              <option value="Under">Under</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Team Total</label>
-            <input
-              type="text"
-              value={participant.total || ''}
-              onChange={(e) => updateFunc('total', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-              placeholder="e.g., 7.5"
-            />
-          </div>
-        </>
-      );
-
-    case 'Prop Bet':
-      return (
-        <>
-          <div className="relative">
-            <label className="block text-xs font-medium mb-1 text-white">Prop Type</label>
-            <input
-              type="text"
-              value={participant.propType || ''}
-              onChange={(e) => {
-                if (isEditMode) {
-                  updateFunc('propType', e.target.value);
-                } else {
-                  handlePropTypeInput(id, e.target.value);
-                }
-              }}
-              onFocus={(e) => !isEditMode && handlePropTypeInput(id, e.target.value)}
-              onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-              placeholder="Start typing..."
-            />
-            {!isEditMode && showSuggestions[`prop-${id}`] && suggestions.length > 0 && (
-              <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
-                {suggestions.map((suggestion, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => selectSuggestion(id, 'propType', suggestion)}
-                    className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-                  >
-                    {suggestion}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
-            <select
-              value={participant.overUnder || 'Over'}
-              onChange={(e) => updateFunc('overUnder', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-            >
-              <option value="Over">Over</option>
-              <option value="Under">Under</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Line</label>
-            <input
-              type="text"
-              value={participant.line || ''}
-              onChange={(e) => updateFunc('line', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
-              style={inputStyle}
-              placeholder="e.g., 255.5"
-            />
-          </div>
-        </>
-      );
-
-    default:
-      return null;
-  }
-};
-  
   // Helper function to get day of week from date string
 const getDayOfWeek = (dateString) => {
   if (!dateString) return '';
@@ -1707,175 +1393,54 @@ return (
           {/* Picks */}
           <h3 className="text-base md:text-lg font-semibold mb-3">Picks</h3>
           <div className="space-y-4 mb-6">
-            {Object.entries(participants).map(([id, participant]) => (
-              <div key={id} className="border rounded p-3 md:p-4 bg-gray-50">
-                {participant.autoUpdated && (
-                  <div className="mb-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                    ✓ Auto-updated on {new Date(participant.autoUpdatedAt).toLocaleString()}
-                  </div>
-                )}
-                
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-                  <div>
-                    <label className="block text-xs font-medium mb-1 text-white">Big Guy</label>
-                    <select
-                      value={participant.player}
-                      onChange={(e) => {
-                        const updated = {...editingParlay};
-                        updated.participants[id].player = e.target.value;
-                        setEditingParlay(updated);
-                      }}
-                      className="w-full px-2 py-1 border rounded text-base"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    >
-                      <option value="">Select</option>
-                      {players.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1 text-white">Sport</label>
-                    <select
-                      value={participant.sport}
-                      onChange={(e) => {
-                        const updated = {...editingParlay};
-                        updated.participants[id].sport = e.target.value;
-                        setEditingParlay(updated);
-                      }}
-                      className="w-full px-2 py-1 border rounded text-base"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    >
-                      {sports.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1 text-white">Bet Type</label>
-                    <select
-                      value={participant.betType}
-                      onChange={(e) => {
-                        const updated = {...editingParlay};
-                        updated.participants[id].betType = e.target.value;
-                        setEditingParlay(updated);
-                      }}
-                      className="w-full px-2 py-1 border rounded text-base"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    >
-                      {betTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
-                    </select>
-                  </div>
-                  
-                  {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
-                    <div>
-                      <label className="block text-xs font-medium mb-1 text-white">Team/Player</label>
-                      <input
-                        type="text"
-                        value={participant.team || ''}
-                        onChange={(e) => {
-                          const updated = {...editingParlay};
-                          updated.participants[id].team = e.target.value;
-                          setEditingParlay(updated);
-                        }}
-                        className="w-full px-2 py-1 border rounded text-base"
-                        style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                    <div>
-                      <label className="block text-xs font-medium mb-1 text-white">Away Team</label>
-                      <input
-                        type="text"
-                        value={participant.awayTeam || ''}
-                        onChange={(e) => {
-                          const updated = {...editingParlay};
-                          updated.participants[id].awayTeam = e.target.value;
-                          setEditingParlay(updated);
-                        }}
-                        className="w-full px-2 py-1 border rounded text-base"
-                        style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium mb-1 text-white">Home Team</label>
-                      <input
-                        type="text"
-                        value={participant.homeTeam || ''}
-                        onChange={(e) => {
-                          const updated = {...editingParlay};
-                          updated.participants[id].homeTeam = e.target.value;
-                          setEditingParlay(updated);
-                        }}
-                        className="w-full px-2 py-1 border rounded text-base"
-                        style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  {renderBetSpecificFields(participant, id, true)}
-
-                  <div>
-                    <label className="block text-xs font-medium mb-1 text-white">Odds (Optional)</label>
-                    <input
-                      type="text"
-                      value={participant.odds || ''}
-                      onChange={(e) => {
-                        const updated = {...editingParlay};
-                        updated.participants[id].odds = e.target.value;
-                        setEditingParlay(updated);
-                      }}
-                      className="w-full px-2 py-1 border rounded text-base"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      placeholder="e.g., -120 (Optional)"
-                    />
-                    {participant.oddsSource && (
-                      <div className="text-xs text-gray-500 mt-1 text-white">Source: {participant.oddsSource}</div>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1 text-white">Result</label>
-                    <select
-                      value={participant.result}
-                      onChange={(e) => {
-                        const updated = {...editingParlay};
-                        updated.participants[id].result = e.target.value;
-                        updated.participants[id].autoUpdated = false;
-                        updated.participants[id].manuallyOverridden = e.target.value !== 'pending';
-                        // Clear actualStats if setting to pending
-                        if (e.target.value === 'pending') {
-                          updated.participants[id].actualStats = null;
-                        }
-                        setEditingParlay(updated);
-                      }}
-                      className="w-full px-2 py-1 border rounded text-base"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="win">Win</option>
-                      <option value="loss">Loss</option>
-                      <option value="push">Push</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium mb-1">Actual Stats (Optional)</label>
-                    <input
-                      type="text"
-                      value={participant.actualStats || ''}
-                      onChange={(e) => {
-                        const updated = {...editingParlay};
-                        updated.participants[id].actualStats = e.target.value || null;
-                        setEditingParlay(updated);
-                      }}
-                      className="w-full px-2 py-1 border rounded text-base"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      placeholder="e.g., 212 passing yards"
-                    />
-                  </div>
-                </div>
-              </div>
+            {Object.entries(editingParlay.participants).map(([id, participant]) => (
+              <PickEntry
+                key={id}
+                participant={participant}
+                participantId={id}
+                onUpdate={(partId, field, value) => {
+                  const updated = {...editingParlay};
+                  updated.participants[partId][field] = value;
+                  setEditingParlay(updated);
+                }}
+                onRemove={(partId) => {
+                  const updated = {...editingParlay};
+                  delete updated.participants[partId];
+                  setEditingParlay(updated);
+                }}
+                players={PLAYERS}
+                sports={SPORTS}
+                betTypes={PICK_TYPES}
+                suggestions={suggestions}
+                showSuggestions={showSuggestions}
+                onTeamInput={(partId, value, sport) => {
+                  const updated = {...editingParlay};
+                  updated.participants[partId].team = value;
+                  setEditingParlay(updated);
+                  handleTeamInput(partId, value, sport);
+                }}
+                onPropTypeInput={(partId, value) => {
+                  const updated = {...editingParlay};
+                  updated.participants[partId].propType = value;
+                  setEditingParlay(updated);
+                  handlePropTypeInput(partId, value);
+                }}
+                onAwayTeamInput={(partId, value, sport) => {
+                  const updated = {...editingParlay};
+                  updated.participants[partId].awayTeam = value;
+                  setEditingParlay(updated);
+                  handleAwayTeamInput(partId, value, sport);
+                }}
+                onHomeTeamInput={(partId, value, sport) => {
+                  const updated = {...editingParlay};
+                  updated.participants[partId].homeTeam = value;
+                  setEditingParlay(updated);
+                  handleHomeTeamInput(partId, value, sport);
+                }}
+                onSelectSuggestion={selectSuggestion}
+                isMobile={isMobile}
+                isEditMode={true}
+              />
             ))}
           </div>
 
@@ -2842,168 +2407,24 @@ const generateSearchInsights = (searchResults) => {
             <h3 className="text-base md:text-lg font-semibold text-yellow-400">Picks</h3>
           </div>
           {Object.entries(newParlay.participants).map(([id, participant]) => (
-            <div key={id} className="border border-gray-700 rounded-lg p-4 md:p-6 bg-gray-800/50">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-                <div>
-                  <label className="block text-xs font-medium mb-1 text-white">Big Guy</label>
-                  <select
-                    value={participant.player}
-                    onChange={(e) => updateParticipant(id, 'player', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-base"
-                    style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  >
-                    <option value="">Select</option>
-                    {players.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1 text-white">Sport</label>
-                  <select
-                    value={participant.sport}
-                    onChange={(e) => updateParticipant(id, 'sport', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-base"
-                    style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  >
-                    {sports.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1 text-white">Bet Type</label>
-                  <select
-                    value={participant.betType}
-                    onChange={(e) => updateParticipant(id, 'betType', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-base"
-                    style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  >
-                    {betTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
-                  </select>
-                </div>
-                
-                {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
-                  <div className="relative">
-                    <label className="block text-xs font-medium mb-1 text-white">Team/Player</label>
-                    <input
-                      type="text"
-                      value={participant.team}
-                      onChange={(e) => handleTeamInput(id, e.target.value, participant.sport)}
-                      onFocus={(e) => handleTeamInput(id, e.target.value, participant.sport)}
-                      onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-                      className="w-full px-2 py-1 border rounded text-base"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      placeholder="Start typing..."
-                    />
-                    {showSuggestions[`team-${id}`] && suggestions.length > 0 && (
-                      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
-                        {suggestions.map((suggestion, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => selectSuggestion(id, 'team', suggestion)}
-                            className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-                          >
-                            {suggestion}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-          
-              {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                  <div className="relative">
-                    <label className="block text-xs font-medium mb-1 text-white">Away Team</label>
-                    <input
-                      type="text"
-                      value={participant.awayTeam || ''}
-                      onChange={(e) => handleAwayTeamInput(id, e.target.value, participant.sport)}
-                      onFocus={(e) => handleAwayTeamInput(id, e.target.value, participant.sport)}
-                      onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-                      className="w-full px-2 py-1 border rounded text-base"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      placeholder="Start typing..."
-                    />
-                    {showSuggestions[`awayTeam-${id}`] && suggestions.length > 0 && (
-                      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
-                        {suggestions.map((suggestion, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => selectSuggestion(id, 'awayTeam', suggestion)}
-                            className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-                          >
-                            {suggestion}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  <div className="relative">
-                    <label className="block text-xs font-medium mb-1 text-white">Home Team</label>
-                    <input
-                      type="text"
-                      value={participant.homeTeam || ''}
-                      onChange={(e) => handleHomeTeamInput(id, e.target.value, participant.sport)}
-                      onFocus={(e) => handleHomeTeamInput(id, e.target.value, participant.sport)}
-                      onBlur={() => setTimeout(() => setShowSuggestions({}), 200)}
-                      className="w-full px-2 py-1 border rounded text-base"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      placeholder="Start typing..."
-                    />
-                    {showSuggestions[`homeTeam-${id}`] && suggestions.length > 0 && (
-                      <div className="absolute z-10 w-full bg-white border border-gray-300 rounded-b shadow-lg max-h-40 overflow-y-auto">
-                        {suggestions.map((suggestion, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => selectSuggestion(id, 'homeTeam', suggestion)}
-                            className="px-2 py-1 hover:bg-blue-100 cursor-pointer text-sm"
-                          >
-                            {suggestion}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-          
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
-                {renderBetSpecificFields(participant, id, false)}
-          
-                <div>
-                  <label className="block text-xs font-medium mb-1 text-white">Odds (Optional)</label>
-                  <input
-                    type="text"
-                    value={participant.odds || ''}
-                    onChange={(e) => updateParticipant(id, 'odds', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-base"
-                    style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    placeholder="e.g., -120 (Optional)"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium mb-1 text-white">Result</label>
-                  <select
-                    value={participant.result}
-                    onChange={(e) => updateParticipant(id, 'result', e.target.value)}
-                    className="w-full px-2 py-1 border rounded text-base"
-                    style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="win">Win</option>
-                    <option value="loss">Loss</option>
-                    <option value="push">Push</option>
-                  </select>
-                </div>
-              </div>
-              <Button
-                onClick={() => removeParticipant(id)}
-                variant="danger"
-                size="small"
-                className={isMobile ? 'min-h-[44px]' : ''}
-              >
-                Remove Pick
-              </Button>
-            </div>
+            <PickEntry
+              key={id}
+              participant={participant}
+              participantId={id}
+              onUpdate={updateParticipant}
+              onRemove={removeParticipant}
+              players={PLAYERS}
+              sports={SPORTS}
+              betTypes={PICK_TYPES}
+              suggestions={suggestions}
+              showSuggestions={showSuggestions}
+              onTeamInput={handleTeamInput}
+              onPropTypeInput={handlePropTypeInput}
+              onAwayTeamInput={handleAwayTeamInput}
+              onHomeTeamInput={handleHomeTeamInput}
+              onSelectSuggestion={selectSuggestion}
+              isMobile={isMobile}
+            />
           ))}
         </div>
 
