@@ -805,8 +805,7 @@ const handleTouchEnd = async () => {
         player2PropType: '',      // For H2H Prop - NEW
         selectedPlayer: '',       // For H2H Prop - who you're betting on
         h2hLine: '',              // For H2H Prop - optional spread
-        h2hLineType: '',          // For H2H Prop - 'Favorite' or 'Dog' (only if h2hLine exists)
-        entities: []              // For Either Prop and Combined Prop
+        h2hLineType: ''          // For H2H Prop - 'Favorite' or 'Dog' (only if h2hLine exists)
       }
     }
   });
@@ -1330,9 +1329,9 @@ const formatBetDescription = (participant) => {
       }
     }
     case 'Either Prop':
-      return `${participant.propType} ${participant.overUnder} ${participant.line} (Either: ${(participant.entities || []).join(' OR ')})`;
+      return `${participant.propType} ${participant.overUnder} ${participant.line} (Either: ${participant.player1 || '?'} OR ${participant.player2 || '?'})`;
     case 'Combined Prop':
-      return `Combined ${participant.propType} ${participant.overUnder} ${participant.line} (${(participant.entities || []).join(' + ')})`;  
+      return `Combined ${participant.propType} ${participant.overUnder} ${participant.line} (${participant.player1 || '?'} + ${participant.player2 || '?'})`;  
     case 'Moneyline':
       return 'ML';
     default:
