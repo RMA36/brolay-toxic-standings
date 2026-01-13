@@ -369,7 +369,20 @@ const normalizePropType = (propType) => {
   
   const mappings = PROP_TYPE_VARIATIONS; // Now imported from constants/sports
 
-  return mappings[normalized] || normalized;
+  // Check if input is already a canonical form
+  if (mappings[normalized]) {
+    return normalized;
+  }
+  
+  // Check if input is a variation - find its canonical form
+  for (const [canonical, variations] of Object.entries(mappings)) {
+    if (variations.includes(normalized)) {
+      return canonical;
+    }
+  }
+  
+  // Return as-is if no match found
+  return normalized;
 };
 
 const getStatValue = (stats, propType, sport, labels) => {
