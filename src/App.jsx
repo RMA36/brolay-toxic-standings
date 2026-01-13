@@ -1674,7 +1674,7 @@ const importFromCSV = async (csvText) => {
         playerStats.byBetType[participant.betType].total++;
 
         // Track multi-entity props
-        if (participant.betType === 'H2H Prop') {
+        if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
           playerStats.h2hProps.total++;
           
           // Track by prop type combination
@@ -1708,7 +1708,7 @@ const importFromCSV = async (csvText) => {
           playerStats.byBetType[participant.betType].wins++;
 
         // Track multi-entity prop wins
-        if (participant.betType === 'H2H Prop') {
+        if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
           playerStats.h2hProps.wins++;
           const propCombo = participant.player1PropType === participant.player2PropType 
             ? participant.player1PropType 
@@ -1738,7 +1738,7 @@ const importFromCSV = async (csvText) => {
           playerStats.byBetType[participant.betType].losses++;
 
           // Track multi-entity prop losses
-          if (participant.betType === 'H2H Prop') {
+          if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
             playerStats.h2hProps.losses++;
             const propCombo = participant.player1PropType === participant.player2PropType 
               ? participant.player1PropType 
