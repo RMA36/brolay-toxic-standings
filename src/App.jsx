@@ -1658,7 +1658,7 @@ const importFromCSV = async (csvText) => {
       const and1 = losers.length === 1 && winners.length === participants.length - 1;
 
       participants.forEach(participant => {
-        if (!participant.player || participant.player === '') return;
+        if (!participant.player || participant.player === '' || !participant.sport || !participant.betType) return;
         
         const playerStats = stats[participant.player];
         playerStats.totalPicks++;
@@ -2605,7 +2605,7 @@ parlaysList.forEach(parlay => {
     const parlayWon = losers.length === 0 && winners.length > 0;
     const and1 = losers.length === 1 && winners.length === participants.length - 1;
     participants.forEach(participant => {
-      if (participant.player !== player) return;
+      if (participant.player !== player || !participant.sport || !participant.betType) return;
       
       playerStats.totalPicks++;
       if (!playerStats.bySport[participant.sport]) {
