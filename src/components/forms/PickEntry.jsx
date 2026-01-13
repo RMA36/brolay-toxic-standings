@@ -384,17 +384,28 @@ const PickEntry = ({
               />
             </div>
             <div className="md:col-span-3">
-              <label className="block text-xs font-medium mb-1 text-white">Players/Teams (comma-separated)</label>
+              <label className="block text-xs font-medium mb-1 text-white">Player 1</label>
               <input
                 type="text"
-                value={(participant.entities || []).join(', ')}
-                onChange={(e) => updateField('entities', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                value={participant.player1 || ''}
+                onChange={(e) => updateField('player1', e.target.value)}
                 className="w-full px-2 py-1 border rounded text-base"
                 style={inputStyle}
-                placeholder="e.g., LeBron James, Anthony Davis"
+                placeholder="First player/team name"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs font-medium mb-1 text-white">Player 2</label>
+              <input
+                type="text"
+                value={participant.player2 || ''}
+                onChange={(e) => updateField('player2', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="Second player/team name"
               />
               <p className="text-xs text-gray-400 mt-1">
-                Win if ANY player/team hits the line
+                Win if EITHER player/team hits the line
               </p>
             </div>
           </>
@@ -451,14 +462,25 @@ const PickEntry = ({
               />
             </div>
             <div className="md:col-span-3">
-              <label className="block text-xs font-medium mb-1 text-white">Players/Teams (comma-separated)</label>
+              <label className="block text-xs font-medium mb-1 text-white">Player 1</label>
               <input
                 type="text"
-                value={(participant.entities || []).join(', ')}
-                onChange={(e) => updateField('entities', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                value={participant.player1 || ''}
+                onChange={(e) => updateField('player1', e.target.value)}
                 className="w-full px-2 py-1 border rounded text-base"
                 style={inputStyle}
-                placeholder="e.g., Aaron Judge, Giancarlo Stanton"
+                placeholder="First player/team name"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs font-medium mb-1 text-white">Player 2</label>
+              <input
+                type="text"
+                value={participant.player2 || ''}
+                onChange={(e) => updateField('player2', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="Second player/team name"
               />
               <p className="text-xs text-gray-400 mt-1">
                 Win if COMBINED total hits the line
