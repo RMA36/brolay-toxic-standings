@@ -797,7 +797,14 @@ const handleTouchEnd = async () => {
         odds: '',
         yesNoRuns: 'Yes',
         quarter: '1Q',
-        result: 'pending'
+        result: 'pending',
+        // Multi-entity prop fields
+        player1: '',           // For H2H Prop
+        player2: '',           // For H2H Prop
+        selectedPlayer: '',    // For H2H Prop - who you're betting on
+        h2hLine: '',           // For H2H Prop - optional spread
+        h2hLineType: '',       // For H2H Prop - 'Favorite' or 'Dog' (only if h2hLine exists)
+        entities: []           // For Either Prop and Combined Prop
       }
     }
   });
@@ -1297,6 +1304,18 @@ const formatBetDescription = (participant) => {
       return `${participant.quarter} Team ${participant.overUnder} ${participant.total}`;
     case 'Prop Bet':
       return `${participant.propType} ${participant.overUnder} ${participant.line}`;
+    case 'H2H Prop': {
+      const opponent = participant.player1 === participant.selectedPlayer ? participant.player2 : participant.player1;
+      if (participant.h2hLine && participant.h2hLineType) {
+        const sign = participant.h2hLineType === 'Dog' ? '+' : '-';
+        return `${participant.propType}: ${participant.selectedPlayer || '?'} ${sign}${participant.h2hLine} vs ${opponent}`;
+      }
+      return `${participant.propType}: ${participant.selectedPlayer || '?'} > ${opponent}`;
+    }
+    case 'Either Prop':
+      return `${participant.propType} ${participant.overUnder} ${participant.line} (Either: ${(participant.entities || []).join(' OR ')})`;
+    case 'Combined Prop':
+      return `Combined ${participant.propType} ${participant.overUnder} ${participant.line} (${(participant.entities || []).join(' + ')})`;  
     case 'Moneyline':
       return 'ML';
     default:
