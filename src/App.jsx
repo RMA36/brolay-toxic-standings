@@ -3120,14 +3120,14 @@ return (
                       )}
                       
                       {/* Multi-Entity Props Breakdowns */}
-                      {(Object.keys(stats.byH2HPropType).length > 0 || 
-                        Object.keys(stats.byEitherPropType).length > 0 || 
-                        Object.keys(stats.byCombinedPropType).length > 0) && (
+                      {(Object.keys(stats.byH2HPropType || {}).length > 0 || 
+                        Object.keys(stats.byEitherPropType || {}).length > 0 || 
+                        Object.keys(stats.byCombinedPropType || {}).length > 0) && (
                         <div className="mt-4 pt-4 border-t border-gray-700">
                           <h5 className="font-semibold text-sm mb-3 text-gray-300">🎯 Multi-Entity Props Breakdown</h5>
                           
                           {/* H2H Props by Type */}
-                          {Object.keys(stats.byH2HPropType).length > 0 && (
+                          {Object.keys(stats.byH2HPropType || {}).length > 0 && (
                             <div className="mb-4">
                               <h6 className="text-xs font-medium text-gray-400 mb-2">🆚 H2H Props</h6>
                               <div className="space-y-2">
@@ -3158,7 +3158,7 @@ return (
                           )}
                           
                           {/* Either Props by Type */}
-                          {Object.keys(stats.byEitherPropType).length > 0 && (
+                          {Object.keys(stats.byEitherPropType || {}).length > 0 && (
                             <div className="mb-4">
                               <h6 className="text-xs font-medium text-gray-400 mb-2">🎲 Either Props</h6>
                               <div className="space-y-2">
@@ -3189,7 +3189,7 @@ return (
                           )}
                           
                           {/* Combined Props by Type */}
-                          {Object.keys(stats.byCombinedPropType).length > 0 && (
+                          {Object.keys(stats.byCombinedPropType || {}).length > 0 && (
                             <div>
                               <h6 className="text-xs font-medium text-gray-400 mb-2">➕ Combined Props</h6>
                               <div className="space-y-2">
