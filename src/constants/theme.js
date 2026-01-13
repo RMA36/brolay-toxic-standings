@@ -50,6 +50,11 @@ export const inputStyle = {
   borderColor: colors.border.default,
 };
 
+export const inputClasses = {
+  base: 'w-full px-2 py-1 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none',
+  large: 'w-full px-3 py-2 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none',
+};
+
 export const buttonStyles = {
   primary: `bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-gray-900 font-bold px-4 py-2 rounded-lg transition-all duration-200 shadow-lg`,
   secondary: `bg-gray-700 hover:bg-gray-600 text-white font-bold px-4 py-2 rounded-lg transition-all duration-200`,
