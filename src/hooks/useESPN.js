@@ -472,6 +472,450 @@ export const useESPN = () => {
     }
   };
 
+  // Check H2H Prop result
+  const checkH2HPropResult = async (participant, gameDate) => {
+    const { sport, player1, player1PropType, player2, player2PropType, selectedPlayer, h2hLine, h2hLineType } = participant;
+    
+    console.log('🆚 checkH2HPropResult called with:', {
+      player1, player1PropType,
+      player2, player2PropType,
+      selectedPlayer, h2hLine, h2hLineType,
+      gameDate
+    });
+    
+    if (!player1 || !player2 || !player1PropType || !player2PropType || !selectedPlayer) {
+      console.log('❌ Missing required fields for H2H prop');
+      return { result: 'pending', stats: null };
+    }
+    
+    const espnSport = getESPNSport(sport);
+    if (!espnSport) {
+      return { result: 'pending', stats: null };
+    }
+    
+    // Unsupported sports for prop tracking
+    if (['Golf', 'Rugby', 'UFC'].includes(sport)) {
+      return { result: 'pending', stats: null };
+    }
+    
+    try {
+      const formattedDate = gameDate.replace(/-/g, '');
+      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      console.log('📡 ESPN API returned', data.events?.length || 0, 'events for date', gameDate);
+      
+      if (!data.events || data.events.length === 0) {
+        console.log('❌ No events found');
+        return { result: 'pending', stats: null };
+      }
+      
+      let player1Stat = null;
+      let player2Stat = null;
+      let player1Found = false;
+      let player2Found = false;
+      
+      // Search for both players' games
+      for (const event of data.events) {
+        const competition = event.competitions?.[0];
+        if (!competition) continue;
+        
+        // Check if game is completed
+        if (event.status?.type?.state !== 'post') {
+          console.log('Game not completed yet');
+          continue;
+        }
+        
+        const gameId = event.id;
+        
+        try {
+          const boxscoreUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/summary?event=${gameId}`;
+          const boxscoreResponse = await fetch(boxscoreUrl);
+          const boxscoreData = await boxscoreResponse.json();
+          
+          // Get player stats from boxscore
+          const allPlayers = [];
+          boxscoreData.boxscore?.players?.forEach(team => {
+            team.statistics?.forEach(statCategory => {
+              statCategory.athletes?.forEach(athlete => {
+                allPlayers.push({
+                  name: athlete.athlete?.displayName || athlete.athlete?.name,
+                  stats: athlete.stats || []
+                });
+              });
+            });
+          });
+          
+          // Check for player1
+          if (!player1Found) {
+            const foundPlayer1 = allPlayers.find(p => 
+              p.name.toLowerCase().includes(player1.toLowerCase()) || 
+              player1.toLowerCase().includes(p.name.toLowerCase())
+            );
+            
+            if (foundPlayer1) {
+              player1Stat = getStatValue(foundPlayer1.stats, player1PropType, sport);
+              if (player1Stat !== null) {
+                player1Found = true;
+                console.log(`✅ Found ${player1}: ${player1PropType} = ${player1Stat}`);
+              }
+            }
+          }
+          
+          // Check for player2
+          if (!player2Found) {
+            const foundPlayer2 = allPlayers.find(p => 
+              p.name.toLowerCase().includes(player2.toLowerCase()) || 
+              player2.toLowerCase().includes(p.name.toLowerCase())
+            );
+            
+            if (foundPlayer2) {
+              player2Stat = getStatValue(foundPlayer2.stats, player2PropType, sport);
+              if (player2Stat !== null) {
+                player2Found = true;
+                console.log(`✅ Found ${player2}: ${player2PropType} = ${player2Stat}`);
+              }
+            }
+          }
+          
+          // If we found both players, we can stop searching
+          if (player1Found && player2Found) break;
+          
+        } catch (boxscoreError) {
+          console.error(`Error fetching boxscore for game ${gameId}:`, boxscoreError);
+          continue;
+        }
+      }
+      
+      // If either player not found or game not finished, return pending
+      if (!player1Found || !player2Found || player1Stat === null || player2Stat === null) {
+        console.log('❌ One or both players not found or games not completed');
+        return { result: 'pending', stats: null };
+      }
+      
+      // Calculate result
+      const opponent = selectedPlayer === player1 ? player2 : player1;
+      const selectedStat = selectedPlayer === player1 ? player1Stat : player2Stat;
+      const opponentStat = selectedPlayer === player1 ? player2Stat : player1Stat;
+      const selectedPropType = selectedPlayer === player1 ? player1PropType : player2PropType;
+      const opponentPropType = selectedPlayer === player1 ? player2PropType : player1PropType;
+      
+      let result;
+      if (h2hLine && h2hLineType) {
+        // H2H with spread
+        const lineValue = parseFloat(h2hLine);
+        const adjustedStat = h2hLineType === 'Dog' ? selectedStat + lineValue : selectedStat - lineValue;
+        
+        if (adjustedStat > opponentStat) result = 'win';
+        else if (adjustedStat < opponentStat) result = 'loss';
+        else result = 'push';
+        
+        const sign = h2hLineType === 'Dog' ? '+' : '-';
+        return {
+          result,
+          stats: `${selectedPlayer} ${selectedPropType}: ${selectedStat} ${sign}${h2hLine} vs ${opponent} ${opponentPropType}: ${opponentStat}`
+        };
+      } else {
+        // Straight up H2H
+        if (selectedStat > opponentStat) result = 'win';
+        else if (selectedStat < opponentStat) result = 'loss';
+        else result = 'push';
+        
+        return {
+          result,
+          stats: `${selectedPlayer} ${selectedPropType}: ${selectedStat} vs ${opponent} ${opponentPropType}: ${opponentStat}`
+        };
+      }
+      
+    } catch (error) {
+      console.error('Error checking H2H prop result:', error);
+      return { result: 'pending', stats: null };
+    }
+  };
+  
+  // Check Either Prop result
+  const checkEitherPropResult = async (participant, gameDate) => {
+    const { sport, propType, overUnder, line, player1, player2 } = participant;
+    
+    console.log('🎲 checkEitherPropResult called with:', {
+      sport, propType, overUnder, line,
+      player1, player2, gameDate
+    });
+    
+    if (!player1 || !player2 || !propType || !line) {
+      console.log('❌ Missing required fields for Either prop');
+      return { result: 'pending', stats: null };
+    }
+    
+    const espnSport = getESPNSport(sport);
+    if (!espnSport) {
+      return { result: 'pending', stats: null };
+    }
+    
+    // Unsupported sports
+    if (['Golf', 'Rugby', 'UFC'].includes(sport)) {
+      return { result: 'pending', stats: null };
+    }
+    
+    try {
+      const formattedDate = gameDate.replace(/-/g, '');
+      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (!data.events || data.events.length === 0) {
+        return { result: 'pending', stats: null };
+      }
+      
+      let player1Stat = null;
+      let player2Stat = null;
+      let player1Found = false;
+      let player2Found = false;
+      
+      // Search for both players
+      for (const event of data.events) {
+        const competition = event.competitions?.[0];
+        if (!competition) continue;
+        
+        if (event.status?.type?.state !== 'post') {
+          continue;
+        }
+        
+        const gameId = event.id;
+        
+        try {
+          const boxscoreUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/summary?event=${gameId}`;
+          const boxscoreResponse = await fetch(boxscoreUrl);
+          const boxscoreData = await boxscoreResponse.json();
+          
+          const allPlayers = [];
+          boxscoreData.boxscore?.players?.forEach(team => {
+            team.statistics?.forEach(statCategory => {
+              statCategory.athletes?.forEach(athlete => {
+                allPlayers.push({
+                  name: athlete.athlete?.displayName || athlete.athlete?.name,
+                  stats: athlete.stats || []
+                });
+              });
+            });
+          });
+          
+          // Check for player1
+          if (!player1Found) {
+            const foundPlayer1 = allPlayers.find(p => 
+              p.name.toLowerCase().includes(player1.toLowerCase()) || 
+              player1.toLowerCase().includes(p.name.toLowerCase())
+            );
+            
+            if (foundPlayer1) {
+              player1Stat = getStatValue(foundPlayer1.stats, propType, sport);
+              if (player1Stat !== null) {
+                player1Found = true;
+                console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
+              }
+            }
+          }
+          
+          // Check for player2
+          if (!player2Found) {
+            const foundPlayer2 = allPlayers.find(p => 
+              p.name.toLowerCase().includes(player2.toLowerCase()) || 
+              player2.toLowerCase().includes(p.name.toLowerCase())
+            );
+            
+            if (foundPlayer2) {
+              player2Stat = getStatValue(foundPlayer2.stats, propType, sport);
+              if (player2Stat !== null) {
+                player2Found = true;
+                console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
+              }
+            }
+          }
+          
+          if (player1Found && player2Found) break;
+          
+        } catch (boxscoreError) {
+          console.error(`Error fetching boxscore:`, boxscoreError);
+          continue;
+        }
+      }
+      
+      // If either player not found, return pending
+      if (!player1Found || !player2Found || player1Stat === null || player2Stat === null) {
+        console.log('❌ One or both players not found or games not completed');
+        return { result: 'pending', stats: null };
+      }
+      
+      // Check if EITHER player hit the line
+      const lineValue = parseFloat(line);
+      let player1Hit = false;
+      let player2Hit = false;
+      
+      if (overUnder === 'Over') {
+        player1Hit = player1Stat > lineValue;
+        player2Hit = player2Stat > lineValue;
+      } else {
+        player1Hit = player1Stat < lineValue;
+        player2Hit = player2Stat < lineValue;
+      }
+      
+      // Win if ONE OR BOTH hit
+      const result = (player1Hit || player2Hit) ? 'win' : 'loss';
+      
+      return {
+        result,
+        stats: `${player1} ${propType}: ${player1Stat}, ${player2} ${propType}: ${player2Stat} (${overUnder} ${line})`
+      };
+      
+    } catch (error) {
+      console.error('Error checking Either prop result:', error);
+      return { result: 'pending', stats: null };
+    }
+  };
+  
+  // Check Combined Prop result
+  const checkCombinedPropResult = async (participant, gameDate) => {
+    const { sport, propType, overUnder, line, player1, player2 } = participant;
+    
+    console.log('➕ checkCombinedPropResult called with:', {
+      sport, propType, overUnder, line,
+      player1, player2, gameDate
+    });
+    
+    if (!player1 || !player2 || !propType || !line) {
+      console.log('❌ Missing required fields for Combined prop');
+      return { result: 'pending', stats: null };
+    }
+    
+    const espnSport = getESPNSport(sport);
+    if (!espnSport) {
+      return { result: 'pending', stats: null };
+    }
+    
+    // Unsupported sports
+    if (['Golf', 'Rugby', 'UFC'].includes(sport)) {
+      return { result: 'pending', stats: null };
+    }
+    
+    try {
+      const formattedDate = gameDate.replace(/-/g, '');
+      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (!data.events || data.events.length === 0) {
+        return { result: 'pending', stats: null };
+      }
+      
+      let player1Stat = null;
+      let player2Stat = null;
+      let player1Found = false;
+      let player2Found = false;
+      
+      // Search for both players
+      for (const event of data.events) {
+        const competition = event.competitions?.[0];
+        if (!competition) continue;
+        
+        if (event.status?.type?.state !== 'post') {
+          continue;
+        }
+        
+        const gameId = event.id;
+        
+        try {
+          const boxscoreUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/summary?event=${gameId}`;
+          const boxscoreResponse = await fetch(boxscoreUrl);
+          const boxscoreData = await boxscoreResponse.json();
+          
+          const allPlayers = [];
+          boxscoreData.boxscore?.players?.forEach(team => {
+            team.statistics?.forEach(statCategory => {
+              statCategory.athletes?.forEach(athlete => {
+                allPlayers.push({
+                  name: athlete.athlete?.displayName || athlete.athlete?.name,
+                  stats: athlete.stats || []
+                });
+              });
+            });
+          });
+          
+          // Check for player1
+          if (!player1Found) {
+            const foundPlayer1 = allPlayers.find(p => 
+              p.name.toLowerCase().includes(player1.toLowerCase()) || 
+              player1.toLowerCase().includes(p.name.toLowerCase())
+            );
+            
+            if (foundPlayer1) {
+              player1Stat = getStatValue(foundPlayer1.stats, propType, sport);
+              if (player1Stat !== null) {
+                player1Found = true;
+                console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
+              }
+            }
+          }
+          
+          // Check for player2
+          if (!player2Found) {
+            const foundPlayer2 = allPlayers.find(p => 
+              p.name.toLowerCase().includes(player2.toLowerCase()) || 
+              player2.toLowerCase().includes(p.name.toLowerCase())
+            );
+            
+            if (foundPlayer2) {
+              player2Stat = getStatValue(foundPlayer2.stats, propType, sport);
+              if (player2Stat !== null) {
+                player2Found = true;
+                console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
+              }
+            }
+          }
+          
+          if (player1Found && player2Found) break;
+          
+        } catch (boxscoreError) {
+          console.error(`Error fetching boxscore:`, boxscoreError);
+          continue;
+        }
+      }
+      
+      // If either player not found, return pending
+      if (!player1Found || !player2Found || player1Stat === null || player2Stat === null) {
+        console.log('❌ One or both players not found or games not completed');
+        return { result: 'pending', stats: null };
+      }
+      
+      // Calculate combined total
+      const combinedTotal = player1Stat + player2Stat;
+      const lineValue = parseFloat(line);
+      
+      let result;
+      if (overUnder === 'Over') {
+        if (combinedTotal > lineValue) result = 'win';
+        else if (combinedTotal < lineValue) result = 'loss';
+        else result = 'push';
+      } else {
+        if (combinedTotal < lineValue) result = 'win';
+        else if (combinedTotal > lineValue) result = 'loss';
+        else result = 'push';
+      }
+      
+      return {
+        result,
+        stats: `${player1}: ${player1Stat}, ${player2}: ${player2Stat} (Combined: ${combinedTotal}, ${overUnder} ${line})`
+      };
+      
+    } catch (error) {
+      console.error('Error checking Combined prop result:', error);
+      return { result: 'pending', stats: null };
+    }
+  };
+  
   // Check first half/quarter results
   const checkFirstHalfResult = async (participant, gameDate) => {
     const { sport, betType, team, awayTeam, homeTeam, overUnder, total } = participant;
@@ -725,6 +1169,18 @@ export const useESPN = () => {
       return await checkPropBetResult(participant, gameDate);
     }
     
+    if (betType === 'H2H Prop') {
+      return await checkH2HPropResult(participant, gameDate);
+    }
+    
+    if (betType === 'Either Prop') {
+      return await checkEitherPropResult(participant, gameDate);
+    }
+    
+    if (betType === 'Combined Prop') {
+      return await checkCombinedPropResult(participant, gameDate);
+    }
+    
     if (['Quarter Moneyline', 'Quarter Total', 'Quarter Team Total'].includes(betType)) {
       return await checkQuarterResult(participant, gameDate);
     }
@@ -919,5 +1375,8 @@ export const useESPN = () => {
     checkGameResult,
     autoUpdatePendingPicks,
     matchTeamName,
+    checkH2HPropResult,
+    checkEitherPropResult,
+    checkCombinedPropResult
   };
 };
