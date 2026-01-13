@@ -388,7 +388,10 @@ const PickEntry = ({
               <input
                 type="text"
                 value={participant.player1 || ''}
-                onChange={(e) => onTeamInput(participantId, e.target.value, participant.sport)}
+                onChange={(e) => {
+                  updateField('player1', e.target.value);
+                  onTeamInput(participantId, e.target.value, participant.sport);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="First player/team name"
@@ -501,7 +504,10 @@ const PickEntry = ({
               <input
                 type="text"
                 value={participant.player1 || ''}
-                onChange={(e) => onTeamInput(participantId, e.target.value, participant.sport)}
+                onChange={(e) => {
+                  updateField('player1', e.target.value);
+                  onTeamInput(participantId, e.target.value, participant.sport);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="First player/team name"
