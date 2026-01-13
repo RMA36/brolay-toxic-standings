@@ -1686,14 +1686,14 @@ const importFromCSV = async (csvText) => {
             stats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
           }
           stats.byH2HPropType[propCombo].total++;
-        } else if (participant.betType === 'Either Prop' && participant.propType) {
+        } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
           playerStats.eitherProps.total++;
           
           if (!stats.byEitherPropType[participant.propType]) {
             stats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
           }
           stats.byEitherPropType[participant.propType].total++;
-        } else if (participant.betType === 'Combined Prop' && participant.propType) {
+        } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
           playerStats.combinedProps.total++;
           
           if (!stats.byCombinedPropType[participant.propType]) {
@@ -1716,12 +1716,12 @@ const importFromCSV = async (csvText) => {
           if (stats.byH2HPropType[propCombo]) {
             stats.byH2HPropType[propCombo].wins++;
           }
-        } else if (participant.betType === 'Either Prop' && participant.propType) {
+        } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
           playerStats.eitherProps.wins++;
           if (stats.byEitherPropType[participant.propType]) {
             stats.byEitherPropType[participant.propType].wins++;
           }
-        } else if (participant.betType === 'Combined Prop' && participant.propType) {
+        } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
           playerStats.combinedProps.wins++;
           if (stats.byCombinedPropType[participant.propType]) {
             stats.byCombinedPropType[participant.propType].wins++;
@@ -1746,12 +1746,12 @@ const importFromCSV = async (csvText) => {
             if (stats.byH2HPropType[propCombo]) {
               stats.byH2HPropType[propCombo].losses++;
             }
-          } else if (participant.betType === 'Either Prop' && participant.propType) {
+          } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
             playerStats.eitherProps.losses++;
             if (stats.byEitherPropType[participant.propType]) {
               stats.byEitherPropType[participant.propType].losses++;
             }
-          } else if (participant.betType === 'Combined Prop' && participant.propType) {
+          } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
             playerStats.combinedProps.losses++;
             if (stats.byCombinedPropType[participant.propType]) {
               stats.byCombinedPropType[participant.propType].losses++;
@@ -2632,12 +2632,12 @@ parlaysList.forEach(parlay => {
         if (stats.byH2HPropType[propCombo]) {
           stats.byH2HPropType[propCombo].wins++;
         }
-      } else if (participant.betType === 'Either Prop' && participant.propType) {
+      } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
         playerStats.eitherProps.wins++;
         if (stats.byEitherPropType[participant.propType]) {
           stats.byEitherPropType[participant.propType].wins++;
         }
-      } else if (participant.betType === 'Combined Prop' && participant.propType) {
+      } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
         playerStats.combinedProps.wins++;
         if (stats.byCombinedPropType[participant.propType]) {
           stats.byCombinedPropType[participant.propType].wins++;
@@ -2662,12 +2662,12 @@ parlaysList.forEach(parlay => {
           if (stats.byH2HPropType[propCombo]) {
             stats.byH2HPropType[propCombo].losses++;
           }
-        } else if (participant.betType === 'Either Prop' && participant.propType) {
+        } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
           playerStats.eitherProps.losses++;
           if (stats.byEitherPropType[participant.propType]) {
             stats.byEitherPropType[participant.propType].losses++;
           }
-        } else if (participant.betType === 'Combined Prop' && participant.propType) {
+        } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
           playerStats.combinedProps.losses++;
           if (stats.byCombinedPropType[participant.propType]) {
             stats.byCombinedPropType[participant.propType].losses++;
