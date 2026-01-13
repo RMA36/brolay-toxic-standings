@@ -96,10 +96,15 @@ export const analyzeCombo = (parlays, player, sport, dayOfWeek = null, betType =
     }
     
     Object.values(parlay.participants || {}).forEach(pick => {
+      if (!pick.player || !pick.sport || !pick.betType) return; // Skip incomplete picks
       if (pick.player !== player) return;
       if (pick.sport !== sport) return;
       if (betType && pick.betType !== betType) return;
       if (pick.result === 'pending') return;
+      
+      // Skip multi-entity props without required fields
+      if (pick.betType === 'H2H Prop' && (!pick.player1PropType || !pick.player2PropType)) return;
+      if ((pick.betType === 'Either Prop' || pick.betType === 'Combined Prop') && (!pick.propType || !pick.player1 || !pick.player2)) return;
       
       totalPicks++;
       if (pick.result === 'win') wins++;
