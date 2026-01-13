@@ -26,7 +26,7 @@ const PickEntry = ({
   isEditMode = false
 }) => {
   const inputStyle = { fontSize: isMobile ? '16px' : '14px' };
-  const inputClassName = "w-full px-2 py-1 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none";
+  const inputClassName = inputClasses.base;
 
   const updateField = (field, value) => {
     onUpdate(participantId, field, value);
