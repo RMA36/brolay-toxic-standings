@@ -1669,24 +1669,24 @@ const importFromCSV = async (csvText) => {
             ? participant.player1PropType 
             : `${participant.player1PropType} vs ${participant.player2PropType}`;
           
-          if (!playerStats.byH2HPropType[propCombo]) {
-            playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+          if (!stats.byH2HPropType[propCombo]) {
+            stats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
           }
-          playerStats.byH2HPropType[propCombo].total++;
+          stats.byH2HPropType[propCombo].total++;
         } else if (participant.betType === 'Either Prop') {
           playerStats.eitherProps.total++;
           
-          if (!playerStats.byEitherPropType[participant.propType]) {
-            playerStats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+          if (!stats.byEitherPropType[participant.propType]) {
+            stats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
           }
-          playerStats.byEitherPropType[participant.propType].total++;
+          stats.byEitherPropType[participant.propType].total++;
         } else if (participant.betType === 'Combined Prop') {
           playerStats.combinedProps.total++;
           
-          if (!playerStats.byCombinedPropType[participant.propType]) {
-            playerStats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+          if (!stats.byCombinedPropType[participant.propType]) {
+            stats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
           }
-          playerStats.byCombinedPropType[participant.propType].total++;
+          stats.byCombinedPropType[participant.propType].total++;
         }
         
         if (participant.result === 'win') {
@@ -1700,18 +1700,18 @@ const importFromCSV = async (csvText) => {
           const propCombo = participant.player1PropType === participant.player2PropType 
             ? participant.player1PropType 
             : `${participant.player1PropType} vs ${participant.player2PropType}`;
-          if (playerStats.byH2HPropType[propCombo]) {
-            playerStats.byH2HPropType[propCombo].wins++;
+          if (stats.byH2HPropType[propCombo]) {
+            stats.byH2HPropType[propCombo].wins++;
           }
         } else if (participant.betType === 'Either Prop') {
           playerStats.eitherProps.wins++;
-          if (playerStats.byEitherPropType[participant.propType]) {
-            playerStats.byEitherPropType[participant.propType].wins++;
+          if (stats.byEitherPropType[participant.propType]) {
+            stats.byEitherPropType[participant.propType].wins++;
           }
         } else if (participant.betType === 'Combined Prop') {
           playerStats.combinedProps.wins++;
-          if (playerStats.byCombinedPropType[participant.propType]) {
-            playerStats.byCombinedPropType[participant.propType].wins++;
+          if (stats.byCombinedPropType[participant.propType]) {
+            stats.byCombinedPropType[participant.propType].wins++;
           }
         }
           
@@ -1730,18 +1730,18 @@ const importFromCSV = async (csvText) => {
             const propCombo = participant.player1PropType === participant.player2PropType 
               ? participant.player1PropType 
               : `${participant.player1PropType} vs ${participant.player2PropType}`;
-            if (playerStats.byH2HPropType[propCombo]) {
-              playerStats.byH2HPropType[propCombo].losses++;
+            if (stats.byH2HPropType[propCombo]) {
+              stats.byH2HPropType[propCombo].losses++;
             }
           } else if (participant.betType === 'Either Prop') {
             playerStats.eitherProps.losses++;
-            if (playerStats.byEitherPropType[participant.propType]) {
-              playerStats.byEitherPropType[participant.propType].losses++;
+            if (stats.byEitherPropType[participant.propType]) {
+              stats.byEitherPropType[participant.propType].losses++;
             }
           } else if (participant.betType === 'Combined Prop') {
             playerStats.combinedProps.losses++;
-            if (playerStats.byCombinedPropType[participant.propType]) {
-              playerStats.byCombinedPropType[participant.propType].losses++;
+            if (stats.byCombinedPropType[participant.propType]) {
+              stats.byCombinedPropType[participant.propType].losses++;
             }
           }
           
@@ -2610,18 +2610,18 @@ parlaysList.forEach(parlay => {
         const propCombo = participant.player1PropType === participant.player2PropType 
           ? participant.player1PropType 
           : `${participant.player1PropType} vs ${participant.player2PropType}`;
-        if (playerStats.byH2HPropType[propCombo]) {
-          playerStats.byH2HPropType[propCombo].wins++;
+        if (stats.byH2HPropType[propCombo]) {
+          stats.byH2HPropType[propCombo].wins++;
         }
       } else if (participant.betType === 'Either Prop') {
         playerStats.eitherProps.wins++;
-        if (playerStats.byEitherPropType[participant.propType]) {
-          playerStats.byEitherPropType[participant.propType].wins++;
+        if (stats.byEitherPropType[participant.propType]) {
+          stats.byEitherPropType[participant.propType].wins++;
         }
       } else if (participant.betType === 'Combined Prop') {
         playerStats.combinedProps.wins++;
-        if (playerStats.byCombinedPropType[participant.propType]) {
-          playerStats.byCombinedPropType[participant.propType].wins++;
+        if (stats.byCombinedPropType[participant.propType]) {
+          stats.byCombinedPropType[participant.propType].wins++;
         }
       }
         
@@ -2640,18 +2640,18 @@ parlaysList.forEach(parlay => {
           const propCombo = participant.player1PropType === participant.player2PropType 
             ? participant.player1PropType 
             : `${participant.player1PropType} vs ${participant.player2PropType}`;
-          if (playerStats.byH2HPropType[propCombo]) {
-            playerStats.byH2HPropType[propCombo].losses++;
+          if (stats.byH2HPropType[propCombo]) {
+            stats.byH2HPropType[propCombo].losses++;
           }
         } else if (participant.betType === 'Either Prop') {
           playerStats.eitherProps.losses++;
-          if (playerStats.byEitherPropType[participant.propType]) {
-            playerStats.byEitherPropType[participant.propType].losses++;
+          if (stats.byEitherPropType[participant.propType]) {
+            stats.byEitherPropType[participant.propType].losses++;
           }
         } else if (participant.betType === 'Combined Prop') {
           playerStats.combinedProps.losses++;
-          if (playerStats.byCombinedPropType[participant.propType]) {
-            playerStats.byCombinedPropType[participant.propType].losses++;
+          if (stats.byCombinedPropType[participant.propType]) {
+            stats.byCombinedPropType[participant.propType].losses++;
           }
         }
         
@@ -2675,8 +2675,8 @@ parlaysList.forEach(parlay => {
           const propCombo = participant.player1PropType === participant.player2PropType 
             ? participant.player1PropType 
             : `${participant.player1PropType} vs ${participant.player2PropType}`;
-          if (playerStats.byH2HPropType[propCombo]) {
-            playerStats.byH2HPropType[propCombo].pushes++;
+          if (stats.byH2HPropType[propCombo]) {
+            stats.byH2HPropType[propCombo].pushes++;
           }
         }
       }
@@ -3120,18 +3120,18 @@ return (
                       )}
                       
                       {/* Multi-Entity Props Breakdowns */}
-                      {(Object.keys(playerStats.byH2HPropType).length > 0 || 
-                        Object.keys(playerStats.byEitherPropType).length > 0 || 
-                        Object.keys(playerStats.byCombinedPropType).length > 0) && (
+                      {(Object.keys(stats.byH2HPropType).length > 0 || 
+                        Object.keys(stats.byEitherPropType).length > 0 || 
+                        Object.keys(stats.byCombinedPropType).length > 0) && (
                         <div className="mt-4 pt-4 border-t border-gray-700">
                           <h5 className="font-semibold text-sm mb-3 text-gray-300">🎯 Multi-Entity Props Breakdown</h5>
                           
                           {/* H2H Props by Type */}
-                          {Object.keys(playerStats.byH2HPropType).length > 0 && (
+                          {Object.keys(stats.byH2HPropType).length > 0 && (
                             <div className="mb-4">
                               <h6 className="text-xs font-medium text-gray-400 mb-2">🆚 H2H Props</h6>
                               <div className="space-y-2">
-                                {Object.entries(playerStats.byH2HPropType)
+                                {Object.entries(stats.byH2HPropType)
                                   .sort((a, b) => b[1].total - a[1].total)
                                   .map(([propType, data]) => {
                                     const winPct = data.total > 0 ? (((data.wins + data.pushes * 0.5) / data.total) * 100).toFixed(0) : 0;
@@ -3158,11 +3158,11 @@ return (
                           )}
                           
                           {/* Either Props by Type */}
-                          {Object.keys(playerStats.byEitherPropType).length > 0 && (
+                          {Object.keys(stats.byEitherPropType).length > 0 && (
                             <div className="mb-4">
                               <h6 className="text-xs font-medium text-gray-400 mb-2">🎲 Either Props</h6>
                               <div className="space-y-2">
-                                {Object.entries(playerStats.byEitherPropType)
+                                {Object.entries(stats.byEitherPropType)
                                   .sort((a, b) => b[1].total - a[1].total)
                                   .map(([propType, data]) => {
                                     const winPct = data.total > 0 ? ((data.wins / data.total) * 100).toFixed(0) : 0;
@@ -3189,11 +3189,11 @@ return (
                           )}
                           
                           {/* Combined Props by Type */}
-                          {Object.keys(playerStats.byCombinedPropType).length > 0 && (
+                          {Object.keys(stats.byCombinedPropType).length > 0 && (
                             <div>
                               <h6 className="text-xs font-medium text-gray-400 mb-2">➕ Combined Props</h6>
                               <div className="space-y-2">
-                                {Object.entries(playerStats.byCombinedPropType)
+                                {Object.entries(stats.byCombinedPropType)
                                   .sort((a, b) => b[1].total - a[1].total)
                                   .map(([propType, data]) => {
                                     const winPct = data.total > 0 ? ((data.wins / data.total) * 100).toFixed(0) : 0;
