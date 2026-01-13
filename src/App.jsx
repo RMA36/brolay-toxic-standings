@@ -1354,28 +1354,28 @@ return (
         }
       }}
     >
-      <div className="bg-white rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto" style={{ maxWidth: isMobile ? '100%' : '1024px' }}>
+      <div className="bg-gray-900 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto border border-yellow-500/20" style={{ maxWidth: isMobile ? '100%' : '1024px' }}>
         <div className="p-4 md:p-6">
-          <h2 className="text-xl md:text-2xl font-bold mb-4">Edit Brolay</h2>
+          <h2 className="text-xl md:text-2xl font-bold mb-4 text-yellow-400">Edit Brolay</h2>
           
           {/* Brolay Info */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
             <div>
-              <label className="block text-sm font-medium mb-1">Date</label>
+              <label className="block text-sm font-medium mb-1 text-white">Date</label>
               <input
                 type="date"
                 value={editingParlay.date}
                 onChange={(e) => setEditingParlay({...editingParlay, date: e.target.value})}
-                className="w-full px-3 py-2 border rounded text-base"
+                className="w-full px-3 py-2 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none"
                 style={{ fontSize: isMobile ? '16px' : '14px' }}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Placed By</label>
+              <label className="block text-sm font-medium mb-1 text-white">Placed By</label>
               <select
                 value={editingParlay.placedBy || ''}
                 onChange={(e) => setEditingParlay({...editingParlay, placedBy: e.target.value})}
-                className="w-full px-3 py-2 border rounded text-base"
+                className="w-full px-3 py-2 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none"
                 style={{ fontSize: isMobile ? '16px' : '14px' }}
               >
                 <option value="">Select Big Guy</option>
@@ -1386,17 +1386,17 @@ return (
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6">
             <div>
-              <label className="block text-sm font-medium mb-1">Bet Amount (per person)</label>
+              <label className="block text-sm font-medium mb-1 text-white">Bet Amount (per person)</label>
               <input
                 type="number"
                 value={editingParlay.betAmount}
                 onChange={(e) => setEditingParlay({...editingParlay, betAmount: Number(e.target.value)})}
-                className="w-full px-3 py-2 border rounded text-base"
+                className="w-full px-3 py-2 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none"
                 style={{ fontSize: isMobile ? '16px' : '14px' }}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Total Payout</label>
+              <label className="block text-sm font-medium mb-1 text-white">Total Payout</label>
               <input
                 type="number"
                 value={editingParlay.totalPayout || ''}
@@ -1404,12 +1404,12 @@ return (
                   const payout = Number(e.target.value) || 0;
                   setEditingParlay({...editingParlay, totalPayout: payout});
                 }}
-                className="w-full px-3 py-2 border rounded text-base"
+                className="w-full px-3 py-2 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none"
                 style={{ fontSize: isMobile ? '16px' : '14px' }}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Net Profit</label>
+              <label className="block text-sm font-medium mb-1 text-white">Net Profit</label>
               <input
                 type="number"
                 value={Math.max(0, (editingParlay.totalPayout || 0) - (editingParlay.betAmount * Object.keys(participants).length))}
@@ -1419,14 +1419,14 @@ return (
                   const calculatedPayout = netProfit + totalRisk;
                   setEditingParlay({...editingParlay, totalPayout: calculatedPayout});
                 }}
-                className="w-full px-3 py-2 border rounded text-base"
+                className="w-full px-3 py-2 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none"
                 style={{ fontSize: isMobile ? '16px' : '14px' }}
               />
             </div>
           </div>
 
           {/* Picks */}
-          <h3 className="text-base md:text-lg font-semibold mb-3">Picks</h3>
+          <h3 className="text-base md:text-lg font-semibold mb-3 text-yellow-400">Picks</h3>
           <div className="space-y-4 mb-6">
             {Object.entries(editingParlay.participants).map(([id, participant]) => (
               <PickEntry
