@@ -3117,6 +3117,8 @@ return (
                               })}
                           </div>
                         </div>
+                      )}
+                      
                       {/* Multi-Entity Props Breakdowns */}
                       {(Object.keys(playerStats.byH2HPropType).length > 0 || 
                         Object.keys(playerStats.byEitherPropType).length > 0 || 
@@ -3217,7 +3219,6 @@ return (
                             </div>
                           )}
                         </div>
-                      )}
                       )}
                     </div>
                   )}
