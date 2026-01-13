@@ -799,12 +799,14 @@ const handleTouchEnd = async () => {
         quarter: '1Q',
         result: 'pending',
         // Multi-entity prop fields
-        player1: '',           // For H2H Prop
-        player2: '',           // For H2H Prop
-        selectedPlayer: '',    // For H2H Prop - who you're betting on
-        h2hLine: '',           // For H2H Prop - optional spread
-        h2hLineType: '',       // For H2H Prop - 'Favorite' or 'Dog' (only if h2hLine exists)
-        entities: []           // For Either Prop and Combined Prop
+        player1: '',              // For H2H Prop
+        player1PropType: '',      // For H2H Prop - NEW
+        player2: '',              // For H2H Prop
+        player2PropType: '',      // For H2H Prop - NEW
+        selectedPlayer: '',       // For H2H Prop - who you're betting on
+        h2hLine: '',              // For H2H Prop - optional spread
+        h2hLineType: '',          // For H2H Prop - 'Favorite' or 'Dog' (only if h2hLine exists)
+        entities: []              // For Either Prop and Combined Prop
       }
     }
   });
@@ -1306,11 +1308,26 @@ const formatBetDescription = (participant) => {
       return `${participant.propType} ${participant.overUnder} ${participant.line}`;
     case 'H2H Prop': {
       const opponent = participant.player1 === participant.selectedPlayer ? participant.player2 : participant.player1;
+      const selectedPropType = participant.player1 === participant.selectedPlayer ? participant.player1PropType : participant.player2PropType;
+      const opponentPropType = participant.player1 === participant.selectedPlayer ? participant.player2PropType : participant.player1PropType;
+      
+      // Check if prop types are the same
+      const samePropType = participant.player1PropType === participant.player2PropType;
+      
       if (participant.h2hLine && participant.h2hLineType) {
         const sign = participant.h2hLineType === 'Dog' ? '+' : '-';
-        return `${participant.propType}: ${participant.selectedPlayer || '?'} ${sign}${participant.h2hLine} vs ${opponent}`;
+        if (samePropType) {
+          return `${selectedPropType}: ${participant.selectedPlayer || '?'} ${sign}${participant.h2hLine} vs ${opponent}`;
+        } else {
+          return `${participant.selectedPlayer || '?'} ${selectedPropType} ${sign}${participant.h2hLine} vs ${opponent} ${opponentPropType}`;
+        }
       }
-      return `${participant.propType}: ${participant.selectedPlayer || '?'} > ${opponent}`;
+      
+      if (samePropType) {
+        return `${selectedPropType}: ${participant.selectedPlayer || '?'} > ${opponent}`;
+      } else {
+        return `${participant.selectedPlayer || '?'} ${selectedPropType} vs ${opponent} ${opponentPropType}`;
+      }
     }
     case 'Either Prop':
       return `${participant.propType} ${participant.overUnder} ${participant.line} (Either: ${(participant.entities || []).join(' OR ')})`;
