@@ -1,5 +1,6 @@
 import React from 'react';
 import Button from '../common/Button';
+import { colors } from '../constants/theme';
 
 /**
  * PickEntry Component
@@ -25,6 +26,7 @@ const PickEntry = ({
   isEditMode = false
 }) => {
   const inputStyle = { fontSize: isMobile ? '16px' : '14px' };
+  const inputClassName = "w-full px-2 py-1 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none";
 
   const updateField = (field, value) => {
     onUpdate(participantId, field, value);
@@ -41,7 +43,7 @@ const PickEntry = ({
               <select
                 value={participant.favorite || 'Favorite'}
                 onChange={(e) => updateField('favorite', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="Favorite">Favorite</option>
@@ -54,7 +56,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.spread || ''}
                 onChange={(e) => updateField('spread', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 7.5"
               />
@@ -70,7 +72,7 @@ const PickEntry = ({
               <select
                 value={participant.overUnder || 'Over'}
                 onChange={(e) => updateField('overUnder', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="Over">Over</option>
@@ -83,7 +85,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.total || ''}
                 onChange={(e) => updateField('total', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 45.5"
               />
@@ -100,7 +102,7 @@ const PickEntry = ({
               <select
                 value={participant.overUnder || 'Over'}
                 onChange={(e) => updateField('overUnder', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="Over">Over</option>
@@ -113,7 +115,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.total || ''}
                 onChange={(e) => updateField('total', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 21.5"
               />
@@ -130,7 +132,7 @@ const PickEntry = ({
               <select
                 value={participant.overUnder || 'Over'}
                 onChange={(e) => updateField('overUnder', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="Over">Over</option>
@@ -143,7 +145,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.total || ''}
                 onChange={(e) => updateField('total', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 23.5"
               />
@@ -160,7 +162,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.propType || ''}
                 onChange={(e) => onPropTypeInput(participantId, e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., Passing TDs"
               />
@@ -183,7 +185,7 @@ const PickEntry = ({
               <select
                 value={participant.overUnder || 'Over'}
                 onChange={(e) => updateField('overUnder', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="Over">Over</option>
@@ -196,7 +198,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.line || ''}
                 onChange={(e) => updateField('line', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 2.5"
               />
@@ -213,7 +215,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.player1 || ''}
                 onChange={(e) => updateField('player1', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="First player name"
               />
@@ -225,7 +227,7 @@ const PickEntry = ({
                 value={participant.player1PropType || ''}
                 onChange={(e) => updateField('player1PropType', e.target.value)}
                 onFocus={(e) => onPropTypeInput(participantId, e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., Passing Yards, Points"
               />
@@ -252,7 +254,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.player2 || ''}
                 onChange={(e) => updateField('player2', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="Second player name"
               />
@@ -264,7 +266,7 @@ const PickEntry = ({
                 value={participant.player2PropType || ''}
                 onChange={(e) => updateField('player2PropType', e.target.value)}
                 onFocus={(e) => onPropTypeInput(participantId, e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., Rushing Yards, Assists (can be different!)"
               />
@@ -290,7 +292,7 @@ const PickEntry = ({
               <select
                 value={participant.selectedPlayer || ''}
                 onChange={(e) => updateField('selectedPlayer', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="">Select player</option>
@@ -307,7 +309,7 @@ const PickEntry = ({
               <select
                 value={participant.h2hLineType || ''}
                 onChange={(e) => updateField('h2hLineType', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="">Straight Up</option>
@@ -321,7 +323,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.h2hLine || ''}
                 onChange={(e) => updateField('h2hLine', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 18.5 (leave empty for straight up)"
               />
@@ -338,7 +340,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.propType || ''}
                 onChange={(e) => onPropTypeInput(participantId, e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., Passing TDs, Points, Strikeouts"
               />
@@ -361,7 +363,7 @@ const PickEntry = ({
               <select
                 value={participant.overUnder || 'Over'}
                 onChange={(e) => updateField('overUnder', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="Over">Over</option>
@@ -374,7 +376,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.line || ''}
                 onChange={(e) => updateField('line', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 2.5"
               />
@@ -385,7 +387,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.player1 || ''}
                 onChange={(e) => updateField('player1', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="First player/team name"
               />
@@ -396,7 +398,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.player2 || ''}
                 onChange={(e) => updateField('player2', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="Second player/team name"
               />
@@ -416,7 +418,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.propType || ''}
                 onChange={(e) => onPropTypeInput(participantId, e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., Home Runs, Touchdowns, Goals"
               />
@@ -439,7 +441,7 @@ const PickEntry = ({
               <select
                 value={participant.overUnder || 'Over'}
                 onChange={(e) => updateField('overUnder', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="Over">Over</option>
@@ -452,7 +454,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.line || ''}
                 onChange={(e) => updateField('line', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 2.5"
               />
@@ -463,7 +465,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.player1 || ''}
                 onChange={(e) => updateField('player1', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="First player/team name"
               />
@@ -474,7 +476,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.player2 || ''}
                 onChange={(e) => updateField('player2', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="Second player/team name"
               />
@@ -493,7 +495,7 @@ const PickEntry = ({
             <select
               value={participant.yesNoRuns || 'Yes'}
               onChange={(e) => updateField('yesNoRuns', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
+              className={inputClassName}
               style={inputStyle}
             >
               <option value="Yes">YRFI (Yes)</option>
@@ -512,7 +514,7 @@ const PickEntry = ({
                 <select
                   value={participant.quarter || '1Q'}
                   onChange={(e) => updateField('quarter', e.target.value)}
-                  className="w-full px-2 py-1 border rounded text-base"
+                  className={inputClassName}
                   style={inputStyle}
                 >
                   <option value="1Q">1Q</option>
@@ -527,7 +529,7 @@ const PickEntry = ({
               <select
                 value={participant.favorite || 'Favorite'}
                 onChange={(e) => updateField('favorite', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="Favorite">Favorite</option>
@@ -540,7 +542,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.spread || ''}
                 onChange={(e) => updateField('spread', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 3.5"
               />
@@ -557,7 +559,7 @@ const PickEntry = ({
               <select
                 value={participant.quarter || '1Q'}
                 onChange={(e) => updateField('quarter', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="1Q">1Q</option>
@@ -571,7 +573,7 @@ const PickEntry = ({
               <select
                 value={participant.overUnder || 'Over'}
                 onChange={(e) => updateField('overUnder', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="Over">Over</option>
@@ -584,7 +586,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.total || ''}
                 onChange={(e) => updateField('total', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 10.5"
               />
@@ -600,7 +602,7 @@ const PickEntry = ({
             <select
               value={participant.quarter || '1Q'}
               onChange={(e) => updateField('quarter', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-base"
+              className={inputClassName}
               style={inputStyle}
             >
               <option value="1Q">1Q</option>
@@ -625,7 +627,7 @@ const PickEntry = ({
           <select
             value={participant.player}
             onChange={(e) => updateField('player', e.target.value)}
-            className="w-full px-2 py-1 border rounded text-base"
+            className={inputClassName}
             style={inputStyle}
           >
             <option value="">Select</option>
@@ -639,7 +641,7 @@ const PickEntry = ({
           <select
             value={participant.sport}
             onChange={(e) => updateField('sport', e.target.value)}
-            className="w-full px-2 py-1 border rounded text-base"
+            className={inputClassName}
             style={inputStyle}
           >
             {sports.map(s => <option key={s} value={s}>{s}</option>)}
@@ -652,7 +654,7 @@ const PickEntry = ({
           <select
             value={participant.betType}
             onChange={(e) => updateField('betType', e.target.value)}
-            className="w-full px-2 py-1 border rounded text-base"
+            className={inputClassName}
             style={inputStyle}
           >
             {betTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
@@ -669,7 +671,7 @@ const PickEntry = ({
               type="text"
               value={participant.team || ''}
               onChange={(e) => onTeamInput(participantId, e.target.value, participant.sport)}
-              className="w-full px-2 py-1 border rounded text-base"
+              className={inputClassName}
               style={inputStyle}
               placeholder="Start typing..."
             />
@@ -698,7 +700,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.awayTeam || ''}
                 onChange={(e) => onAwayTeamInput(participantId, e.target.value, participant.sport)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="Start typing..."
               />
@@ -722,7 +724,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.homeTeam || ''}
                 onChange={(e) => onHomeTeamInput(participantId, e.target.value, participant.sport)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="Start typing..."
               />
@@ -757,7 +759,7 @@ const PickEntry = ({
             type="text"
             value={participant.odds || ''}
             onChange={(e) => updateField('odds', e.target.value)}
-            className="w-full px-2 py-1 border rounded text-base"
+            className={inputClassName}
             style={inputStyle}
             placeholder="e.g., +150 or -110"
           />
@@ -778,7 +780,7 @@ const PickEntry = ({
                     updateField('actualStats', null);
                   }
                 }}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
               >
                 <option value="pending">Pending</option>
@@ -794,7 +796,7 @@ const PickEntry = ({
                 type="text"
                 value={participant.actualStats || ''}
                 onChange={(e) => updateField('actualStats', e.target.value || null)}
-                className="w-full px-2 py-1 border rounded text-base"
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., 212 passing yards"
               />
