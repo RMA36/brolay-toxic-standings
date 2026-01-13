@@ -1626,7 +1626,14 @@ const importFromCSV = async (csvText) => {
         and1s: 0,
         and1Cost: 0,
         bySport: {},
-        byBetType: {}
+        byBetType: {},
+        // Multi-entity prop stats
+        h2hProps: { total: 0, wins: 0, losses: 0, pushes: 0 },
+        eitherProps: { total: 0, wins: 0, losses: 0 },
+        combinedProps: { total: 0, wins: 0, losses: 0 },
+        byH2HPropType: {},      // Track by prop type combination
+        byEitherPropType: {},   // Track Either props by prop type
+        byCombinedPropType: {} // Track Combined props by prop type
       };
     });
 
@@ -1653,10 +1660,60 @@ const importFromCSV = async (csvText) => {
         }
         playerStats.byBetType[participant.betType].total++;
 
+        // Track multi-entity props
+        if (participant.betType === 'H2H Prop') {
+          playerStats.h2hProps.total++;
+          
+          // Track by prop type combination
+          const propCombo = participant.player1PropType === participant.player2PropType 
+            ? participant.player1PropType 
+            : `${participant.player1PropType} vs ${participant.player2PropType}`;
+          
+          if (!playerStats.byH2HPropType[propCombo]) {
+            playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+          }
+          playerStats.byH2HPropType[propCombo].total++;
+        } else if (participant.betType === 'Either Prop') {
+          playerStats.eitherProps.total++;
+          
+          if (!playerStats.byEitherPropType[participant.propType]) {
+            playerStats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+          }
+          playerStats.byEitherPropType[participant.propType].total++;
+        } else if (participant.betType === 'Combined Prop') {
+          playerStats.combinedProps.total++;
+          
+          if (!playerStats.byCombinedPropType[participant.propType]) {
+            playerStats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+          }
+          playerStats.byCombinedPropType[participant.propType].total++;
+        }
+        
         if (participant.result === 'win') {
           playerStats.wins++;
           playerStats.bySport[participant.sport].wins++;
           playerStats.byBetType[participant.betType].wins++;
+
+        // Track multi-entity prop wins
+        if (participant.betType === 'H2H Prop') {
+          playerStats.h2hProps.wins++;
+          const propCombo = participant.player1PropType === participant.player2PropType 
+            ? participant.player1PropType 
+            : `${participant.player1PropType} vs ${participant.player2PropType}`;
+          if (playerStats.byH2HPropType[propCombo]) {
+            playerStats.byH2HPropType[propCombo].wins++;
+          }
+        } else if (participant.betType === 'Either Prop') {
+          playerStats.eitherProps.wins++;
+          if (playerStats.byEitherPropType[participant.propType]) {
+            playerStats.byEitherPropType[participant.propType].wins++;
+          }
+        } else if (participant.betType === 'Combined Prop') {
+          playerStats.combinedProps.wins++;
+          if (playerStats.byCombinedPropType[participant.propType]) {
+            playerStats.byCombinedPropType[participant.propType].wins++;
+          }
+        }
           
           if (parlayWon) {
             const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
@@ -1666,6 +1723,27 @@ const importFromCSV = async (csvText) => {
           playerStats.losses++;
           playerStats.bySport[participant.sport].losses++;
           playerStats.byBetType[participant.betType].losses++;
+
+          // Track multi-entity prop losses
+          if (participant.betType === 'H2H Prop') {
+            playerStats.h2hProps.losses++;
+            const propCombo = participant.player1PropType === participant.player2PropType 
+              ? participant.player1PropType 
+              : `${participant.player1PropType} vs ${participant.player2PropType}`;
+            if (playerStats.byH2HPropType[propCombo]) {
+              playerStats.byH2HPropType[propCombo].losses++;
+            }
+          } else if (participant.betType === 'Either Prop') {
+            playerStats.eitherProps.losses++;
+            if (playerStats.byEitherPropType[participant.propType]) {
+              playerStats.byEitherPropType[participant.propType].losses++;
+            }
+          } else if (participant.betType === 'Combined Prop') {
+            playerStats.combinedProps.losses++;
+            if (playerStats.byCombinedPropType[participant.propType]) {
+              playerStats.byCombinedPropType[participant.propType].losses++;
+            }
+          }
           
           if (and1) {
             playerStats.and1s++;
@@ -2525,6 +2603,27 @@ parlaysList.forEach(parlay => {
         playerStats.wins++;
         playerStats.bySport[participant.sport].wins++;
         playerStats.byBetType[participant.betType].wins++;
+
+      // Track multi-entity prop wins
+      if (participant.betType === 'H2H Prop') {
+        playerStats.h2hProps.wins++;
+        const propCombo = participant.player1PropType === participant.player2PropType 
+          ? participant.player1PropType 
+          : `${participant.player1PropType} vs ${participant.player2PropType}`;
+        if (playerStats.byH2HPropType[propCombo]) {
+          playerStats.byH2HPropType[propCombo].wins++;
+        }
+      } else if (participant.betType === 'Either Prop') {
+        playerStats.eitherProps.wins++;
+        if (playerStats.byEitherPropType[participant.propType]) {
+          playerStats.byEitherPropType[participant.propType].wins++;
+        }
+      } else if (participant.betType === 'Combined Prop') {
+        playerStats.combinedProps.wins++;
+        if (playerStats.byCombinedPropType[participant.propType]) {
+          playerStats.byCombinedPropType[participant.propType].wins++;
+        }
+      }
         
         if (parlayWon) {
           const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
@@ -2534,6 +2633,27 @@ parlaysList.forEach(parlay => {
         playerStats.losses++;
         playerStats.bySport[participant.sport].losses++;
         playerStats.byBetType[participant.betType].losses++;
+
+        // Track multi-entity prop losses
+        if (participant.betType === 'H2H Prop') {
+          playerStats.h2hProps.losses++;
+          const propCombo = participant.player1PropType === participant.player2PropType 
+            ? participant.player1PropType 
+            : `${participant.player1PropType} vs ${participant.player2PropType}`;
+          if (playerStats.byH2HPropType[propCombo]) {
+            playerStats.byH2HPropType[propCombo].losses++;
+          }
+        } else if (participant.betType === 'Either Prop') {
+          playerStats.eitherProps.losses++;
+          if (playerStats.byEitherPropType[participant.propType]) {
+            playerStats.byEitherPropType[participant.propType].losses++;
+          }
+        } else if (participant.betType === 'Combined Prop') {
+          playerStats.combinedProps.losses++;
+          if (playerStats.byCombinedPropType[participant.propType]) {
+            playerStats.byCombinedPropType[participant.propType].losses++;
+          }
+        }
         
         if (and1) {
           playerStats.and1s++;
@@ -2548,6 +2668,19 @@ parlaysList.forEach(parlay => {
         playerStats.pushes++;
         playerStats.bySport[participant.sport].pushes++;
         playerStats.byBetType[participant.betType].pushes++;
+      }
+
+      } else if (participant.result === 'push') {
+        // Track H2H prop pushes
+        if (participant.betType === 'H2H Prop') {
+          playerStats.h2hProps.pushes++;
+          const propCombo = participant.player1PropType === participant.player2PropType 
+            ? participant.player1PropType 
+            : `${participant.player1PropType} vs ${participant.player2PropType}`;
+          if (playerStats.byH2HPropType[propCombo]) {
+            playerStats.byH2HPropType[propCombo].pushes++;
+          }
+        }
       }
     });
   });
@@ -2986,6 +3119,107 @@ return (
                               })}
                           </div>
                         </div>
+                      {/* Multi-Entity Props Breakdowns */}
+                      {(Object.keys(playerStats.byH2HPropType).length > 0 || 
+                        Object.keys(playerStats.byEitherPropType).length > 0 || 
+                        Object.keys(playerStats.byCombinedPropType).length > 0) && (
+                        <div className="mt-4 pt-4 border-t border-gray-700">
+                          <h5 className="font-semibold text-sm mb-3 text-gray-300">🎯 Multi-Entity Props Breakdown</h5>
+                          
+                          {/* H2H Props by Type */}
+                          {Object.keys(playerStats.byH2HPropType).length > 0 && (
+                            <div className="mb-4">
+                              <h6 className="text-xs font-medium text-gray-400 mb-2">🆚 H2H Props</h6>
+                              <div className="space-y-2">
+                                {Object.entries(playerStats.byH2HPropType)
+                                  .sort((a, b) => b[1].total - a[1].total)
+                                  .map(([propType, data]) => {
+                                    const winPct = data.total > 0 ? (((data.wins + data.pushes * 0.5) / data.total) * 100).toFixed(0) : 0;
+                                    return (
+                                      <div key={propType} className="flex justify-between items-center bg-gray-900/50 rounded p-2 border border-gray-600">
+                                        <span className="text-xs text-gray-300">{propType}</span>
+                                        <div className="flex items-center gap-3">
+                                          <span className="text-xs text-gray-400">
+                                            {data.wins}-{data.losses}-{data.pushes}
+                                          </span>
+                                          <span className={`text-xs font-semibold ${
+                                            winPct >= 55 ? 'text-green-400' :
+                                            winPct >= 45 ? 'text-yellow-400' :
+                                            'text-red-400'
+                                          }`}>
+                                            {winPct}%
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Either Props by Type */}
+                          {Object.keys(playerStats.byEitherPropType).length > 0 && (
+                            <div className="mb-4">
+                              <h6 className="text-xs font-medium text-gray-400 mb-2">🎲 Either Props</h6>
+                              <div className="space-y-2">
+                                {Object.entries(playerStats.byEitherPropType)
+                                  .sort((a, b) => b[1].total - a[1].total)
+                                  .map(([propType, data]) => {
+                                    const winPct = data.total > 0 ? ((data.wins / data.total) * 100).toFixed(0) : 0;
+                                    return (
+                                      <div key={propType} className="flex justify-between items-center bg-gray-900/50 rounded p-2 border border-gray-600">
+                                        <span className="text-xs text-gray-300">{propType}</span>
+                                        <div className="flex items-center gap-3">
+                                          <span className="text-xs text-gray-400">
+                                            {data.wins}-{data.losses}
+                                          </span>
+                                          <span className={`text-xs font-semibold ${
+                                            winPct >= 55 ? 'text-green-400' :
+                                            winPct >= 45 ? 'text-yellow-400' :
+                                            'text-red-400'
+                                          }`}>
+                                            {winPct}%
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Combined Props by Type */}
+                          {Object.keys(playerStats.byCombinedPropType).length > 0 && (
+                            <div>
+                              <h6 className="text-xs font-medium text-gray-400 mb-2">➕ Combined Props</h6>
+                              <div className="space-y-2">
+                                {Object.entries(playerStats.byCombinedPropType)
+                                  .sort((a, b) => b[1].total - a[1].total)
+                                  .map(([propType, data]) => {
+                                    const winPct = data.total > 0 ? ((data.wins / data.total) * 100).toFixed(0) : 0;
+                                    return (
+                                      <div key={propType} className="flex justify-between items-center bg-gray-900/50 rounded p-2 border border-gray-600">
+                                        <span className="text-xs text-gray-300">{propType}</span>
+                                        <div className="flex items-center gap-3">
+                                          <span className="text-xs text-gray-400">
+                                            {data.wins}-{data.losses}
+                                          </span>
+                                          <span className={`text-xs font-semibold ${
+                                            winPct >= 55 ? 'text-green-400' :
+                                            winPct >= 45 ? 'text-yellow-400' :
+                                            'text-red-400'
+                                          }`}>
+                                            {winPct}%
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       )}
                     </div>
                   )}
