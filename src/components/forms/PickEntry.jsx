@@ -204,6 +204,229 @@ const PickEntry = ({
           </>
         );
 
+      case 'H2H Prop':
+        return (
+          <>
+            <div className="md:col-span-3 relative">
+              <label className="block text-xs font-medium mb-1 text-white">Prop Type</label>
+              <input
+                type="text"
+                value={participant.propType || ''}
+                onChange={(e) => onPropTypeInput(participantId, e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., Passing Yards, Points, Home Runs"
+              />
+              {showSuggestions[`prop-${participantId}`] && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
+                      onClick={() => onSelectSuggestion(participantId, 'propType', suggestion)}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs font-medium mb-1 text-white">Player 1</label>
+              <input
+                type="text"
+                value={participant.player1 || ''}
+                onChange={(e) => updateField('player1', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="First player name"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs font-medium mb-1 text-white">Player 2</label>
+              <input
+                type="text"
+                value={participant.player2 || ''}
+                onChange={(e) => updateField('player2', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="Second player name"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Betting On</label>
+              <select
+                value={participant.selectedPlayer || ''}
+                onChange={(e) => updateField('selectedPlayer', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+              >
+                <option value="">Select player</option>
+                <option value={participant.player1 || 'Player 1'}>{participant.player1 || 'Player 1'}</option>
+                <option value={participant.player2 || 'Player 2'}>{participant.player2 || 'Player 2'}</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Favorite/Dog</label>
+              <select
+                value={participant.h2hLineType || ''}
+                onChange={(e) => updateField('h2hLineType', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+              >
+                <option value="">Straight Up</option>
+                <option value="Favorite">Favorite</option>
+                <option value="Dog">Dog</option>
+              </select>
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Spread (optional)</label>
+              <input
+                type="text"
+                value={participant.h2hLine || ''}
+                onChange={(e) => updateField('h2hLine', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., 18.5 (leave empty for straight up)"
+              />
+            </div>
+          </>
+        );
+      
+      case 'Either Prop':
+        return (
+          <>
+            <div className="md:col-span-3 relative">
+              <label className="block text-xs font-medium mb-1 text-white">Prop Type</label>
+              <input
+                type="text"
+                value={participant.propType || ''}
+                onChange={(e) => onPropTypeInput(participantId, e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., Passing TDs, Points, Strikeouts"
+              />
+              {showSuggestions[`prop-${participantId}`] && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
+                      onClick={() => onSelectSuggestion(participantId, 'propType', suggestion)}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
+              <select
+                value={participant.overUnder || 'Over'}
+                onChange={(e) => updateField('overUnder', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+              >
+                <option value="Over">Over</option>
+                <option value="Under">Under</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Line</label>
+              <input
+                type="text"
+                value={participant.line || ''}
+                onChange={(e) => updateField('line', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., 2.5"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs font-medium mb-1 text-white">Players/Teams (comma-separated)</label>
+              <input
+                type="text"
+                value={(participant.entities || []).join(', ')}
+                onChange={(e) => updateField('entities', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., LeBron James, Anthony Davis"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Win if ANY player/team hits the line
+              </p>
+            </div>
+          </>
+        );
+      
+      case 'Combined Prop':
+        return (
+          <>
+            <div className="md:col-span-3 relative">
+              <label className="block text-xs font-medium mb-1 text-white">Prop Type</label>
+              <input
+                type="text"
+                value={participant.propType || ''}
+                onChange={(e) => onPropTypeInput(participantId, e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., Home Runs, Touchdowns, Goals"
+              />
+              {showSuggestions[`prop-${participantId}`] && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
+                      onClick={() => onSelectSuggestion(participantId, 'propType', suggestion)}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
+              <select
+                value={participant.overUnder || 'Over'}
+                onChange={(e) => updateField('overUnder', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+              >
+                <option value="Over">Over</option>
+                <option value="Under">Under</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Line</label>
+              <input
+                type="text"
+                value={participant.line || ''}
+                onChange={(e) => updateField('line', e.target.value)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., 2.5"
+              />
+            </div>
+            <div className="md:col-span-3">
+              <label className="block text-xs font-medium mb-1 text-white">Players/Teams (comma-separated)</label>
+              <input
+                type="text"
+                value={(participant.entities || []).join(', ')}
+                onChange={(e) => updateField('entities', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., Aaron Judge, Giancarlo Stanton"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Win if COMBINED total hits the line
+              </p>
+            </div>
+          </>
+        );
+        
       case 'First Inning Runs':
       case 'YRFI/NRFI':
         return (
