@@ -207,30 +207,6 @@ const PickEntry = ({
       case 'H2H Prop':
         return (
           <>
-            <div className="md:col-span-3 relative">
-              <label className="block text-xs font-medium mb-1 text-white">Prop Type</label>
-              <input
-                type="text"
-                value={participant.propType || ''}
-                onChange={(e) => onPropTypeInput(participantId, e.target.value)}
-                className="w-full px-2 py-1 border rounded text-base"
-                style={inputStyle}
-                placeholder="e.g., Passing Yards, Points, Home Runs"
-              />
-              {showSuggestions[`prop-${participantId}`] && suggestions.length > 0 && (
-                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                  {suggestions.map((suggestion, idx) => (
-                    <div
-                      key={idx}
-                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
-                      onClick={() => onSelectSuggestion(participantId, 'propType', suggestion)}
-                    >
-                      {suggestion}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
             <div className="md:col-span-3">
               <label className="block text-xs font-medium mb-1 text-white">Player 1</label>
               <input
@@ -241,6 +217,36 @@ const PickEntry = ({
                 style={inputStyle}
                 placeholder="First player name"
               />
+            </div>
+            <div className="md:col-span-3 relative">
+              <label className="block text-xs font-medium mb-1 text-white">Player 1 Prop Type</label>
+              <input
+                type="text"
+                value={participant.player1PropType || ''}
+                onChange={(e) => {
+                  updateField('player1PropType', e.target.value);
+                  onPropTypeInput(participantId, e.target.value);
+                }}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., Passing Yards, Points"
+              />
+              {showSuggestions[`prop-${participantId}`] && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
+                      onClick={() => {
+                        updateField('player1PropType', suggestion);
+                        onSelectSuggestion(participantId, 'propType', suggestion);
+                      }}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="md:col-span-3">
               <label className="block text-xs font-medium mb-1 text-white">Player 2</label>
@@ -253,6 +259,36 @@ const PickEntry = ({
                 placeholder="Second player name"
               />
             </div>
+            <div className="md:col-span-3 relative">
+              <label className="block text-xs font-medium mb-1 text-white">Player 2 Prop Type</label>
+              <input
+                type="text"
+                value={participant.player2PropType || ''}
+                onChange={(e) => {
+                  updateField('player2PropType', e.target.value);
+                  onPropTypeInput(participantId, e.target.value);
+                }}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., Rushing Yards, Assists (can be different!)"
+              />
+              {showSuggestions[`prop-${participantId}`] && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
+                      onClick={() => {
+                        updateField('player2PropType', suggestion);
+                        onSelectSuggestion(participantId, 'propType', suggestion);
+                      }}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="md:col-span-2">
               <label className="block text-xs font-medium mb-1 text-white">Betting On</label>
               <select
@@ -262,8 +298,12 @@ const PickEntry = ({
                 style={inputStyle}
               >
                 <option value="">Select player</option>
-                <option value={participant.player1 || 'Player 1'}>{participant.player1 || 'Player 1'}</option>
-                <option value={participant.player2 || 'Player 2'}>{participant.player2 || 'Player 2'}</option>
+                {participant.player1 && (
+                  <option value={participant.player1}>{participant.player1}</option>
+                )}
+                {participant.player2 && (
+                  <option value={participant.player2}>{participant.player2}</option>
+                )}
               </select>
             </div>
             <div>
