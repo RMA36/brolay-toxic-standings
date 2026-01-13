@@ -2668,9 +2668,7 @@ parlaysList.forEach(parlay => {
         playerStats.pushes++;
         playerStats.bySport[participant.sport].pushes++;
         playerStats.byBetType[participant.betType].pushes++;
-      }
-
-      } else if (participant.result === 'push') {
+        
         // Track H2H prop pushes
         if (participant.betType === 'H2H Prop') {
           playerStats.h2hProps.pushes++;
