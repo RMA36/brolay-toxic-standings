@@ -386,7 +386,7 @@ const normalizePropType = (propType) => {
 };
 
 const getStatValue = (stats, propType, sport, labels) => {
-  if (!stats || !labels) return null;
+  if (!stats || !labels || !propType) return null;
   
   const statMappings = ESPN_STAT_MAPPINGS; // Now imported from constants/sports
   
@@ -508,7 +508,7 @@ const fetchOddsFromTheOddsAPI = async (participant, gameDate, eventsData = null)
       const propTypeMapping = ODDS_API_PROP_MAPPINGS; // Now imported from constants/sports
       
       const normalizedPropType = normalizePropType(propType);
-      const oddsApiMarket = propTypeMap[normalizedPropType];
+      const oddsApiMarket = propTypeMapping[normalizedPropType];
       
       if (!oddsApiMarket) {
         console.log(`Prop type "${propType}" (normalized: "${normalizedPropType}") not available in The Odds API`);
