@@ -1905,6 +1905,7 @@ const analyzeSearchQuery = (query) => {
     stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
 
     filteredPicks.forEach(pick => {
+      if (!pick.player || !pick.betType || !pick.sport) return; // Skip incomplete picks
       if (!stats.byPlayer[pick.player]) {
         stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
@@ -1980,6 +1981,7 @@ const analyzeSearchQuery = (query) => {
     stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
 
     filteredPicks.forEach(pick => {
+      if (!pick.player) return; // Skip incomplete picks
       if (!stats.byPlayer[pick.player]) {
         stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
@@ -2053,6 +2055,7 @@ const analyzeSearchQuery = (query) => {
     stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
   
     filteredPicks.forEach(pick => {
+      if (!pick.player || !pick.betType) return; // Skip incomplete picks
       if (!stats.byPlayer[pick.player]) {
         stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
@@ -2093,6 +2096,7 @@ const analyzeSearchQuery = (query) => {
     const matchingPicks = [];
     parlays.forEach(parlay => {
       Object.values(parlay.participants || {}).forEach(pick => {
+        if (!pick.player || !pick.betType) return; // Skip incomplete picks
         if (pick.result === 'pending') return;
         if (pick.sport === matchedSport) {
           matchingPicks.push({
@@ -2121,6 +2125,7 @@ const analyzeSearchQuery = (query) => {
     stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
 
     filteredPicks.forEach(pick => {
+      if (!pick.player || !pick.betType) return; // Skip incomplete picks
       if (!stats.byPlayer[pick.player]) {
         stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
@@ -2188,6 +2193,7 @@ const analyzeSearchQuery = (query) => {
     stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
 
     filteredPicks.forEach(pick => {
+      if (!pick.sport || !pick.betType) return; // Skip incomplete picks
       if (!stats.bySport[pick.sport]) {
         stats.bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
       }
