@@ -1,6 +1,8 @@
 import React from 'react';
 import Button from '../common/Button';
+
 import { colors } from '../../constants/theme';
+import { inputClasses } from '../../constants/theme';
 
 /**
  * PickEntry Component
