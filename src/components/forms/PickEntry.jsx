@@ -223,10 +223,8 @@ const PickEntry = ({
               <input
                 type="text"
                 value={participant.player1PropType || ''}
-                onChange={(e) => {
-                  updateField('player1PropType', e.target.value);
-                  onPropTypeInput(participantId, e.target.value);
-                }}
+                onChange={(e) => updateField('player1PropType', e.target.value)}
+                onFocus={(e) => onPropTypeInput(participantId, e.target.value)}
                 className="w-full px-2 py-1 border rounded text-base"
                 style={inputStyle}
                 placeholder="e.g., Passing Yards, Points"
@@ -264,10 +262,8 @@ const PickEntry = ({
               <input
                 type="text"
                 value={participant.player2PropType || ''}
-                onChange={(e) => {
-                  updateField('player2PropType', e.target.value);
-                  onPropTypeInput(participantId, e.target.value);
-                }}
+                onChange={(e) => updateField('player2PropType', e.target.value)}
+                onFocus={(e) => onPropTypeInput(participantId, e.target.value)}
                 className="w-full px-2 py-1 border rounded text-base"
                 style={inputStyle}
                 placeholder="e.g., Rushing Yards, Assists (can be different!)"
@@ -666,7 +662,7 @@ const PickEntry = ({
 
       {/* Team/Player Fields - Conditional rendering based on bet type */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 mb-3">
-        {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
+        {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', 'H2H Prop', 'Either Prop', 'Combined Prop'].includes(participant.betType) && (
           <div className="relative">
             <label className="block text-xs font-medium mb-1 text-white">Team/Player</label>
             <input
@@ -753,8 +749,8 @@ const PickEntry = ({
         {renderBetSpecificFields()}
       </div>
 
-      {/* Odds Field */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 mb-3">
+      {/* Odds, Result, and Actual Stats Fields */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3 mb-3">
         <div>
           <label className="block text-xs font-medium mb-1 text-white">Odds (optional)</label>
           <input
@@ -766,6 +762,45 @@ const PickEntry = ({
             placeholder="e.g., +150 or -110"
           />
         </div>
+
+        {isEditMode && (
+          <>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Result</label>
+              <select
+                value={participant.result || 'pending'}
+                onChange={(e) => {
+                  updateField('result', e.target.value);
+                  updateField('autoUpdated', false);
+                  updateField('manuallyOverridden', e.target.value !== 'pending');
+                  // Clear actualStats if setting to pending
+                  if (e.target.value === 'pending') {
+                    updateField('actualStats', null);
+                  }
+                }}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+              >
+                <option value="pending">Pending</option>
+                <option value="win">Win</option>
+                <option value="loss">Loss</option>
+                <option value="push">Push</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Actual Stats (optional)</label>
+              <input
+                type="text"
+                value={participant.actualStats || ''}
+                onChange={(e) => updateField('actualStats', e.target.value || null)}
+                className="w-full px-2 py-1 border rounded text-base"
+                style={inputStyle}
+                placeholder="e.g., 212 passing yards"
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Remove Button */}
