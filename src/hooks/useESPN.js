@@ -542,7 +542,8 @@ export const useESPN = () => {
               statCategory.athletes?.forEach(athlete => {
                 allPlayers.push({
                   name: athlete.athlete?.displayName || athlete.athlete?.name,
-                  stats: athlete.stats || []
+                  stats: athlete.stats || [],
+                  labels: statCategory.labels || []
                 });
               });
             });
@@ -556,7 +557,7 @@ export const useESPN = () => {
             );
             
             if (foundPlayer1) {
-              player1Stat = getStatValue(foundPlayer1.stats, player1PropType, sport);
+              player1Stat = getStatValue(foundPlayer1.stats, player1PropType, sport, foundPlayer1.labels);
               if (player1Stat !== null) {
                 player1Found = true;
                 console.log(`✅ Found ${player1}: ${player1PropType} = ${player1Stat}`);
@@ -572,7 +573,7 @@ export const useESPN = () => {
             );
             
             if (foundPlayer2) {
-              player2Stat = getStatValue(foundPlayer2.stats, player2PropType, sport);
+              player2Stat = getStatValue(foundPlayer2.stats, player2PropType, sport, foundPlayer2.labels);
               if (player2Stat !== null) {
                 player2Found = true;
                 console.log(`✅ Found ${player2}: ${player2PropType} = ${player2Stat}`);
@@ -697,7 +698,8 @@ export const useESPN = () => {
               statCategory.athletes?.forEach(athlete => {
                 allPlayers.push({
                   name: athlete.athlete?.displayName || athlete.athlete?.name,
-                  stats: athlete.stats || []
+                  stats: athlete.stats || [],
+                  labels: statCategory.labels || []
                 });
               });
             });
@@ -711,7 +713,7 @@ export const useESPN = () => {
             );
             
             if (foundPlayer1) {
-              player1Stat = getStatValue(foundPlayer1.stats, propType, sport);
+              player1Stat = getStatValue(foundPlayer1.stats, propType, sport, foundPlayer1.labels);
               if (player1Stat !== null) {
                 player1Found = true;
                 console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
@@ -727,7 +729,7 @@ export const useESPN = () => {
             );
             
             if (foundPlayer2) {
-              player2Stat = getStatValue(foundPlayer2.stats, propType, sport);
+              player2Stat = getStatValue(foundPlayer2.stats, propType, sport, foundPlayer2.labels);
               if (player2Stat !== null) {
                 player2Found = true;
                 console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
@@ -838,7 +840,8 @@ export const useESPN = () => {
               statCategory.athletes?.forEach(athlete => {
                 allPlayers.push({
                   name: athlete.athlete?.displayName || athlete.athlete?.name,
-                  stats: athlete.stats || []
+                  stats: athlete.stats || [],
+                  labels: statCategory.labels || []
                 });
               });
             });
@@ -852,7 +855,7 @@ export const useESPN = () => {
             );
             
             if (foundPlayer1) {
-              player1Stat = getStatValue(foundPlayer1.stats, propType, sport);
+              player1Stat = getStatValue(foundPlayer1.stats, propType, sport, foundPlayer1.labels);
               if (player1Stat !== null) {
                 player1Found = true;
                 console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
@@ -868,7 +871,7 @@ export const useESPN = () => {
             );
             
             if (foundPlayer2) {
-              player2Stat = getStatValue(foundPlayer2.stats, propType, sport);
+              player2Stat = getStatValue(foundPlayer2.stats, propType, sport, foundPlayer2.labels);
               if (player2Stat !== null) {
                 player2Found = true;
                 console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
