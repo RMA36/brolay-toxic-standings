@@ -1065,6 +1065,9 @@ const submitParlay = async () => {
 
 const applyFilters = (parlaysList) => {
   return parlaysList.filter(parlay => {
+    // Skip the parlay being edited - it's in draft state
+    if (editingParlay && parlay.id === editingParlay.id) return false;
+    
     // Date range filter
     if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
     if (filters.dateTo && parlay.date > filters.dateTo) return false;
@@ -1671,6 +1674,10 @@ const importFromCSV = async (csvText) => {
     });
 
     parlays.forEach(parlay => {
+      // Skip the parlay being edited - it's in draft state
+      if (editingParlay && parlay.id === editingParlay.id) {
+        return;
+      }
       const participants = Object.values(parlay.participants);
       const losers = participants.filter(p => p.result === 'loss');
       const winners = participants.filter(p => p.result === 'win');
