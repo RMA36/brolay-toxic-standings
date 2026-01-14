@@ -230,7 +230,9 @@ const PickEntry = ({
                     <div
                       key={idx}
                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
                         updateField('player1', suggestion);
                         onSelectSuggestion(`${participantId}-player1`, 'team', suggestion);
                       }}
@@ -290,7 +292,9 @@ const PickEntry = ({
                     <div
                       key={idx}
                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
                         updateField('player2', suggestion);
                         onSelectSuggestion(`${participantId}-player2`, 'team', suggestion);
                       }}
