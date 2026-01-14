@@ -549,34 +549,38 @@ export const useESPN = () => {
             });
           });
           
-          // Check for player1
+          // Check for player1 - try ALL matching entries
           if (!player1Found) {
-            const foundPlayer1 = allPlayers.find(p => 
+            const matchingPlayer1Entries = allPlayers.filter(p => 
               p.name.toLowerCase().includes(player1.toLowerCase()) || 
               player1.toLowerCase().includes(p.name.toLowerCase())
             );
             
-            if (foundPlayer1) {
-              player1Stat = getStatValue(foundPlayer1.stats, player1PropType, sport, foundPlayer1.labels);
-              if (player1Stat !== null) {
+            for (const entry of matchingPlayer1Entries) {
+              const stat = getStatValue(entry.stats, player1PropType, sport, entry.labels);
+              if (stat !== null) {
+                player1Stat = stat;
                 player1Found = true;
                 console.log(`✅ Found ${player1}: ${player1PropType} = ${player1Stat}`);
+                break;
               }
             }
           }
           
-          // Check for player2
+          // Check for player2 - try ALL matching entries
           if (!player2Found) {
-            const foundPlayer2 = allPlayers.find(p => 
+            const matchingPlayer2Entries = allPlayers.filter(p => 
               p.name.toLowerCase().includes(player2.toLowerCase()) || 
               player2.toLowerCase().includes(p.name.toLowerCase())
             );
             
-            if (foundPlayer2) {
-              player2Stat = getStatValue(foundPlayer2.stats, player2PropType, sport, foundPlayer2.labels);
-              if (player2Stat !== null) {
+            for (const entry of matchingPlayer2Entries) {
+              const stat = getStatValue(entry.stats, player2PropType, sport, entry.labels);
+              if (stat !== null) {
+                player2Stat = stat;
                 player2Found = true;
                 console.log(`✅ Found ${player2}: ${player2PropType} = ${player2Stat}`);
+                break;
               }
             }
           }
@@ -705,34 +709,38 @@ export const useESPN = () => {
             });
           });
           
-          // Check for player1
+          // Check for player1 - try ALL matching entries
           if (!player1Found) {
-            const foundPlayer1 = allPlayers.find(p => 
+            const matchingPlayer1Entries = allPlayers.filter(p => 
               p.name.toLowerCase().includes(player1.toLowerCase()) || 
               player1.toLowerCase().includes(p.name.toLowerCase())
             );
             
-            if (foundPlayer1) {
-              player1Stat = getStatValue(foundPlayer1.stats, propType, sport, foundPlayer1.labels);
-              if (player1Stat !== null) {
+            for (const entry of matchingPlayer1Entries) {
+              const stat = getStatValue(entry.stats, propType, sport, entry.labels);
+              if (stat !== null) {
+                player1Stat = stat;
                 player1Found = true;
                 console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
+                break;
               }
             }
           }
           
-          // Check for player2
+          // Check for player2 - try ALL matching entries
           if (!player2Found) {
-            const foundPlayer2 = allPlayers.find(p => 
+            const matchingPlayer2Entries = allPlayers.filter(p => 
               p.name.toLowerCase().includes(player2.toLowerCase()) || 
               player2.toLowerCase().includes(p.name.toLowerCase())
             );
             
-            if (foundPlayer2) {
-              player2Stat = getStatValue(foundPlayer2.stats, propType, sport, foundPlayer2.labels);
-              if (player2Stat !== null) {
+            for (const entry of matchingPlayer2Entries) {
+              const stat = getStatValue(entry.stats, propType, sport, entry.labels);
+              if (stat !== null) {
+                player2Stat = stat;
                 player2Found = true;
                 console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
+                break;
               }
             }
           }
@@ -847,57 +855,51 @@ export const useESPN = () => {
             });
           });
           
-          // Check for player1
+          // Check for player1 - try ALL matching entries
           if (!player1Found) {
-            const foundPlayer1 = allPlayers.find(p => 
+            const matchingPlayer1Entries = allPlayers.filter(p => 
               p.name.toLowerCase().includes(player1.toLowerCase()) || 
               player1.toLowerCase().includes(p.name.toLowerCase())
             );
             
-            if (foundPlayer1) {
-              console.log(`🔍 Found player1 "${player1}" in boxscore:`, foundPlayer1.name);
-              console.log('📊 Player1 stats:', foundPlayer1.stats);
-              console.log('🏷️ Player1 labels:', foundPlayer1.labels);
-              console.log('🎯 Looking for prop type:', propType);
-              
-              player1Stat = getStatValue(foundPlayer1.stats, propType, sport, foundPlayer1.labels);
-              console.log('📈 Player1 stat result:', player1Stat);
-              
-              if (player1Stat !== null) {
+            console.log(`🔍 Found ${matchingPlayer1Entries.length} entries for player1 "${player1}"`);
+            
+            for (const entry of matchingPlayer1Entries) {
+              const stat = getStatValue(entry.stats, propType, sport, entry.labels);
+              if (stat !== null) {
+                player1Stat = stat;
                 player1Found = true;
                 console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
-              } else {
-                console.log(`❌ getStatValue returned null for ${player1}`);
+                break;
               }
-            } else {
-              console.log(`❌ Player1 "${player1}" not found in allPlayers`);
+            }
+            
+            if (!player1Found && matchingPlayer1Entries.length > 0) {
+              console.log(`❌ Found player1 "${player1}" but prop type "${propType}" not in any stat category`);
             }
           }
           
-          // Check for player2
+          // Check for player2 - try ALL matching entries
           if (!player2Found) {
-            const foundPlayer2 = allPlayers.find(p => 
+            const matchingPlayer2Entries = allPlayers.filter(p => 
               p.name.toLowerCase().includes(player2.toLowerCase()) || 
               player2.toLowerCase().includes(p.name.toLowerCase())
             );
             
-            if (foundPlayer2) {
-              console.log(`🔍 Found player2 "${player2}" in boxscore:`, foundPlayer2.name);
-              console.log('📊 Player2 stats:', foundPlayer2.stats);
-              console.log('🏷️ Player2 labels:', foundPlayer2.labels);
-              console.log('🎯 Looking for prop type:', propType);
-              
-              player2Stat = getStatValue(foundPlayer2.stats, propType, sport, foundPlayer2.labels);
-              console.log('📈 Player2 stat result:', player2Stat);
-              
-              if (player2Stat !== null) {
+            console.log(`🔍 Found ${matchingPlayer2Entries.length} entries for player2 "${player2}"`);
+            
+            for (const entry of matchingPlayer2Entries) {
+              const stat = getStatValue(entry.stats, propType, sport, entry.labels);
+              if (stat !== null) {
+                player2Stat = stat;
                 player2Found = true;
                 console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
-              } else {
-                console.log(`❌ getStatValue returned null for ${player2}`);
+                break;
               }
-            } else {
-              console.log(`❌ Player2 "${player2}" not found in allPlayers`);
+            }
+            
+            if (!player2Found && matchingPlayer2Entries.length > 0) {
+              console.log(`❌ Found player2 "${player2}" but prop type "${propType}" not in any stat category`);
             }
           }
           
