@@ -824,12 +824,21 @@ const handleTouchEnd = async () => {
   });
 };
   const updateParticipant = (id, field, value) => {
+    // Extract base participant ID for multi-entity props
+    // IDs like "participant-1-player2" should become "participant-1"
+    const baseId = id.includes('-player') || id.includes('-prop') ? id.split('-').slice(0, 2).join('-') : id;
+    
+    // Only update if the base participant exists
+    if (!newParlay.participants[baseId]) {
+      return;
+    }
+    
     setNewParlay({
       ...newParlay,
       participants: {
         ...newParlay.participants,
-        [id]: {
-          ...newParlay.participants[id],
+        [baseId]: {
+          ...newParlay.participants[baseId],
           [field]: value
         }
       }
