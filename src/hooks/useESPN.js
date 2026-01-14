@@ -855,11 +855,22 @@ export const useESPN = () => {
             );
             
             if (foundPlayer1) {
+              console.log(`🔍 Found player1 "${player1}" in boxscore:`, foundPlayer1.name);
+              console.log('📊 Player1 stats:', foundPlayer1.stats);
+              console.log('🏷️ Player1 labels:', foundPlayer1.labels);
+              console.log('🎯 Looking for prop type:', propType);
+              
               player1Stat = getStatValue(foundPlayer1.stats, propType, sport, foundPlayer1.labels);
+              console.log('📈 Player1 stat result:', player1Stat);
+              
               if (player1Stat !== null) {
                 player1Found = true;
                 console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
+              } else {
+                console.log(`❌ getStatValue returned null for ${player1}`);
               }
+            } else {
+              console.log(`❌ Player1 "${player1}" not found in allPlayers`);
             }
           }
           
@@ -871,11 +882,22 @@ export const useESPN = () => {
             );
             
             if (foundPlayer2) {
+              console.log(`🔍 Found player2 "${player2}" in boxscore:`, foundPlayer2.name);
+              console.log('📊 Player2 stats:', foundPlayer2.stats);
+              console.log('🏷️ Player2 labels:', foundPlayer2.labels);
+              console.log('🎯 Looking for prop type:', propType);
+              
               player2Stat = getStatValue(foundPlayer2.stats, propType, sport, foundPlayer2.labels);
+              console.log('📈 Player2 stat result:', player2Stat);
+              
               if (player2Stat !== null) {
                 player2Found = true;
                 console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
+              } else {
+                console.log(`❌ getStatValue returned null for ${player2}`);
               }
+            } else {
+              console.log(`❌ Player2 "${player2}" not found in allPlayers`);
             }
           }
           
