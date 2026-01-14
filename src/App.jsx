@@ -860,14 +860,20 @@ const getPropTypeSuggestions = (input) => {
 };
 
 const handleTeamInput = (id, value, sport) => {
-  updateParticipant(id, 'team', value);
+  // Only update newParlay if this is a real participant ID (not editing mode with modified IDs)
+  if (newParlay.participants && newParlay.participants[id]) {
+    updateParticipant(id, 'team', value);
+  }
   const suggestions = getTeamSuggestions(value, sport);
   setSuggestions(suggestions);
   setShowSuggestions({ ...showSuggestions, [`team-${id}`]: suggestions.length > 0 });
 };
 
 const handlePropTypeInput = (id, value) => {
-  updateParticipant(id, 'propType', value);
+  // Only update newParlay if this is a real participant ID (not editing mode with modified IDs)
+  if (newParlay.participants && newParlay.participants[id]) {
+    updateParticipant(id, 'propType', value);
+  }
   const suggestions = getPropTypeSuggestions(value);
   setSuggestions(suggestions);
   setShowSuggestions({ ...showSuggestions, [`prop-${id}`]: suggestions.length > 0 });
