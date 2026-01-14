@@ -1462,14 +1462,28 @@ return (
                 suggestions={suggestions}
                 showSuggestions={showSuggestions}
                 onTeamInput={(partId, value, sport) => {
+                  // Extract base participant ID (remove -player1, -player2 suffixes)
+                  const baseId = partId.replace(/-player[12]$/, '');
                   const updated = {...editingParlay};
-                  updated.participants[partId].team = value;
+                  
+                  // Don't update team field for multi-entity props
+                  if (!partId.includes('-player')) {
+                    updated.participants[baseId].team = value;
+                  }
+                  
                   setEditingParlay(updated);
                   handleTeamInput(partId, value, sport);
                 }}
                 onPropTypeInput={(partId, value) => {
+                  // Extract base participant ID (remove -prop1, -prop2 suffixes)
+                  const baseId = partId.replace(/-prop[12]$/, '');
                   const updated = {...editingParlay};
-                  updated.participants[partId].propType = value;
+                  
+                  // Don't update propType field for multi-entity props with separate prop types
+                  if (!partId.includes('-prop')) {
+                    updated.participants[baseId].propType = value;
+                  }
+                  
                   setEditingParlay(updated);
                   handlePropTypeInput(partId, value);
                 }}
