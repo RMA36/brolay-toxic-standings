@@ -211,37 +211,28 @@ const PickEntry = ({
       case 'H2H Prop':
         return (
           <>
-            <div className="md:col-span-3">
+            <div className="md:col-span-3 relative">
               <label className="block text-xs font-medium mb-1 text-white">Player 1</label>
               <input
                 type="text"
                 value={participant.player1 || ''}
-                onChange={(e) => updateField('player1', e.target.value)}
+                onChange={(e) => {
+                  updateField('player1', e.target.value);
+                  onTeamInput(`${participantId}-player1`, e.target.value, participant.sport);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="First player name"
               />
-            </div>
-            <div className="md:col-span-3 relative">
-              <label className="block text-xs font-medium mb-1 text-white">Player 1 Prop Type</label>
-              <input
-                type="text"
-                value={participant.player1PropType || ''}
-                onChange={(e) => updateField('player1PropType', e.target.value)}
-                onFocus={(e) => onPropTypeInput(participantId, e.target.value)}
-                className={inputClassName}
-                style={inputStyle}
-                placeholder="e.g., Passing Yards, Points"
-              />
-              {showSuggestions[`prop-${participantId}`] && suggestions.length > 0 && (
+              {showSuggestions[`team-${participantId}-player1`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
                     <div
                       key={idx}
                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
                       onClick={() => {
-                        updateField('player1PropType', suggestion);
-                        onSelectSuggestion(participantId, 'propType', suggestion);
+                        updateField('player1', suggestion);
+                        onSelectSuggestion(`${participantId}-player1`, 'team', suggestion);
                       }}
                     >
                       {suggestion}
@@ -250,29 +241,80 @@ const PickEntry = ({
                 </div>
               )}
             </div>
-            <div className="md:col-span-3">
+            <div className="md:col-span-3 relative">
+              <label className="block text-xs font-medium mb-1 text-white">Player 1 Prop Type</label>
+              <input
+                type="text"
+                value={participant.player1PropType || ''}
+                onChange={(e) => {
+                  updateField('player1PropType', e.target.value);
+                  onPropTypeInput(`${participantId}-prop1`, e.target.value);
+                }}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="e.g., Passing Yards, Points"
+              />
+              {showSuggestions[`prop-${participantId}-prop1`] && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
+                      onClick={() => {
+                        updateField('player1PropType', suggestion);
+                        onSelectSuggestion(`${participantId}-prop1`, 'propType', suggestion);
+                      }}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="md:col-span-3 relative">
               <label className="block text-xs font-medium mb-1 text-white">Player 2</label>
               <input
                 type="text"
                 value={participant.player2 || ''}
-                onChange={(e) => updateField('player2', e.target.value)}
+                onChange={(e) => {
+                  updateField('player2', e.target.value);
+                  onTeamInput(`${participantId}-player2`, e.target.value, participant.sport);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="Second player name"
               />
+              {showSuggestions[`team-${participantId}-player2`] && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
+                      onClick={() => {
+                        updateField('player2', suggestion);
+                        onSelectSuggestion(`${participantId}-player2`, 'team', suggestion);
+                      }}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="md:col-span-3 relative">
               <label className="block text-xs font-medium mb-1 text-white">Player 2 Prop Type</label>
               <input
                 type="text"
                 value={participant.player2PropType || ''}
-                onChange={(e) => updateField('player2PropType', e.target.value)}
-                onFocus={(e) => onPropTypeInput(participantId, e.target.value)}
+                onChange={(e) => {
+                  updateField('player2PropType', e.target.value);
+                  onPropTypeInput(`${participantId}-prop2`, e.target.value);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="e.g., Rushing Yards, Assists (can be different!)"
               />
-              {showSuggestions[`prop-${participantId}`] && suggestions.length > 0 && (
+              {showSuggestions[`prop-${participantId}-prop2`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
                     <div
@@ -280,7 +322,7 @@ const PickEntry = ({
                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
                       onClick={() => {
                         updateField('player2PropType', suggestion);
-                        onSelectSuggestion(participantId, 'propType', suggestion);
+                        onSelectSuggestion(`${participantId}-prop2`, 'propType', suggestion);
                       }}
                     >
                       {suggestion}
@@ -390,13 +432,13 @@ const PickEntry = ({
                 value={participant.player1 || ''}
                 onChange={(e) => {
                   updateField('player1', e.target.value);
-                  onTeamInput(participantId, e.target.value, participant.sport);
+                  onTeamInput(`${participantId}-player1`, e.target.value, participant.sport);
                 }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="First player/team name"
               />
-              {showSuggestions[`team-${participantId}`] && suggestions.length > 0 && (
+              {showSuggestions[`team-${participantId}-player1`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
                     <div
@@ -404,7 +446,7 @@ const PickEntry = ({
                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
                       onClick={() => {
                         updateField('player1', suggestion);
-                        onSelectSuggestion(participantId, 'team', suggestion);
+                        onSelectSuggestion(`${participantId}-player1`, 'team', suggestion);
                       }}
                     >
                       {suggestion}
@@ -420,13 +462,13 @@ const PickEntry = ({
                 value={participant.player2 || ''}
                 onChange={(e) => {
                   updateField('player2', e.target.value);
-                  onTeamInput(participantId, e.target.value, participant.sport);
+                  onTeamInput(`${participantId}-player2`, e.target.value, participant.sport);
                 }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="Second player/team name"
               />
-              {showSuggestions[`team-${participantId}`] && suggestions.length > 0 && (
+              {showSuggestions[`team-${participantId}-player2`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
                     <div
@@ -434,7 +476,7 @@ const PickEntry = ({
                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
                       onClick={() => {
                         updateField('player2', suggestion);
-                        onSelectSuggestion(participantId, 'team', suggestion);
+                        onSelectSuggestion(`${participantId}-player2`, 'team', suggestion);
                       }}
                     >
                       {suggestion}
@@ -506,13 +548,13 @@ const PickEntry = ({
                 value={participant.player1 || ''}
                 onChange={(e) => {
                   updateField('player1', e.target.value);
-                  onTeamInput(participantId, e.target.value, participant.sport);
+                  onTeamInput(`${participantId}-player1`, e.target.value, participant.sport);
                 }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="First player/team name"
               />
-              {showSuggestions[`team-${participantId}`] && suggestions.length > 0 && (
+              {showSuggestions[`team-${participantId}-player1`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
                     <div
@@ -520,7 +562,7 @@ const PickEntry = ({
                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
                       onClick={() => {
                         updateField('player1', suggestion);
-                        onSelectSuggestion(participantId, 'team', suggestion);
+                        onSelectSuggestion(`${participantId}-player1`, 'team', suggestion);
                       }}
                     >
                       {suggestion}
@@ -536,13 +578,13 @@ const PickEntry = ({
                 value={participant.player2 || ''}
                 onChange={(e) => {
                   updateField('player2', e.target.value);
-                  onTeamInput(participantId, e.target.value, participant.sport);
+                  onTeamInput(`${participantId}-player2`, e.target.value, participant.sport);
                 }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="Second player/team name"
               />
-              {showSuggestions[`team-${participantId}`] && suggestions.length > 0 && (
+              {showSuggestions[`team-${participantId}-player2`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
                     <div
@@ -550,7 +592,7 @@ const PickEntry = ({
                       className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
                       onClick={() => {
                         updateField('player2', suggestion);
-                        onSelectSuggestion(participantId, 'team', suggestion);
+                        onSelectSuggestion(`${participantId}-player2`, 'team', suggestion);
                       }}
                     >
                       {suggestion}
