@@ -536,52 +536,21 @@ export const useESPN = () => {
           const boxscoreData = await boxscoreResponse.json();
           
           // Get player stats from boxscore
-          const allPlayers = [];
-          boxscoreData.boxscore?.players?.forEach(team => {
-            team.statistics?.forEach(statCategory => {
-              statCategory.athletes?.forEach(athlete => {
-                allPlayers.push({
-                  name: athlete.athlete?.displayName || athlete.athlete?.name,
-                  stats: athlete.stats || [],
-                  labels: statCategory.labels || []
-                });
-              });
-            });
-          });
-          
-          // Check for player1 - try ALL matching entries
+          // Check for player1 using the existing extractPlayerStat function
           if (!player1Found) {
-            const matchingPlayer1Entries = allPlayers.filter(p => 
-              p.name.toLowerCase().includes(player1.toLowerCase()) || 
-              player1.toLowerCase().includes(p.name.toLowerCase())
-            );
-            
-            for (const entry of matchingPlayer1Entries) {
-              const stat = getStatValue(entry.stats, player1PropType, sport, entry.labels);
-              if (stat !== null) {
-                player1Stat = stat;
-                player1Found = true;
-                console.log(`✅ Found ${player1}: ${player1PropType} = ${player1Stat}`);
-                break;
-              }
+            player1Stat = extractPlayerStat(boxscoreData.boxscore, player1, player1PropType, sport);
+            if (player1Stat !== null) {
+              player1Found = true;
+              console.log(`✅ Found ${player1}: ${player1PropType} = ${player1Stat}`);
             }
           }
           
-          // Check for player2 - try ALL matching entries
+          // Check for player2 using the existing extractPlayerStat function
           if (!player2Found) {
-            const matchingPlayer2Entries = allPlayers.filter(p => 
-              p.name.toLowerCase().includes(player2.toLowerCase()) || 
-              player2.toLowerCase().includes(p.name.toLowerCase())
-            );
-            
-            for (const entry of matchingPlayer2Entries) {
-              const stat = getStatValue(entry.stats, player2PropType, sport, entry.labels);
-              if (stat !== null) {
-                player2Stat = stat;
-                player2Found = true;
-                console.log(`✅ Found ${player2}: ${player2PropType} = ${player2Stat}`);
-                break;
-              }
+            player2Stat = extractPlayerStat(boxscoreData.boxscore, player2, player2PropType, sport);
+            if (player2Stat !== null) {
+              player2Found = true;
+              console.log(`✅ Found ${player2}: ${player2PropType} = ${player2Stat}`);
             }
           }
           
@@ -696,52 +665,21 @@ export const useESPN = () => {
           const boxscoreResponse = await fetch(boxscoreUrl);
           const boxscoreData = await boxscoreResponse.json();
           
-          const allPlayers = [];
-          boxscoreData.boxscore?.players?.forEach(team => {
-            team.statistics?.forEach(statCategory => {
-              statCategory.athletes?.forEach(athlete => {
-                allPlayers.push({
-                  name: athlete.athlete?.displayName || athlete.athlete?.name,
-                  stats: athlete.stats || [],
-                  labels: statCategory.labels || []
-                });
-              });
-            });
-          });
-          
-          // Check for player1 - try ALL matching entries
+          // Check for player1 using the existing extractPlayerStat function
           if (!player1Found) {
-            const matchingPlayer1Entries = allPlayers.filter(p => 
-              p.name.toLowerCase().includes(player1.toLowerCase()) || 
-              player1.toLowerCase().includes(p.name.toLowerCase())
-            );
-            
-            for (const entry of matchingPlayer1Entries) {
-              const stat = getStatValue(entry.stats, propType, sport, entry.labels);
-              if (stat !== null) {
-                player1Stat = stat;
-                player1Found = true;
-                console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
-                break;
-              }
+            player1Stat = extractPlayerStat(boxscoreData.boxscore, player1, propType, sport);
+            if (player1Stat !== null) {
+              player1Found = true;
+              console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
             }
           }
           
-          // Check for player2 - try ALL matching entries
+          // Check for player2 using the existing extractPlayerStat function
           if (!player2Found) {
-            const matchingPlayer2Entries = allPlayers.filter(p => 
-              p.name.toLowerCase().includes(player2.toLowerCase()) || 
-              player2.toLowerCase().includes(p.name.toLowerCase())
-            );
-            
-            for (const entry of matchingPlayer2Entries) {
-              const stat = getStatValue(entry.stats, propType, sport, entry.labels);
-              if (stat !== null) {
-                player2Stat = stat;
-                player2Found = true;
-                console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
-                break;
-              }
+            player2Stat = extractPlayerStat(boxscoreData.boxscore, player2, propType, sport);
+            if (player2Stat !== null) {
+              player2Found = true;
+              console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
             }
           }
           
@@ -842,64 +780,21 @@ export const useESPN = () => {
           const boxscoreResponse = await fetch(boxscoreUrl);
           const boxscoreData = await boxscoreResponse.json();
           
-          const allPlayers = [];
-          boxscoreData.boxscore?.players?.forEach(team => {
-            team.statistics?.forEach(statCategory => {
-              statCategory.athletes?.forEach(athlete => {
-                allPlayers.push({
-                  name: athlete.athlete?.displayName || athlete.athlete?.name,
-                  stats: athlete.stats || [],
-                  labels: statCategory.labels || []
-                });
-              });
-            });
-          });
-          
-          // Check for player1 - try ALL matching entries
+          // Check for player1 using the existing extractPlayerStat function
           if (!player1Found) {
-            const matchingPlayer1Entries = allPlayers.filter(p => 
-              p.name.toLowerCase().includes(player1.toLowerCase()) || 
-              player1.toLowerCase().includes(p.name.toLowerCase())
-            );
-            
-            console.log(`🔍 Found ${matchingPlayer1Entries.length} entries for player1 "${player1}"`);
-            
-            for (const entry of matchingPlayer1Entries) {
-              const stat = getStatValue(entry.stats, propType, sport, entry.labels);
-              if (stat !== null) {
-                player1Stat = stat;
-                player1Found = true;
-                console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
-                break;
-              }
-            }
-            
-            if (!player1Found && matchingPlayer1Entries.length > 0) {
-              console.log(`❌ Found player1 "${player1}" but prop type "${propType}" not in any stat category`);
+            player1Stat = extractPlayerStat(boxscoreData.boxscore, player1, propType, sport);
+            if (player1Stat !== null) {
+              player1Found = true;
+              console.log(`✅ Found ${player1}: ${propType} = ${player1Stat}`);
             }
           }
           
-          // Check for player2 - try ALL matching entries
+          // Check for player2 using the existing extractPlayerStat function
           if (!player2Found) {
-            const matchingPlayer2Entries = allPlayers.filter(p => 
-              p.name.toLowerCase().includes(player2.toLowerCase()) || 
-              player2.toLowerCase().includes(p.name.toLowerCase())
-            );
-            
-            console.log(`🔍 Found ${matchingPlayer2Entries.length} entries for player2 "${player2}"`);
-            
-            for (const entry of matchingPlayer2Entries) {
-              const stat = getStatValue(entry.stats, propType, sport, entry.labels);
-              if (stat !== null) {
-                player2Stat = stat;
-                player2Found = true;
-                console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
-                break;
-              }
-            }
-            
-            if (!player2Found && matchingPlayer2Entries.length > 0) {
-              console.log(`❌ Found player2 "${player2}" but prop type "${propType}" not in any stat category`);
+            player2Stat = extractPlayerStat(boxscoreData.boxscore, player2, propType, sport);
+            if (player2Stat !== null) {
+              player2Found = true;
+              console.log(`✅ Found ${player2}: ${propType} = ${player2Stat}`);
             }
           }
           
