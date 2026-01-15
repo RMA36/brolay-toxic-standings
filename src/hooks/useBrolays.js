@@ -20,10 +20,15 @@ export const useBrolays = (db) => {
     const unsubscribe = onSnapshot(
       brolaysRef,
       (snapshot) => {
-        const brolaysData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const brolaysData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          // Remove any 'id' field from the document data to prevent conflicts
+          const { id: _, ...dataWithoutId } = data;
+          return {
+            ...dataWithoutId,
+            id: doc.id  // Always use Firebase's document ID
+          };
+        });
         setParlays(brolaysData);
         setLoading(false);
       },

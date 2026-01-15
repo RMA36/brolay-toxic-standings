@@ -1640,8 +1640,10 @@ const importFromCSV = async (csvText) => {
     // Save all to Firebase
     setSaving(true);
     for (const parlay of importedParlays) {
+      // Remove 'id' field if it exists to let Firebase generate its own
+      const { id, ...parlayWithoutId } = parlay;
       const parlaysCollection = collection(db, 'parlays');
-      await addDoc(parlaysCollection, parlay);
+      await addDoc(parlaysCollection, parlayWithoutId);
     }
     // Learn teams/players from imported data
     const newTeams = [...learnedTeams];
