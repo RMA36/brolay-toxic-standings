@@ -2688,8 +2688,8 @@ const renderAllBrolays = () => {
       formatBetDescription={formatBetDescription}
       setEditingParlay={setEditingParlay}
       deleteParlay={deleteParlay}
-      handleAutoUpdate={handleESPNSync}
-      autoUpdating={isSyncing}
+      handleAutoUpdate={handleAutoUpdate}
+      autoUpdating={autoUpdating}
       isMobile={isMobile}
       filters={filters}
       setFilters={setFilters}
