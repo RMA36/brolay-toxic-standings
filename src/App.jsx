@@ -211,7 +211,7 @@ const App = () => {
     autoUpdatePendingPicks,
     matchTeamName 
   } = useESPN();
-  const { stats, calculateStatsForPlayer } = useStats(parlays, editingParlay);
+  const { stats, calculateStatsForPlayer } = useStats(parlays, players, editingParlay);
   const { fetchOddsFromTheOddsAPI } = useOdds(THE_ODDS_API_KEY, matchTeamName);
   const moneyMaker = useMemo(() => findMoneyMaker(parlays, players), [parlays, players]);
   const dangerZone = useMemo(() => findDangerZone(parlays, players), [parlays, players]);

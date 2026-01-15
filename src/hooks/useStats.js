@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
-import { PLAYERS } from '../constants/sports';
 
 /**
  * Custom hook for calculating statistics from brolay (parlay) data
  *
  * @param {Array} parlays - Array of parlay objects from Firebase
+ * @param {Array} players - Array of player names
  * @param {Object} editingParlay - Currently editing parlay (excluded from calculations)
  * @returns {Object} Statistics object with player stats and helper functions
  */
-export const useStats = (parlays, editingParlay = null) => {
+export const useStats = (parlays, players, editingParlay = null) => {
 
   /**
    * Calculate comprehensive statistics for all players
@@ -16,7 +16,7 @@ export const useStats = (parlays, editingParlay = null) => {
    */
   const calculateStats = useMemo(() => {
     const stats = {};
-    PLAYERS.forEach(player => {
+    players.forEach(player => {
       stats[player] = {
         totalPicks: 0,
         wins: 0,
@@ -163,7 +163,7 @@ export const useStats = (parlays, editingParlay = null) => {
     });
 
     return stats;
-  }, [parlays, editingParlay]);
+  }, [parlays, players, editingParlay]);
 
   /**
    * Calculate detailed statistics for a specific player
