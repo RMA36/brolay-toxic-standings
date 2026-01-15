@@ -1318,7 +1318,7 @@ const formatBetDescription = (participant) => {
   switch(participant.betType) {
     case 'Spread':
       const sign = participant.favorite === 'Favorite' ? '-' : '+';
-      return `${participant.favorite} ${sign}${participant.spread}`;
+      return `${sign}${participant.spread}`;
     case 'Total':
       return `${participant.overUnder} ${participant.total}`;
     case 'First Half Moneyline':
