@@ -1317,7 +1317,8 @@ const changeMonth = (direction) => {
 const formatBetDescription = (participant) => {
   switch(participant.betType) {
     case 'Spread':
-      return `${participant.favorite} ${participant.spread}`;
+      const sign = participant.favorite === 'Favorite' ? '-' : '+';
+      return `${participant.favorite} ${sign}${participant.spread}`;
     case 'Total':
       return `${participant.overUnder} ${participant.total}`;
     case 'First Half Moneyline':

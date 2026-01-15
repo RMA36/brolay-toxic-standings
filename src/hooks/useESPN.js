@@ -49,19 +49,21 @@ export const useESPN = () => {
   const determineSpreadResult = (team, favorite, spread, homeComp, awayComp, homeScore, awayScore) => {
     const spreadValue = parseFloat(spread);
     if (isNaN(spreadValue)) return 'pending';
-    
+
     const teamIsHome = matchTeamName(team, homeComp.team.displayName);
     const teamIsFavorite = favorite === 'Favorite';
-    
+
     let margin;
     if (teamIsHome) {
       margin = homeScore - awayScore;
     } else {
       margin = awayScore - homeScore;
     }
-    
-    const adjustedMargin = teamIsFavorite ? margin + spreadValue : margin - spreadValue;
-    
+
+    // Favorite needs to win by MORE than spread (margin - spread)
+    // Dog gets the points added (margin + spread)
+    const adjustedMargin = teamIsFavorite ? margin - spreadValue : margin + spreadValue;
+
     if (adjustedMargin > 0) return 'win';
     if (adjustedMargin < 0) return 'loss';
     return 'push';
