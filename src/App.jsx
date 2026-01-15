@@ -31,6 +31,7 @@ import PickEntry from './components/forms/PickEntry';
 import Rankings from './pages/Rankings';
 import IndividualDashboard from './pages/IndividualDashboard';
 import GroupDashboard from './pages/GroupDashboard';
+import AllBrolays from './pages/AllBrolays';
 
 import { useBrolays } from './hooks/useBrolays';
 import { useESPN } from './hooks/useESPN';
@@ -2664,6 +2665,39 @@ const renderSearch = () => {
         </Card>
       )}
     </div>
+  );
+};
+
+const renderAllBrolays = () => {
+  return (
+    <AllBrolays
+      parlays={parlays}
+      players={players}
+      sports={sports}
+      applyFilters={applyFilters}
+      calendarMonth={calendarMonth}
+      setCalendarMonth={setCalendarMonth}
+      getCalendarDays={getCalendarDays}
+      selectedCalendarDate={selectedCalendarDate}
+      setSelectedCalendarDate={setSelectedCalendarDate}
+      calendarView={calendarView}
+      setCalendarView={setCalendarView}
+      changeMonth={changeMonth}
+      formatCalendarDate={formatCalendarDate}
+      getBrolaysForDate={getBrolaysForDate}
+      formatBetDescription={formatBetDescription}
+      setEditingParlay={setEditingParlay}
+      deleteParlay={deleteParlay}
+      handleAutoUpdate={handleESPNSync}
+      autoUpdating={isSyncing}
+      isMobile={isMobile}
+      filters={filters}
+      setFilters={setFilters}
+      filtersExpanded={filtersExpanded}
+      setFiltersExpanded={setFiltersExpanded}
+      preloadedTeams={PRELOADED_TEAMS}
+      learnedTeams={learnedTeams}
+    />
   );
 };
 
