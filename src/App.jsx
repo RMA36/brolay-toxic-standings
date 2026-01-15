@@ -285,6 +285,7 @@ const [refreshing, setRefreshing] = useState(false);
 const [pullStartY, setPullStartY] = useState(0);
 const [pullDistance, setPullDistance] = useState(0);
 const [brolaysToShow, setBrolaysToShow] = useState(10);
+const [settledBrolaysToShow, setSettledBrolaysToShow] = useState(10);
 const [mobileDropdownOpen, setMobileDropdownOpen] = useState(null);
 
 // Detect mobile device
@@ -1153,29 +1154,46 @@ const updateParlayResult = async (parlayId, participantId, newResult) => {
   };
   
   const toggleSettlement = async (parlayId) => {
-  const updatedParlays = parlays.map(parlay => {
-    if (parlay.id === parlayId) {
-      const newSettled = !parlay.settled;
-      return { 
-        ...parlay, 
-        settled: newSettled,
-        settledAt: newSettled ? new Date().toISOString() : null
-      };
-    }
-    return parlay;
+  console.log('🔄 Attempting to toggle settlement for parlay ID:', parlayId);
+
+  // Find the parlay in current state
+  const parlayToUpdate = parlays.find(p => p.id === parlayId);
+  if (!parlayToUpdate) {
+    console.error('❌ Parlay not found in state:', parlayId);
+    alert('Error: Parlay not found');
+    return;
+  }
+
+  console.log('📋 Found parlay:', {
+    id: parlayToUpdate.id,
+    date: parlayToUpdate.date,
+    currentSettled: parlayToUpdate.settled
   });
-  
-  // Update in Firebase
-  const parlayToUpdate = updatedParlays.find(p => p.id === parlayId);
-  if (parlayToUpdate && parlayToUpdate.id) {
-    try {
-      await updateBrolay(parlayToUpdate.id, {
-        settled: parlayToUpdate.settled,
-        settledAt: parlayToUpdate.settledAt
-      });
-    } catch (error) {
-      console.error('Error updating settlement:', error);
+
+  const newSettled = !parlayToUpdate.settled;
+
+  try {
+    setSaving(true);
+
+    // Update in Firebase first
+    const result = await updateBrolay(parlayToUpdate.id, {
+      settled: newSettled,
+      settledAt: newSettled ? new Date().toISOString() : null
+    });
+
+    if (!result.success) {
+      console.error('❌ Firebase update failed:', result.error);
+      alert(`Error updating brolay: ${result.error.message}`);
+      setSaving(false);
+      return;
     }
+
+    console.log('✅ Successfully toggled settlement to:', newSettled);
+    setSaving(false);
+  } catch (error) {
+    console.error('❌ Error updating settlement:', error);
+    alert(`Error: ${error.message}`);
+    setSaving(false);
   }
 };
   
@@ -5658,35 +5676,78 @@ return (
           {settledParlays.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No recently settled brolays</p>
           ) : (
-            settledParlays.slice(0, 10).map(parlay => {
-              const participants = Object.values(parlay.participants);
-              const winners = participants.filter(p => p.result === 'win');
-              const losers = participants.filter(p => p.result === 'loss');
-              const won = losers.length === 0 && winners.length > 0;
-              
-              return (
-                <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm text-white">{formatDateForDisplay(parlay.date)}</div>
-                      <div className="text-xs text-gray-400">
-                        {won ? `Winners paid by ${parlay.placedBy || 'Unknown'}: ${winners.map(w => w.player).join(', ')}` 
-                             : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
+            <>
+              {settledParlays
+                .sort((a, b) => {
+                  // Sort by settledAt date (most recent first), fallback to date
+                  const dateA = new Date(a.settledAt || a.date);
+                  const dateB = new Date(b.settledAt || b.date);
+                  return dateB - dateA;
+                })
+                .slice(0, settledBrolaysToShow)
+                .map(parlay => {
+                  const participants = Object.values(parlay.participants);
+                  const winners = participants.filter(p => p.result === 'win');
+                  const losers = participants.filter(p => p.result === 'loss');
+                  const won = losers.length === 0 && winners.length > 0;
+
+                  return (
+                    <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="font-semibold text-sm text-white">{formatDateForDisplay(parlay.date)}</div>
+                          <div className="text-xs text-gray-400">
+                            {won ? `Winners paid by ${parlay.placedBy || 'Unknown'}: ${winners.map(w => w.player).join(', ')}`
+                                 : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => toggleSettlement(parlay.id)}
+                          disabled={saving}
+                          variant="danger"
+                          size="small"
+                          className={`ml-3 whitespace-nowrap ${isMobile ? 'min-h-[44px]' : ''}`}
+                        >
+                          Unsettle
+                        </Button>
                       </div>
                     </div>
-                    <Button
-                      onClick={() => toggleSettlement(parlay.id)}
-                      disabled={saving}
-                      variant="danger"
-                      size="small"
-                      className={`ml-3 whitespace-nowrap ${isMobile ? 'min-h-[44px]' : ''}`}
-                    >
-                      Unsettle
-                    </Button>
-                  </div>
+                  );
+                })}
+
+              {/* Pagination controls */}
+              {settledParlays.length > settledBrolaysToShow && (
+                <div className="flex justify-center gap-2 mt-4 pt-4 border-t border-gray-700">
+                  <Button
+                    onClick={() => setSettledBrolaysToShow(prev => prev + 10)}
+                    variant="outline"
+                    size="small"
+                  >
+                    Show 10 More
+                  </Button>
+                  <Button
+                    onClick={() => setSettledBrolaysToShow(settledParlays.length)}
+                    variant="outline"
+                    size="small"
+                  >
+                    Show All ({settledParlays.length})
+                  </Button>
                 </div>
-              );
-            })
+              )}
+
+              {/* Show Less button when expanded */}
+              {settledBrolaysToShow > 10 && settledBrolaysToShow >= settledParlays.length && (
+                <div className="flex justify-center mt-4 pt-4 border-t border-gray-700">
+                  <Button
+                    onClick={() => setSettledBrolaysToShow(10)}
+                    variant="outline"
+                    size="small"
+                  >
+                    Show Less
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </Card>
