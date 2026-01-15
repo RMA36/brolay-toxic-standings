@@ -211,8 +211,6 @@ const App = () => {
     autoUpdatePendingPicks,
     matchTeamName 
   } = useESPN();
-  const { stats, calculateStatsForPlayer } = useStats(parlays, players, editingParlay);
-  const { fetchOddsFromTheOddsAPI } = useOdds(THE_ODDS_API_KEY, matchTeamName);
   const moneyMaker = useMemo(() => findMoneyMaker(parlays, players), [parlays, players]);
   const dangerZone = useMemo(() => findDangerZone(parlays, players), [parlays, players]);
   const currentDay = useMemo(() => getCurrentDayOfWeek(), []);
@@ -225,6 +223,8 @@ const App = () => {
   const [learnedTeams, setLearnedTeams] = useState([]);
   const [learnedPropTypes, setLearnedPropTypes] = useState([]);
   const [editingParlay, setEditingParlay] = useState(null);
+  const { stats, calculateStatsForPlayer } = useStats(parlays, players, editingParlay);
+  const { fetchOddsFromTheOddsAPI } = useOdds(THE_ODDS_API_KEY, matchTeamName);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
