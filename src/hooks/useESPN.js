@@ -1141,18 +1141,27 @@ export const useESPN = () => {
       for (const event of data.events) {
         const competition = event.competitions[0];
         const competitors = competition.competitors;
-        
+
         if (competition.status.type.completed !== true) {
+          console.log('⏭️ Skipping incomplete game');
           continue;
         }
-        
+
         const homeTeamName = competitors.find(c => c.homeAway === 'home')?.team.displayName || '';
         const awayTeamName = competitors.find(c => c.homeAway === 'away')?.team.displayName || '';
-        
+
+        console.log(`🏀 Checking game: ${awayTeamName} @ ${homeTeamName}`);
+
         // For totals, match BOTH teams to ensure correct game
         if (betType === 'Total') {
-          if (matchTeamName(awayTeam, awayTeamName) && matchTeamName(homeTeam, homeTeamName)) {
+          console.log(`🎯 Total bet - Looking for: ${awayTeam} @ ${homeTeam}`);
+          const awayMatch = matchTeamName(awayTeam, awayTeamName);
+          const homeMatch = matchTeamName(homeTeam, homeTeamName);
+          console.log(`   Away match (${awayTeam} vs ${awayTeamName}): ${awayMatch}`);
+          console.log(`   Home match (${homeTeam} vs ${homeTeamName}): ${homeMatch}`);
+          if (awayMatch && homeMatch) {
             relevantGame = competition;
+            console.log('✅ MATCH FOUND!');
             break;
           }
         } else {

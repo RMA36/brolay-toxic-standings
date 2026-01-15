@@ -1,7 +1,7 @@
 // Core data constants - maintains existing localStorage learning functionality
 
 export const SPORTS = [
-  'NFL', 'NBA', 'MLB', 'NHL', 'NCAAF', 'NCAAB', 'WNBA', 
+  'NFL', 'NBA', 'MLB', 'NHL', 'College Football', 'College Basketball', 'WNBA',
   'Soccer', 'Tennis', 'Golf', 'Rugby', 'UFC'
 ];
 

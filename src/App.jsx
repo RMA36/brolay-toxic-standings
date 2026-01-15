@@ -808,8 +808,8 @@ const handleTouchEnd = async () => {
         propType: '',
         line: '',
         odds: '',
-        yesNoRuns: 'Yes',
-        quarter: '1Q',
+        yesNoRuns: '',
+        quarter: '',
         result: 'pending',
         // Multi-entity prop fields
         player1: '',              // For H2H Prop
@@ -1589,13 +1589,13 @@ const importFromCSV = async (csvText) => {
             // Prop fields
             propType: row[`pick${j}_propType`] || '',
             line: row[`pick${j}_line`] || '',
-            
+
             // First Inning Runs field
-            yesNoRuns: row[`pick${j}_yesNoRuns`] || 'Yes',
-            
+            yesNoRuns: row[`pick${j}_yesNoRuns`] || '',
+
             // Quarter field
-            quarter: row[`pick${j}_quarter`] || '1Q',
-            
+            quarter: row[`pick${j}_quarter`] || '',
+
             // Common fields
             odds: row[`pick${j}_odds`] || '',
             result: row[`pick${j}_result`] || 'pending'
@@ -6912,8 +6912,8 @@ const handleSavePickEdit = async () => {
       propType: editingPick.propType || '',
       line: editingPick.line || '',
       odds: editingPick.odds || '',
-      yesNoRuns: editingPick.yesNoRuns || 'Yes',
-      quarter: editingPick.quarter || '1Q',
+      yesNoRuns: editingPick.yesNoRuns || '',
+      quarter: editingPick.quarter || '',
       result: editingPick.result,
       actualStats: editingPick.actualStats || null,
       autoUpdated: editingPick.autoUpdated || false,
