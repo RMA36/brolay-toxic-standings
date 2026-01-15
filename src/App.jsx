@@ -4,6 +4,7 @@ import { PlusCircle, TrendingUp, Users, Award, AlertCircle, Loader, Menu, X, Ref
 import { getCurrentSportsInSeason, getCurrentDayOfWeek, findMoneyMaker, findDangerZone, getSeasonalTip, formatComboDescription } from './insightsHelper';
 import { tokenizeQuery, findBestTeamMatch, filterByRelevance, calculateRelevanceScore, teamAliases } from './searchUtils';
 
+import { formatDateForDisplay, formatDateForStorage, formatCalendarDate, formatBetDescription, normalizePlayerName, normalizePropType, getStatValue, getCurrentETDate } from './utils/formatters';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, deleteField } from 'firebase/firestore';
 
@@ -26,6 +27,8 @@ import PickEntry from './components/forms/PickEntry';
 
 import { useBrolays } from './hooks/useBrolays';
 import { useESPN } from './hooks/useESPN';
+import { useStats } from './hooks/useStats';
+import { useOdds } from './hooks/useOdds';
 
 // Firebase configuration
 const firebaseConfig = {
@@ -208,6 +211,8 @@ const App = () => {
     autoUpdatePendingPicks,
     matchTeamName 
   } = useESPN();
+  const { stats, calculateStatsForPlayer } = useStats(parlays, editingParlay);
+  const { fetchOddsFromTheOddsAPI } = useOdds(THE_ODDS_API_KEY, matchTeamName);
   const moneyMaker = useMemo(() => findMoneyMaker(parlays, players), [parlays, players]);
   const dangerZone = useMemo(() => findDangerZone(parlays, players), [parlays, players]);
   const currentDay = useMemo(() => getCurrentDayOfWeek(), []);
@@ -248,30 +253,10 @@ const App = () => {
   const [comparisonMode, setComparisonMode] = useState(false);
   const [selectedForComparison, setSelectedForComparison] = useState(new Set());
   const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
-
-    // Helper function to format date to mm/dd/yyyy for display
-    const formatDateForDisplay = (dateStr) => {
-      if (!dateStr) return '';
-      const [year, month, day] = dateStr.split('-');
-      return `${month}/${day}/${year}`;
-    };
-    
-    // Helper function to convert mm/dd/yyyy to yyyy-mm-dd for storage
-    const formatDateForStorage = (dateStr) => {
-      if (!dateStr) return '';
-      if (dateStr.includes('-')) return dateStr; // Already in storage format
-      const [month, day, year] = dateStr.split('/');
-      return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
     };
   
     const [newParlay, setNewParlay] = useState({
-  date: (() => {
-    const etDate = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
-    const year = etDate.getFullYear();
-    const month = String(etDate.getMonth() + 1).padStart(2, '0');
-    const day = String(etDate.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  })(),
+  date: getCurrentETDate(),
   betAmount: 10,
   totalPayout: 0,
   participants: {},
@@ -335,14 +320,6 @@ useEffect(() => {
 // Pre-loaded teams and common values
 const preloadedTeams = PRELOADED_TEAMS; // Now imported from constants/sports
 const commonPropTypes = COMMON_PROP_TYPES; // Now imported from constants/sports
-const normalizePlayerName = (name) => {
-  if (!name) return '';
-  return name
-    .toLowerCase()
-    .replace(/\s+(jr\.?|sr\.?|ii|iii|iv)$/i, '')
-    .replace(/[^a-z\s]/g, '')
-    .trim();
-};
 
 const matchPlayerName = (pickPlayer, apiPlayer) => {
   if (!pickPlayer || !apiPlayer) return false;
@@ -364,284 +341,6 @@ const matchPlayerName = (pickPlayer, apiPlayer) => {
   return false;
 };
 
-const normalizePropType = (propType) => {
-  if (!propType) return '';
-  const normalized = propType.toLowerCase().trim();
-  
-  const mappings = PROP_TYPE_VARIATIONS; // Now imported from constants/sports
-
-  // Check if input is already a canonical form
-  if (mappings[normalized]) {
-    return normalized;
-  }
-  
-  // Check if input is a variation - find its canonical form
-  for (const [canonical, variations] of Object.entries(mappings)) {
-    if (variations.includes(normalized)) {
-      return canonical;
-    }
-  }
-  
-  // Return as-is if no match found
-  return normalized;
-};
-
-const getStatValue = (stats, propType, sport, labels) => {
-  if (!stats || !labels || !propType) return null;
-  
-  const statMappings = ESPN_STAT_MAPPINGS; // Now imported from constants/sports
-  
-  const sportMappings = statMappings[sport] || {};
-  const possibleLabels = sportMappings[propType] || [];
-  
-  if (propType === 'passing completions') {
-    const index = labels.findIndex(label => 
-      label === 'C/ATT' || label.toUpperCase() === 'COMP'
-    );
-    
-    if (index !== -1 && stats[index] !== undefined) {
-      const value = stats[index].toString().split('/')[0];
-      const parsed = parseFloat(value);
-      if (!isNaN(parsed)) return parsed;
-    }
-  }
-  
-  for (const possibleLabel of possibleLabels) {
-    const index = labels.findIndex(label => 
-      label.toUpperCase() === possibleLabel.toUpperCase() ||
-      label.toUpperCase().includes(possibleLabel.toUpperCase())
-    );
-    
-    if (index !== -1 && stats[index] !== undefined) {
-      const value = parseFloat(stats[index]);
-      if (!isNaN(value)) return value;
-    }
-  }
-  
-  return null;
-};
-
-const fetchOddsFromTheOddsAPI = async (participant, gameDate, eventsData = null) => {
-  const { sport, betType, team, awayTeam, homeTeam, propType, overUnder, line, favorite } = participant;
-  
-  if (!THE_ODDS_API_KEY || THE_ODDS_API_KEY === 'YOUR_API_KEY_HERE') {
-    console.warn('The Odds API key not configured');
-    return null;
-  }
-  
-  try {
-    // Comprehensive sport mapping
-    const sportMap = {
-      'NFL': 'americanfootball_nfl',
-      'NBA': 'basketball_nba',
-      'MLB': 'baseball_mlb',
-      'NHL': 'icehockey_nhl',
-      'College Football': 'americanfootball_ncaaf',
-      'College Basketball': 'basketball_ncaab',
-      'College Basketball (Women\'s)': 'basketball_wncaab',
-      'WNBA': 'basketball_wnba',
-      'Soccer': 'soccer_usa_mls',
-      'Soccer (Women\'s)': 'soccer_usa_nwsl',
-      'College Baseball': 'baseball_ncaa'
-    };
-    
-    const oddsApiSport = sportMap[sport];
-    if (!oddsApiSport) {
-      console.log(`Sport ${sport} not supported by The Odds API`);
-      return null;
-    }
-    
-    // Use pre-fetched events if available, otherwise fetch them
-    if (!eventsData) {
-      const gameDateObj = new Date(gameDate + 'T00:00:00');
-      const commenceTimeFrom = gameDateObj.toISOString();
-      const gameDateNext = new Date(gameDateObj);
-      gameDateNext.setDate(gameDateNext.getDate() + 1);
-      const commenceTimeTo = gameDateNext.toISOString();
-      
-      const eventsUrl = `https://api.the-odds-api.com/v4/sports/${oddsApiSport}/events?apiKey=${THE_ODDS_API_KEY}&commenceTimeFrom=${commenceTimeFrom}&commenceTimeTo=${commenceTimeTo}`;
-      
-      console.log(`Fetching events for ${sport} on ${gameDate}`);
-      const eventsResponse = await fetch(eventsUrl);
-      eventsData = await eventsResponse.json();
-    }
-    
-    if (!eventsData || eventsData.length === 0) {
-      console.log('No events found for this date');
-      return null;
-    }
-    
-    // Find the matching game
-    let matchingEvent = null;
-    for (const event of eventsData) {
-      if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total') {
-        // Match by both teams
-        if (matchTeamName(awayTeam, event.away_team) && matchTeamName(homeTeam, event.home_team)) {
-          matchingEvent = event;
-          break;
-        }
-      } else {
-        // Match by single team
-        if (matchTeamName(team, event.home_team) || matchTeamName(team, event.away_team)) {
-          matchingEvent = event;
-          break;
-        }
-      }
-    }
-    
-    if (!matchingEvent) {
-      console.log('No matching game found');
-      return null;
-    }
-    
-    console.log(`Found matching event: ${matchingEvent.away_team} @ ${matchingEvent.home_team}`);
-    
-    // Determine which markets to fetch based on bet type
-    let markets = [];
-    if (betType === 'Spread') {
-      markets = ['spreads'];
-    } else if (betType === 'Moneyline' || betType === 'First Half Moneyline' || betType === 'Quarter Moneyline') {
-      markets = ['h2h'];
-    } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'Quarter Total') {
-      markets = ['totals'];
-    } else if (betType === 'Prop Bet') {
-      // Comprehensive prop type mapping
-      const propTypeMapping = ODDS_API_PROP_MAPPINGS; // Now imported from constants/sports
-      
-      const normalizedPropType = normalizePropType(propType);
-      const oddsApiMarket = propTypeMapping[normalizedPropType];
-      
-      if (!oddsApiMarket) {
-        console.log(`Prop type "${propType}" (normalized: "${normalizedPropType}") not available in The Odds API`);
-        return null;
-      }
-      
-      markets = [oddsApiMarket];
-    } else {
-      console.log(`Bet type ${betType} not yet supported`);
-      return null;
-    }
-    
-    // Fetch odds for the specific event and markets (FanDuel primary, DraftKings secondary)
-    const oddsUrl = `https://api.the-odds-api.com/v4/sports/${oddsApiSport}/events/${matchingEvent.id}/odds?apiKey=${THE_ODDS_API_KEY}&regions=us&markets=${markets.join(',')}&oddsFormat=american&bookmakers=fanduel,draftkings`;
-    
-    console.log(`Fetching odds for markets: ${markets.join(', ')}`);
-    const oddsResponse = await fetch(oddsUrl);
-    const oddsData = await oddsResponse.json();
-    
-    if (!oddsData.bookmakers || oddsData.bookmakers.length === 0) {
-      console.log('No bookmaker odds available');
-      return null;
-    }
-    
-    // Try FanDuel first, then DraftKings as fallback
-    let bookmaker = oddsData.bookmakers.find(b => b.key === 'fanduel');
-    let bookmakerName = 'FanDuel';
-    
-    if (!bookmaker || !bookmaker.markets) {
-      console.log('FanDuel not available, trying DraftKings...');
-      bookmaker = oddsData.bookmakers.find(b => b.key === 'draftkings');
-      bookmakerName = 'DraftKings';
-      
-      if (!bookmaker || !bookmaker.markets) {
-        console.log('Neither FanDuel nor DraftKings available');
-        return null;
-      }
-    }
-    
-    console.log(`Using ${bookmakerName} odds`);
-    
-    // Process based on bet type
-    if (betType === 'Spread') {
-      const spreadMarket = bookmaker.markets.find(m => m.key === 'spreads');
-      if (!spreadMarket) return null;
-      
-      const pickedTeamIsHome = matchTeamName(team, matchingEvent.home_team);
-      const pickedTeamName = pickedTeamIsHome ? matchingEvent.home_team : matchingEvent.away_team;
-      
-      const outcome = spreadMarket.outcomes.find(o => o.name === pickedTeamName);
-      if (!outcome) return null;
-      
-      // Verify spread matches (within 0.5 points)
-      const pickSpread = parseFloat(line);
-      const oddsSpread = Math.abs(parseFloat(outcome.point));
-      
-      if (Math.abs(pickSpread - oddsSpread) <= 0.5) {
-        console.log(`Found spread odds: ${outcome.price} from ${bookmakerName}`);
-        return { odds: outcome.price, bookmaker: bookmakerName };
-      }
-      
-    } else if (betType === 'Moneyline' || betType === 'First Half Moneyline' || betType === 'Quarter Moneyline') {
-      const moneylineMarket = bookmaker.markets.find(m => m.key === 'h2h');
-      if (!moneylineMarket) return null;
-      
-      const pickedTeamIsHome = matchTeamName(team, matchingEvent.home_team);
-      const pickedTeamName = pickedTeamIsHome ? matchingEvent.home_team : matchingEvent.away_team;
-      
-      const outcome = moneylineMarket.outcomes.find(o => o.name === pickedTeamName);
-      if (outcome) {
-        console.log(`Found moneyline odds: ${outcome.price} from ${bookmakerName}`);
-        return { odds: outcome.price, bookmaker: bookmakerName };
-      }
-      
-    } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'Quarter Total') {
-      const totalsMarket = bookmaker.markets.find(m => m.key === 'totals');
-      if (!totalsMarket) return null;
-      
-      const outcome = totalsMarket.outcomes.find(o => o.name === overUnder);
-      if (!outcome) return null;
-      
-      // Verify total matches (within 0.5 points)
-      const pickTotal = parseFloat(line);
-      const oddsTotal = parseFloat(outcome.point);
-      
-      if (Math.abs(pickTotal - oddsTotal) <= 0.5) {
-        console.log(`Found total odds: ${outcome.price} from ${bookmakerName}`);
-        return { odds: outcome.price, bookmaker: bookmakerName };
-      }
-      
-    } else if (betType === 'Prop Bet') {
-      const market = bookmaker.markets[0]; // We only requested one market
-      if (!market || !market.outcomes) return null;
-      
-      const playerName = participant.team; // For props, player name is in 'team' field
-      
-      // Search for matching player
-      for (const outcome of market.outcomes) {
-        if (!outcome.description) continue;
-        
-        // Fuzzy match player name
-        const outcomePlayerName = outcome.description.toLowerCase();
-        const searchPlayerName = playerName.toLowerCase();
-        
-        if (outcomePlayerName.includes(searchPlayerName) || searchPlayerName.includes(outcomePlayerName)) {
-          // Check if line matches
-          const outcomeLine = parseFloat(outcome.point);
-          const pickLine = parseFloat(line);
-          
-          if (Math.abs(outcomeLine - pickLine) <= 0.5) {
-            // Match over/under direction
-            if ((overUnder === 'Over' && outcome.name === 'Over') ||
-                (overUnder === 'Under' && outcome.name === 'Under')) {
-              console.log(`Found prop odds: ${outcome.price} for ${playerName} ${propType} from ${bookmakerName}`);
-              return { odds: outcome.price, bookmaker: bookmakerName };
-            }
-          }
-        }
-      }
-    }
-    
-    console.log('No matching odds found');
-    return null;
-    
-  } catch (error) {
-    console.error('Error fetching odds from The Odds API:', error);
-    if (error.message && error.message.includes('401')) {
-      console.error('API Key may be invalid or expired');
-    }
-    return null;
-  }
-};
 
 const handleAutoUpdate = async () => {
   const result = await autoUpdatePendingPicks(parlays, updateBrolay);
@@ -1319,11 +1018,6 @@ const getBrolaysForDate = (dateStr) => {
   return parlays.filter(parlay => parlay.date === dateStr);
 };
 
-const formatCalendarDate = (year, month, day) => {
-  const monthStr = String(month + 1).padStart(2, '0');
-  const dayStr = String(day).padStart(2, '0');
-  return `${year}-${monthStr}-${dayStr}`;
-};
 
 const changeMonth = (direction) => {
   const newDate = new Date(calendarMonth);
@@ -1332,62 +1026,6 @@ const changeMonth = (direction) => {
   setSelectedCalendarDate(null); // Clear selection when changing months
 };
   // Helper function to format bet description for display
-const formatBetDescription = (participant) => {
-  switch(participant.betType) {
-    case 'Spread':
-      const sign = participant.favorite === 'Favorite' ? '-' : '+';
-      return `${sign}${participant.spread}`;
-    case 'Total':
-      return `${participant.overUnder} ${participant.total}`;
-    case 'First Half Moneyline':
-      return 'FH ML';
-    case 'First Half Total':
-      return `FH ${participant.overUnder} ${participant.total}`;
-    case 'First Half Team Total':
-      return `FH Team ${participant.overUnder} ${participant.total}`;
-    case 'First Inning Runs':
-      return participant.yesNoRuns === 'Yes' ? 'YRFI' : 'NRFI';
-    case 'Quarter Moneyline':
-      return `${participant.quarter} ML`;
-    case 'Quarter Total':
-      return `${participant.quarter} ${participant.overUnder} ${participant.total}`;
-    case 'Quarter Team Total':
-      return `${participant.quarter} Team ${participant.overUnder} ${participant.total}`;
-    case 'Prop Bet':
-      return `${participant.propType} ${participant.overUnder} ${participant.line}`;
-    case 'H2H Prop': {
-      const opponent = participant.player1 === participant.selectedPlayer ? participant.player2 : participant.player1;
-      const selectedPropType = participant.player1 === participant.selectedPlayer ? participant.player1PropType : participant.player2PropType;
-      const opponentPropType = participant.player1 === participant.selectedPlayer ? participant.player2PropType : participant.player1PropType;
-      
-      // Check if prop types are the same
-      const samePropType = participant.player1PropType === participant.player2PropType;
-      
-      if (participant.h2hLine && participant.h2hLineType) {
-        const sign = participant.h2hLineType === 'Dog' ? '+' : '-';
-        if (samePropType) {
-          return `${selectedPropType}: ${participant.selectedPlayer || '?'} ${sign}${participant.h2hLine} vs ${opponent}`;
-        } else {
-          return `${participant.selectedPlayer || '?'} ${selectedPropType} ${sign}${participant.h2hLine} vs ${opponent} ${opponentPropType}`;
-        }
-      }
-      
-      if (samePropType) {
-        return `${selectedPropType}: ${participant.selectedPlayer || '?'} > ${opponent}`;
-      } else {
-        return `${participant.selectedPlayer || '?'} ${selectedPropType} vs ${opponent} ${opponentPropType}`;
-      }
-    }
-    case 'Either Prop':
-      return `${participant.propType} ${participant.overUnder} ${participant.line} (Either: ${participant.player1 || '?'} OR ${participant.player2 || '?'})`;
-    case 'Combined Prop':
-      return `Combined ${participant.propType} ${participant.overUnder} ${participant.line} (${participant.player1 || '?'} + ${participant.player2 || '?'})`;  
-    case 'Moneyline':
-      return 'ML';
-    default:
-      return '';
-  }
-};
   
 const renderEditModal = () => {
   if (!editingParlay) return null;
@@ -1680,156 +1318,6 @@ const importFromCSV = async (csvText) => {
   }
 };
   
-  const calculateStats = () => {
-    const stats = {};
-    players.forEach(player => {
-      stats[player] = {
-        totalPicks: 0,
-        wins: 0,
-        losses: 0,
-        moneyWon: 0,
-        moneyLost: 0,
-        and1s: 0,
-        and1Cost: 0,
-        bySport: {},
-        byBetType: {},
-        // Multi-entity prop stats
-        h2hProps: { total: 0, wins: 0, losses: 0, pushes: 0 },
-        eitherProps: { total: 0, wins: 0, losses: 0 },
-        combinedProps: { total: 0, wins: 0, losses: 0 },
-        byH2HPropType: {},      // Track by prop type combination
-        byEitherPropType: {},   // Track Either props by prop type
-        byCombinedPropType: {} // Track Combined props by prop type
-      };
-    });
-
-    parlays.forEach(parlay => {
-      // Skip the parlay being edited - it's in draft state
-      if (editingParlay && parlay.id === editingParlay.id) {
-        return;
-      }
-      const participants = Object.values(parlay.participants);
-      const losers = participants.filter(p => p.result === 'loss');
-      const winners = participants.filter(p => p.result === 'win');
-      const parlayWon = losers.length === 0 && winners.length > 0;
-      const and1 = losers.length === 1 && winners.length === participants.length - 1;
-
-      participants.forEach(participant => {
-        if (!participant.player || participant.player === '' || !participant.sport || !participant.betType) return;
-        
-        const playerStats = stats[participant.player];
-        playerStats.totalPicks++;
-
-        if (!playerStats.bySport[participant.sport]) {
-        playerStats.bySport[participant.sport] = { wins: 0, losses: 0, total: 0 };
-        }
-        playerStats.bySport[participant.sport].total++;
-        
-        if (!playerStats.byBetType[participant.betType]) {
-          playerStats.byBetType[participant.betType] = { wins: 0, losses: 0, total: 0 };
-        }
-        playerStats.byBetType[participant.betType].total++;
-
-        // Track multi-entity props
-        if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
-          playerStats.h2hProps.total++;
-          
-          // Track by prop type combination
-          const propCombo = participant.player1PropType === participant.player2PropType 
-            ? participant.player1PropType 
-            : `${participant.player1PropType} vs ${participant.player2PropType}`;
-          
-          if (!playerStats.byH2HPropType[propCombo]) {
-            playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-          }
-          playerStats.byH2HPropType[propCombo].total++;
-        } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
-          playerStats.eitherProps.total++;
-          
-          if (!playerStats.byEitherPropType[participant.propType]) {
-            playerStats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
-          }
-          playerStats.byEitherPropType[participant.propType].total++;
-        } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
-          playerStats.combinedProps.total++;
-          
-          if (!playerStats.byCombinedPropType[participant.propType]) {
-            playerStats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
-          }
-          playerStats.byCombinedPropType[participant.propType].total++;
-        }
-        
-        if (participant.result === 'win') {
-          playerStats.wins++;
-          playerStats.bySport[participant.sport].wins++;
-          playerStats.byBetType[participant.betType].wins++;
-
-        // Track multi-entity prop wins
-        if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
-          playerStats.h2hProps.wins++;
-          const propCombo = participant.player1PropType === participant.player2PropType 
-            ? participant.player1PropType 
-            : `${participant.player1PropType} vs ${participant.player2PropType}`;
-          if (playerStats.byH2HPropType[propCombo]) {
-            playerStats.byH2HPropType[propCombo].wins++;
-          }
-        } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
-          playerStats.eitherProps.wins++;
-          if (playerStats.byEitherPropType[participant.propType]) {
-            playerStats.byEitherPropType[participant.propType].wins++;
-          }
-        } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
-          playerStats.combinedProps.wins++;
-          if (playerStats.byCombinedPropType[participant.propType]) {
-            playerStats.byCombinedPropType[participant.propType].wins++;
-          }
-        }
-          
-          if (parlayWon) {
-            const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
-            playerStats.moneyWon += netProfit / winners.length;
-          }
-        } else if (participant.result === 'loss') {
-          playerStats.losses++;
-          playerStats.bySport[participant.sport].losses++;
-          playerStats.byBetType[participant.betType].losses++;
-
-          // Track multi-entity prop losses
-          if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
-            playerStats.h2hProps.losses++;
-            const propCombo = participant.player1PropType === participant.player2PropType 
-              ? participant.player1PropType 
-              : `${participant.player1PropType} vs ${participant.player2PropType}`;
-            if (playerStats.byH2HPropType[propCombo]) {
-              playerStats.byH2HPropType[propCombo].losses++;
-            }
-          } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
-            playerStats.eitherProps.losses++;
-            if (playerStats.byEitherPropType[participant.propType]) {
-              playerStats.byEitherPropType[participant.propType].losses++;
-            }
-          } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
-            playerStats.combinedProps.losses++;
-            if (playerStats.byCombinedPropType[participant.propType]) {
-              playerStats.byCombinedPropType[participant.propType].losses++;
-            }
-          }
-          
-          if (and1) {
-            playerStats.and1s++;
-            // For And-1s, the cost is the potential net profit we would have won
-            const potentialNetProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
-            playerStats.and1Cost += potentialNetProfit;
-            playerStats.moneyLost += parlay.betAmount * participants.length;
-          } else {
-            playerStats.moneyLost += (parlay.betAmount * participants.length) / losers.length;
-          }
-        }
-      });
-    });
-
-    return stats;
-  };
 
   if (!authenticated) {
     return (
@@ -1858,7 +1346,6 @@ const importFromCSV = async (csvText) => {
     );
   }
 
-  const stats = calculateStats();
 
   if (loading) {
     return (
@@ -2641,151 +2128,6 @@ const generateSearchInsights = (searchResults) => {
   );
 };
 
-const calculateStatsForPlayer = (player, parlaysList) => {
-    const playerStats = {
-      totalPicks: 0,
-      wins: 0,
-      losses: 0,
-      pushes: 0,
-      moneyWon: 0,
-      moneyLost: 0,
-      and1s: 0,
-      and1Cost: 0,
-      bySport: {},
-      byBetType: {},
-      // Multi-entity prop stats
-      h2hProps: { total: 0, wins: 0, losses: 0, pushes: 0 },
-      eitherProps: { total: 0, wins: 0, losses: 0 },
-      combinedProps: { total: 0, wins: 0, losses: 0 },
-      byH2HPropType: {},      // Track by prop type combination
-      byEitherPropType: {},   // Track Either props by prop type
-      byCombinedPropType: {} // Track Combined props by prop type
-    };
-
-parlaysList.forEach(parlay => {
-    const participants = Object.values(parlay.participants);
-    const losers = participants.filter(p => p.result === 'loss');
-    const winners = participants.filter(p => p.result === 'win');
-    const parlayWon = losers.length === 0 && winners.length > 0;
-    const and1 = losers.length === 1 && winners.length === participants.length - 1;
-    participants.forEach(participant => {
-      if (participant.player !== player || !participant.sport || !participant.betType) return;
-      
-      playerStats.totalPicks++;
-      if (!playerStats.bySport[participant.sport]) {
-        playerStats.bySport[participant.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-      }
-      playerStats.bySport[participant.sport].total++;
-      
-      if (!playerStats.byBetType[participant.betType]) {
-        playerStats.byBetType[participant.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-      }
-      playerStats.byBetType[participant.betType].total++;
-      
-      if (participant.result === 'win') {
-        playerStats.wins++;
-        playerStats.bySport[participant.sport].wins++;
-        playerStats.byBetType[participant.betType].wins++;
-
-      // Track multi-entity prop wins
-      if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
-        playerStats.h2hProps.wins++;
-        const propCombo = participant.player1PropType === participant.player2PropType 
-          ? participant.player1PropType 
-          : `${participant.player1PropType} vs ${participant.player2PropType}`;
-        if (!playerStats.byH2HPropType[propCombo]) {
-          playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-        }
-        playerStats.byH2HPropType[propCombo].wins++;
-      } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
-        playerStats.eitherProps.wins++;
-        if (!playerStats.byEitherPropType[participant.propType]) {
-          playerStats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
-        }
-        playerStats.byEitherPropType[participant.propType].wins++;
-      } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
-        playerStats.combinedProps.wins++;
-        if (!playerStats.byCombinedPropType[participant.propType]) {
-          playerStats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
-        }
-        playerStats.byCombinedPropType[participant.propType].wins++;
-      }
-        
-        if (parlayWon) {
-          const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
-          playerStats.moneyWon += netProfit / winners.length;
-        }
-      } else if (participant.result === 'loss') {
-        playerStats.losses++;
-        playerStats.bySport[participant.sport].losses++;
-        playerStats.byBetType[participant.betType].losses++;
-
-        // Track multi-entity prop losses
-        if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
-          playerStats.h2hProps.losses++;
-          const propCombo = participant.player1PropType === participant.player2PropType 
-            ? participant.player1PropType 
-            : `${participant.player1PropType} vs ${participant.player2PropType}`;
-          if (!playerStats.byH2HPropType[propCombo]) {
-            playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-          }
-          playerStats.byH2HPropType[propCombo].losses++;
-        } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
-          playerStats.eitherProps.losses++;
-          if (!playerStats.byEitherPropType[participant.propType]) {
-            playerStats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
-          }
-          playerStats.byEitherPropType[participant.propType].losses++;
-        } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
-          playerStats.combinedProps.losses++;
-          if (!playerStats.byCombinedPropType[participant.propType]) {
-            playerStats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
-          }
-          playerStats.byCombinedPropType[participant.propType].losses++;
-        }
-        
-        if (and1) {
-          playerStats.and1s++;
-          // For And-1s, the cost is the potential net profit we would have won
-          const potentialNetProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
-          playerStats.and1Cost += potentialNetProfit;
-          playerStats.moneyLost += parlay.betAmount * participants.length;
-        } else {
-          playerStats.moneyLost += (parlay.betAmount * participants.length) / losers.length;
-        }
-      } else if (participant.result === 'push') {
-        playerStats.pushes++;
-        playerStats.bySport[participant.sport].pushes++;
-        playerStats.byBetType[participant.betType].pushes++;
-        
-        // Track multi-entity prop pushes
-        if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
-          playerStats.h2hProps.pushes++;
-          const propCombo = participant.player1PropType === participant.player2PropType 
-            ? participant.player1PropType 
-            : `${participant.player1PropType} vs ${participant.player2PropType}`;
-          if (!playerStats.byH2HPropType[propCombo]) {
-            playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-          }
-          playerStats.byH2HPropType[propCombo].pushes++;
-        } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
-          playerStats.eitherProps.pushes++;
-          if (!playerStats.byEitherPropType[participant.propType]) {
-            playerStats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-          }
-          playerStats.byEitherPropType[participant.propType].pushes++;
-        } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
-          playerStats.combinedProps.pushes++;
-          if (!playerStats.byCombinedPropType[participant.propType]) {
-            playerStats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-          }
-          playerStats.byCombinedPropType[participant.propType].pushes++;
-        }
-      }
-    });
-  });
-
-  return playerStats;
 };
 
 const renderIndividualDashboard = () => {
