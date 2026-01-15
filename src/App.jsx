@@ -2128,7 +2128,6 @@ const generateSearchInsights = (searchResults) => {
   );
 };
 
-};
 
 const renderIndividualDashboard = () => {
     const filteredParlays = applyFilters([...parlays]);
