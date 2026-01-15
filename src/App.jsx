@@ -4695,7 +4695,6 @@ const renderRankings = () => {
   const filteredParlays = applyFilters([...parlays]);
   return <Rankings parlays={filteredParlays} players={players} />;
 };
-};
 
 const renderSearch = () => {
   const handleSearch = () => {
