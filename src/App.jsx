@@ -23,6 +23,8 @@ import {
 import LoadingSpinner from './components/common/LoadingSpinner';
 import Button from './components/common/Button';
 import Card from './components/common/Card';
+import StatCard from './components/dashboard/StatCard';
+import FilterBar from './components/filters/FilterBar';
 import PickEntry from './components/forms/PickEntry';
 
 import { useBrolays } from './hooks/useBrolays';
@@ -2227,158 +2229,24 @@ return (
           </Button>
         </div>
       </div>
-      
+
+
       {/* Filters - Collapsible */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <Button
-          onClick={() => setFiltersExpanded(!filtersExpanded)}
-          variant="ghost"
-          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
-        >
-          <span>Filters</span>
-          <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
-        </Button>
-        
-        {filtersExpanded && (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Date From</label>
-                <input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Date To</label>
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
-                <select
-                  value={filters.player}
-                  onChange={(e) => setFilters({...filters, player: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  {players.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Sport</label>
-                <select
-                  value={filters.sport}
-                  onChange={(e) => setFilters({...filters, sport: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  {sports.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
-                <select
-                  value={filters.placedBy}
-                  onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  {players.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Min Payout</label>
-                <input
-                  type="number"
-                  value={filters.minPayout}
-                  onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="$0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Max Payout</label>
-                <input
-                  type="number"
-                  value={filters.maxPayout}
-                  onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="Any"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
-                <select
-                  value={filters.result}
-                  onChange={(e) => setFilters({...filters, result: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  <option value="win">Win</option>
-                  <option value="loss">Loss</option>
-                  <option value="push">Push</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Auto-Updated</label>
-                <select
-                  value={filters.autoUpdated}
-                  onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  <option value="true">Auto-Updated Only</option>
-                  <option value="false">Manual Only</option>
-                </select>
-              </div>
-              <div className="relative">
-                <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
-                <input
-                  type="text"
-                  value={filters.teamPlayer}
-                  onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="Search teams/players..."
-                  list="team-player-suggestions"
-                />
-                <datalist id="team-player-suggestions">
-                  {[...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])].map((team, idx) => (
-                    <option key={idx} value={team} />
-                  ))}
-                </datalist>
-              </div>
-            </div>
-            <Button
-              onClick={() => setFilters({
-                dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
-                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
-              })}
-              variant="secondary"
-              className={`mt-4 ${isMobile ? 'min-h-[44px]' : ''}`}
-            >
-              Clear Filters
-            </Button>
-          </>
-        )}
-      </div>
+      <FilterBar
+        filters={filters}
+        onFilterChange={setFilters}
+        onClearFilters={() => setFilters({
+          dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
+          placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
+        })}
+        isExpanded={filtersExpanded}
+        onToggleExpand={() => setFiltersExpanded(!filtersExpanded)}
+        players={players}
+        sports={sports}
+        preloadedTeams={preloadedTeams}
+        learnedTeams={learnedTeams}
+        isMobile={isMobile}
+      />
       
       {/* Leaderboard */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
@@ -3069,207 +2937,67 @@ const renderGroupDashboard = () => {
           </Button>
         )}
       </div>
-      
+
+
       {/* Filters - Collapsible */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-        <Button
-          onClick={() => setFiltersExpanded(!filtersExpanded)}
-          variant="ghost"
-          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
-        >
-          <span>Filters</span>
-          <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
-        </Button>
-        
-        {filtersExpanded && (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Date From</label>
-                <input
-                  type="date"
-                  value={filters.dateFrom}
-                  onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Date To</label>
-                <input
-                  type="date"
-                  value={filters.dateTo}
-                  onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
-                <select
-                  value={filters.player}
-                  onChange={(e) => setFilters({...filters, player: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  {players.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Sport</label>
-                <select
-                  value={filters.sport}
-                  onChange={(e) => setFilters({...filters, sport: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  {sports.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
-                <select
-                  value={filters.placedBy}
-                  onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  {players.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Min Payout</label>
-                <input
-                  type="number"
-                  value={filters.minPayout}
-                  onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="$0"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Max Payout</label>
-                <input
-                  type="number"
-                  value={filters.maxPayout}
-                  onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="Any"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
-                <select
-                  value={filters.result}
-                  onChange={(e) => setFilters({...filters, result: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  <option value="win">Win</option>
-                  <option value="loss">Loss</option>
-                  <option value="push">Push</option>
-                  <option value="pending">Pending</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Auto-Updated</label>
-                <select
-                  value={filters.autoUpdated}
-                  onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                >
-                  <option value="">All</option>
-                  <option value="true">Auto-Updated Only</option>
-                  <option value="false">Manual Only</option>
-                </select>
-              </div>
-              <div className="relative">
-                <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
-                <input
-                  type="text"
-                  value={filters.teamPlayer}
-                  onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
-                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                  style={{ fontSize: isMobile ? '16px' : '14px' }}
-                  placeholder="Search teams/players..."
-                  list="team-player-suggestions"
-                />
-                <datalist id="team-player-suggestions">
-                  {[...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])].map((team, idx) => (
-                    <option key={idx} value={team} />
-                  ))}
-                </datalist>
-              </div>
-            </div>
-            <Button
-              onClick={() => setFilters({
-                dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '', 
-                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
-              })}
-              variant="secondary"
-              className={`mt-4 ${isMobile ? 'min-h-[44px]' : ''}`}
-            >
-              Clear Filters
-            </Button>
-          </>
-        )}
-      </div>
+      <FilterBar
+        filters={filters}
+        onFilterChange={setFilters}
+        onClearFilters={() => setFilters({
+          dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
+          placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: ''
+        })}
+        isExpanded={filtersExpanded}
+        onToggleExpand={() => setFiltersExpanded(!filtersExpanded)}
+        players={players}
+        sports={sports}
+        preloadedTeams={preloadedTeams}
+        learnedTeams={learnedTeams}
+        isMobile={isMobile}
+      />
       
       {/* Main Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4">
-        <Card variant="info" padding="default">
-          <div className="flex items-center gap-3 mb-2">
-            <Users className="text-blue-400" size={28} />
-            <h3 className="text-base md:text-lg font-semibold text-blue-400">Total Brolays</h3>
-          </div>
-          <p className="text-3xl md:text-4xl font-bold text-white">{totalParlays}</p>
-          <p className="text-sm text-gray-400 mt-1">
-            {wonParlays}W-{lostParlays}L
-          </p>
-        </Card>
-        
-        <Card variant="success" padding="default">
-          <div className="flex items-center gap-3 mb-2">
-            <TrendingUp className="text-green-400" size={28} />
-            <h3 className="text-base md:text-lg font-semibold text-green-400">Win Rate</h3>
-          </div>
-          <p className="text-3xl md:text-4xl font-bold text-white">{groupWinPct}%</p>
-          <p className="text-sm text-gray-400 mt-1">
-            {wonParlays} wins out of {totalParlays}
-          </p>
-        </Card>
-        
-        <Card variant="warning" padding="default">
-          <div className="flex items-center gap-3 mb-2">
-            <Award className="text-yellow-400" size={28} />
-            <h3 className="text-base md:text-lg font-semibold text-yellow-400">Net Profit</h3>
-          </div>
-          <p className={`text-3xl md:text-4xl font-bold ${
-            (totalMoneyWon - totalMoneyLost) >= 0 ? 'text-green-400' : 'text-red-400'
-          }`}>
-            ${(totalMoneyWon - totalMoneyLost).toFixed(0)}
-          </p>
-          <p className="text-sm text-gray-400 mt-1">
-            ${totalMoneyWon.toFixed(0)} won, ${totalMoneyLost.toFixed(0)} lost
-          </p>
-        </Card>
+        <StatCard
+          icon={Users}
+          iconColor="text-blue-400"
+          title="Total Brolays"
+          titleColor="text-blue-400"
+          value={totalParlays}
+          subtitle={`${wonParlays}W-${lostParlays}L`}
+          variant="info"
+        />
 
-        <Card variant="info" padding="default" className="bg-gradient-to-br from-purple-900/30 to-gray-800 border-purple-500/30">
-          <div className="flex items-center gap-3 mb-2">
-            <AlertCircle className="text-purple-400" size={28} />
-            <h3 className="text-base md:text-lg font-semibold text-purple-400">Avg Payout</h3>
-          </div>
-          <p className="text-3xl md:text-4xl font-bold text-white">
-            ${wonParlays > 0 ? (totalMoneyWon / wonParlays).toFixed(0) : 0}
-          </p>
-        </Card>
+        <StatCard
+          icon={TrendingUp}
+          iconColor="text-green-400"
+          title="Win Rate"
+          titleColor="text-green-400"
+          value={`${groupWinPct}%`}
+          subtitle={`${wonParlays} wins out of ${totalParlays}`}
+          variant="success"
+        />
+
+        <StatCard
+          icon={Award}
+          iconColor="text-yellow-400"
+          title="Net Profit"
+          titleColor="text-yellow-400"
+          value={`$${(totalMoneyWon - totalMoneyLost).toFixed(0)}`}
+          valueColor={(totalMoneyWon - totalMoneyLost) >= 0 ? 'text-green-400' : 'text-red-400'}
+          subtitle={`$${totalMoneyWon.toFixed(0)} won, $${totalMoneyLost.toFixed(0)} lost`}
+          variant="warning"
+        />
+
+        <StatCard
+          icon={AlertCircle}
+          iconColor="text-purple-400"
+          title="Avg Payout"
+          titleColor="text-purple-400"
+          value={`$${wonParlays > 0 ? (totalMoneyWon / wonParlays).toFixed(0) : 0}`}
+          variant="info"
+          className="bg-gradient-to-br from-purple-900/30 to-gray-800 border-purple-500/30"
+        />
       </div>
 
       {/* Recent Performance */}
