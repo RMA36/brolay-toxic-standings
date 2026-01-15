@@ -5613,7 +5613,7 @@ return (
               const losers = participants.filter(p => p.result === 'loss');
               const winners = participants.filter(p => p.result === 'win');
               const and1 = losers.length === 1 && winners.length === participants.length - 1;
-              const totalLost = parlay.betAmount * losers.length;
+              const totalLost = parlay.betAmount * participants.length;
               const amountPerLoser = losers.length > 0 ? (totalLost / losers.length) : 0;
               
               return (
