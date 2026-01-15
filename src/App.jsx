@@ -253,8 +253,6 @@ const App = () => {
   const [comparisonMode, setComparisonMode] = useState(false);
   const [selectedForComparison, setSelectedForComparison] = useState(new Set());
   const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
-    };
-  
     const [newParlay, setNewParlay] = useState({
   date: getCurrentETDate(),
   betAmount: 10,
