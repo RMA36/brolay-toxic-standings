@@ -1120,14 +1120,18 @@ export const useESPN = () => {
     if (['Golf', 'Rugby', 'UFC'].includes(sport)) {
       return { result: 'pending', stats: null };
     }
-    
+
     try {
       const formattedDate = gameDate.replace(/-/g, '');
-      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
-      
+      // For college sports, add groups=50 to get ALL Division I games, not just Top 25
+      const isCollegeSport = sport === 'College Basketball' || sport === 'College Football';
+      const groupsParam = isCollegeSport ? '&groups=50' : '';
+      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}${groupsParam}`;
+
+      console.log('🔗 Fetching:', isCollegeSport ? 'All D-I games' : 'All games');
       const response = await fetch(url);
       const data = await response.json();
-      
+
       console.log('📡 ESPN API returned', data.events?.length || 0, 'events for date', gameDate);
       
       if (!data.events || data.events.length === 0) {
