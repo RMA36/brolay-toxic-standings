@@ -2152,12 +2152,13 @@ const renderIndividualDashboard = () => {
       setFilters={setFilters}
       filtersExpanded={filtersExpanded}
       setFiltersExpanded={setFiltersExpanded}
-      preloadedTeams={preloadedTeams}
+      preloadedTeams={PRELOADED_TEAMS}
       learnedTeams={learnedTeams}
       isMobile={isMobile}
     />
   );
 };
+
 const renderGroupDashboard = () => {
   return (
     <GroupDashboard
@@ -2172,11 +2173,11 @@ const renderGroupDashboard = () => {
       setFilters={setFilters}
       filtersExpanded={filtersExpanded}
       setFiltersExpanded={setFiltersExpanded}
-      preloadedTeams={preloadedTeams}
+      preloadedTeams={PRELOADED_TEAMS}
       learnedTeams={learnedTeams}
       isMobile={isMobile}
-      handleESPNSync={handleESPNSync}
-      isSyncing={isSyncing}
+      handleESPNSync={handleAutoUpdate}
+      isSyncing={autoUpdating}
       autoUpdateStatus={autoUpdateStatus}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
