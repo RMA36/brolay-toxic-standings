@@ -171,6 +171,7 @@ const Rankings = ({ parlays, players }) => {
           sport: p.sport,
           wins: 0,
           losses: 0,
+          pushes: 0,
           total: 0
         };
       }
@@ -178,15 +179,19 @@ const Rankings = ({ parlays, players }) => {
       playerSportCombos[key].total++;
       if (p.result === 'win') playerSportCombos[key].wins++;
       else if (p.result === 'loss') playerSportCombos[key].losses++;
+      else if (p.result === 'push') playerSportCombos[key].pushes++;
     });
   });
 
   const combosWithMin10 = Object.values(playerSportCombos)
     .filter(combo => combo.total >= 10)
-    .map(combo => ({
-      ...combo,
-      winPct: (combo.wins / combo.total) * 100
-    }));
+    .map(combo => {
+      const adjustedWins = combo.wins + (combo.pushes * 0.5);
+      return {
+        ...combo,
+        winPct: (adjustedWins / combo.total) * 100
+      };
+    });
 
   const topCombos = [...combosWithMin10].sort((a, b) => b.winPct - a.winPct).slice(0, 5);
   const worstCombos = [...combosWithMin10].sort((a, b) => a.winPct - b.winPct).slice(0, 5);
@@ -250,10 +255,13 @@ const Rankings = ({ parlays, players }) => {
 
   const playerTeamCombosWithMin5 = Object.values(playerTeamCombos)
     .filter(combo => combo.total >= 5)
-    .map(combo => ({
-      ...combo,
-      winPct: (combo.wins / combo.total) * 100
-    }));
+    .map(combo => {
+      const adjustedWins = combo.wins + (combo.pushes * 0.5);
+      return {
+        ...combo,
+        winPct: (adjustedWins / combo.total) * 100
+      };
+    });
 
   const topPlayerTeamWinPct = [...playerTeamCombosWithMin5]
     .sort((a, b) => b.winPct - a.winPct)

@@ -87,35 +87,38 @@ export const analyzeCombo = (parlays, player, sport, dayOfWeek = null, betType =
   let totalPicks = 0;
   let wins = 0;
   let losses = 0;
-  
+  let pushes = 0;
+
   parlays.forEach(parlay => {
     // Filter by day of week if specified
     if (dayOfWeek) {
       const parlayDay = new Date(parlay.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long' });
       if (parlayDay !== dayOfWeek) return;
     }
-    
+
     Object.values(parlay.participants || {}).forEach(pick => {
       if (!pick.player || !pick.sport || !pick.betType) return; // Skip incomplete picks
       if (pick.player !== player) return;
       if (pick.sport !== sport) return;
       if (betType && pick.betType !== betType) return;
       if (pick.result === 'pending') return;
-      
+
       // Skip multi-entity props without required fields
       if (pick.betType === 'H2H Prop' && (!pick.player1PropType || !pick.player2PropType)) return;
       if ((pick.betType === 'Either Prop' || pick.betType === 'Combined Prop') && (!pick.propType || !pick.player1 || !pick.player2)) return;
-      
+
       totalPicks++;
       if (pick.result === 'win') wins++;
       else if (pick.result === 'loss') losses++;
+      else if (pick.result === 'push') pushes++;
     });
   });
-  
+
   if (totalPicks < 5) return null; // Need minimum 5 picks for statistical relevance
-  
-  const winRate = totalPicks > 0 ? (wins / totalPicks) * 100 : 0;
-  
+
+  const adjustedWins = wins + (pushes * 0.5);
+  const winRate = totalPicks > 0 ? (adjustedWins / totalPicks) * 100 : 0;
+
   return {
     player,
     sport,
@@ -124,6 +127,7 @@ export const analyzeCombo = (parlays, player, sport, dayOfWeek = null, betType =
     totalPicks,
     wins,
     losses,
+    pushes,
     winRate
   };
 };

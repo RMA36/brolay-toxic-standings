@@ -1453,7 +1453,8 @@ const analyzeSearchQuery = (query) => {
       bySport: {}
     };
 
-    stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
+    const adjustedWins = stats.wins + (stats.pushes * 0.5);
+    stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
 
     filteredPicks.forEach(pick => {
       if (!pick.player || !pick.betType || !pick.sport) return; // Skip incomplete picks
@@ -1529,7 +1530,8 @@ const analyzeSearchQuery = (query) => {
       byPlayer: {}
     };
 
-    stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
+    const adjustedWins = stats.wins + (stats.pushes * 0.5);
+    stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
 
     filteredPicks.forEach(pick => {
       if (!pick.player) return; // Skip incomplete picks
@@ -1602,8 +1604,9 @@ const analyzeSearchQuery = (query) => {
       byPlayer: {},
       byBetType: {}
     };
-  
-    stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
+
+    const adjustedWins = stats.wins + (stats.pushes * 0.5);
+    stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
   
     filteredPicks.forEach(pick => {
       if (!pick.player || !pick.betType) return; // Skip incomplete picks
@@ -1673,7 +1676,8 @@ const analyzeSearchQuery = (query) => {
       byBetType: {}
     };
 
-    stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
+    const adjustedWins = stats.wins + (stats.pushes * 0.5);
+    stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
 
     filteredPicks.forEach(pick => {
       if (!pick.player || !pick.betType) return; // Skip incomplete picks
@@ -1741,7 +1745,8 @@ const analyzeSearchQuery = (query) => {
       byBetType: {}
     };
 
-    stats.winPct = stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0;
+    const adjustedWins = stats.wins + (stats.pushes * 0.5);
+    stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
 
     filteredPicks.forEach(pick => {
       if (!pick.sport || !pick.betType) return; // Skip incomplete picks
@@ -1798,26 +1803,32 @@ const generateSearchInsights = (searchResults) => {
     if (data.total >= 10) {
       const bestSport = Object.entries(data.bySport)
         .sort((a, b) => {
-          const aRate = a[1].total > 0 ? (a[1].wins / a[1].total) : 0;
-          const bRate = b[1].total > 0 ? (b[1].wins / b[1].total) : 0;
+          const aAdjusted = a[1].wins + (a[1].pushes * 0.5);
+          const bAdjusted = b[1].wins + (b[1].pushes * 0.5);
+          const aRate = a[1].total > 0 ? (aAdjusted / a[1].total) : 0;
+          const bRate = b[1].total > 0 ? (bAdjusted / b[1].total) : 0;
           return bRate - aRate;
         })[0];
       
       if (bestSport && bestSport[1].total >= 5) {
-        const winRate = ((bestSport[1].wins / bestSport[1].total) * 100).toFixed(1);
+        const adjustedWins = bestSport[1].wins + (bestSport[1].pushes * 0.5);
+        const winRate = ((adjustedWins / bestSport[1].total) * 100).toFixed(1);
         insights.push(`🎯 ${data.player} performs best in ${bestSport[0]} with a ${winRate}% win rate`);
       }
     }
     
     const bestBetType = Object.entries(data.byBetType)
       .sort((a, b) => {
-        const aRate = a[1].total > 0 ? (a[1].wins / a[1].total) : 0;
-        const bRate = b[1].total > 0 ? (b[1].wins / b[1].total) : 0;
+        const aAdjusted = a[1].wins + (a[1].pushes * 0.5);
+        const bAdjusted = b[1].wins + (b[1].pushes * 0.5);
+        const aRate = a[1].total > 0 ? (aAdjusted / a[1].total) : 0;
+        const bRate = b[1].total > 0 ? (bAdjusted / b[1].total) : 0;
         return bRate - aRate;
       })[0];
     
     if (bestBetType && bestBetType[1].total >= 3) {
-      const winRate = ((bestBetType[1].wins / bestBetType[1].total) * 100).toFixed(1);
+      const adjustedWins = bestBetType[1].wins + (bestBetType[1].pushes * 0.5);
+      const winRate = ((adjustedWins / bestBetType[1].total) * 100).toFixed(1);
       insights.push(`💡 ${bestBetType[0]}s are ${data.player}'s strength at ${winRate}%`);
     }
     
@@ -1826,13 +1837,16 @@ const generateSearchInsights = (searchResults) => {
     const bestPlayer = Object.entries(data.byPlayer)
       .filter(([_, stats]) => stats.total >= 5)
       .sort((a, b) => {
-        const aRate = (a[1].wins / a[1].total);
-        const bRate = (b[1].wins / b[1].total);
+        const aAdjusted = a[1].wins + (a[1].pushes * 0.5);
+        const bAdjusted = b[1].wins + (b[1].pushes * 0.5);
+        const aRate = (aAdjusted / a[1].total);
+        const bRate = (bAdjusted / b[1].total);
         return bRate - aRate;
       })[0];
     
     if (bestPlayer) {
-      const winRate = ((bestPlayer[1].wins / bestPlayer[1].total) * 100).toFixed(1);
+      const adjustedWins = bestPlayer[1].wins + (bestPlayer[1].pushes * 0.5);
+      const winRate = ((adjustedWins / bestPlayer[1].total) * 100).toFixed(1);
       insights.push(`⭐ ${bestPlayer[0]} leads in ${data.sport} with ${winRate}% win rate`);
     }
     
@@ -1848,13 +1862,16 @@ const generateSearchInsights = (searchResults) => {
     if (data.total >= 5) {
       const bestPlayer = Object.entries(data.byPlayer)
         .sort((a, b) => {
-          const aRate = a[1].total > 0 ? (a[1].wins / a[1].total) : 0;
-          const bRate = b[1].total > 0 ? (b[1].wins / b[1].total) : 0;
+          const aAdjusted = a[1].wins + (a[1].pushes * 0.5);
+          const bAdjusted = b[1].wins + (b[1].pushes * 0.5);
+          const aRate = a[1].total > 0 ? (aAdjusted / a[1].total) : 0;
+          const bRate = b[1].total > 0 ? (bAdjusted / b[1].total) : 0;
           return bRate - aRate;
         })[0];
       
       if (bestPlayer && bestPlayer[1].total >= 3) {
-        const winRate = ((bestPlayer[1].wins / bestPlayer[1].total) * 100).toFixed(1);
+        const adjustedWins = bestPlayer[1].wins + (bestPlayer[1].pushes * 0.5);
+        const winRate = ((adjustedWins / bestPlayer[1].total) * 100).toFixed(1);
         insights.push(`🔥 ${bestPlayer[0]} has the best record on ${data.team} at ${winRate}%`);
       }
     }
@@ -1879,13 +1896,16 @@ const generateSearchInsights = (searchResults) => {
     const bestSport = Object.entries(data.bySport)
       .filter(([_, stats]) => stats.total >= 3)
       .sort((a, b) => {
-        const aRate = a[1].total > 0 ? (a[1].wins / a[1].total) : 0;
-        const bRate = b[1].total > 0 ? (b[1].wins / b[1].total) : 0;
+        const aAdjusted = a[1].wins + (a[1].pushes * 0.5);
+        const bAdjusted = b[1].wins + (b[1].pushes * 0.5);
+        const aRate = a[1].total > 0 ? (aAdjusted / a[1].total) : 0;
+        const bRate = b[1].total > 0 ? (bAdjusted / b[1].total) : 0;
         return bRate - aRate;
       })[0];
     
     if (bestSport) {
-      const winRate = ((bestSport[1].wins / bestSport[1].total) * 100).toFixed(1);
+      const adjustedWins = bestSport[1].wins + (bestSport[1].pushes * 0.5);
+      const winRate = ((adjustedWins / bestSport[1].total) * 100).toFixed(1);
       insights.push(`🏆 ${bestSport[0]} performs best on this day at ${winRate}%`);
     }
   }
@@ -2433,14 +2453,22 @@ const renderSearch = () => {
               <div className="mb-6">
                 <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Big Guy</h4>
                 <div className="space-y-2">
-                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => (
-                    <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                      <span className="font-semibold text-white">{player}</span>
-                      <span className="text-sm text-gray-300">
-                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
-                      </span>
-                    </div>
-                  ))}
+                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => {
+                    const adjustedWins = stats.wins + (stats.pushes * 0.5);
+                    const winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
+                    const recordDisplay = stats.pushes > 0
+                      ? `${stats.wins}-${stats.losses}-${stats.pushes}`
+                      : `${stats.wins}-${stats.losses}`;
+
+                    return (
+                      <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                        <span className="font-semibold text-white">{player}</span>
+                        <span className="text-sm text-gray-300">
+                          {recordDisplay} ({winPct}%)
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
                       
@@ -2484,14 +2512,22 @@ const renderSearch = () => {
               <div className="mb-6">
                 <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Big Guy</h4>
                 <div className="space-y-2">
-                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => (
-                    <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                      <span className="font-semibold text-white">{player}</span>
-                      <span className="text-sm text-gray-300">
-                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
-                      </span>
-                    </div>
-                  ))}
+                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => {
+                    const adjustedWins = stats.wins + (stats.pushes * 0.5);
+                    const winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
+                    const recordDisplay = stats.pushes > 0
+                      ? `${stats.wins}-${stats.losses}-${stats.pushes}`
+                      : `${stats.wins}-${stats.losses}`;
+
+                    return (
+                      <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                        <span className="font-semibold text-white">{player}</span>
+                        <span className="text-sm text-gray-300">
+                          {recordDisplay} ({winPct}%)
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </>
@@ -2521,14 +2557,22 @@ const renderSearch = () => {
               <div className="mb-6">
                 <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 Who Picks {searchResults.data.team}?</h4>
                 <div className="space-y-2">
-                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => (
-                    <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                      <span className="font-semibold text-white">{player}</span>
-                      <span className="text-sm text-gray-300">
-                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
-                      </span>
-                    </div>
-                  ))}
+                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => {
+                    const adjustedWins = stats.wins + (stats.pushes * 0.5);
+                    const winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
+                    const recordDisplay = stats.pushes > 0
+                      ? `${stats.wins}-${stats.losses}-${stats.pushes}`
+                      : `${stats.wins}-${stats.losses}`;
+
+                    return (
+                      <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                        <span className="font-semibold text-white">{player}</span>
+                        <span className="text-sm text-gray-300">
+                          {recordDisplay} ({winPct}%)
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </>
@@ -2558,14 +2602,22 @@ const renderSearch = () => {
               <div className="mb-6">
                 <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Big Guy</h4>
                 <div className="space-y-2">
-                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => (
-                    <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                      <span className="font-semibold text-white">{player}</span>
-                      <span className="text-sm text-gray-300">
-                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
-                      </span>
-                    </div>
-                  ))}
+                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => {
+                    const adjustedWins = stats.wins + (stats.pushes * 0.5);
+                    const winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
+                    const recordDisplay = stats.pushes > 0
+                      ? `${stats.wins}-${stats.losses}-${stats.pushes}`
+                      : `${stats.wins}-${stats.losses}`;
+
+                    return (
+                      <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                        <span className="font-semibold text-white">{player}</span>
+                        <span className="text-sm text-gray-300">
+                          {recordDisplay} ({winPct}%)
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
       
@@ -2576,7 +2628,7 @@ const renderSearch = () => {
                     <div key={sport} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
                       <span className="font-semibold text-white">{sport}</span>
                       <span className="text-sm text-gray-300">
-                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                        {stats.pushes > 0 ? `${stats.wins}-${stats.losses}-${stats.pushes}` : `${stats.wins}-${stats.losses}`} ({stats.total > 0 ? (((stats.wins + stats.pushes * 0.5) / stats.total) * 100).toFixed(1) : 0}%)
                       </span>
                     </div>
                   ))}
@@ -2590,7 +2642,7 @@ const renderSearch = () => {
                     <div key={betType} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
                       <span className="font-semibold text-white">{betType}</span>
                       <span className="text-sm text-gray-300">
-                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ? ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                        {stats.pushes > 0 ? `${stats.wins}-${stats.losses}-${stats.pushes}` : `${stats.wins}-${stats.losses}`} ({stats.total > 0 ? (((stats.wins + stats.pushes * 0.5) / stats.total) * 100).toFixed(1) : 0}%)
                       </span>
                     </div>
                   ))}
@@ -2627,8 +2679,8 @@ const renderSearch = () => {
                     <div key={sport} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
                       <span className="font-semibold text-white">{sport}</span>
                       <span className="text-sm text-gray-300">
-                        {stats.wins}-{stats.losses}-{stats.pushes} ({stats.total > 0 ?
-                        ((stats.wins / stats.total) * 100).toFixed(1) : 0}%)
+                        {stats.pushes > 0 ? `${stats.wins}-${stats.losses}-${stats.pushes}` : `${stats.wins}-${stats.losses}`} ({stats.total > 0 ?
+                        (((stats.wins + stats.pushes * 0.5) / stats.total) * 100).toFixed(1) : 0}%)
                       </span>
                     </div>
                   ))}

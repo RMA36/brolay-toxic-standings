@@ -479,14 +479,17 @@ return (
             const comparisonData = Array.from(selectedForComparison).map(player => {
               const stats = calculateStatsForPlayer(player, filteredParlays);
               const adjustedWins = stats.wins + (stats.pushes * 0.5);
-              const winPct = stats.totalPicks > 0 
-                ? ((adjustedWins / stats.totalPicks) * 100)
+              const totalDecidedPicks = stats.wins + stats.losses + stats.pushes;
+              const winPct = totalDecidedPicks > 0
+                ? ((adjustedWins / totalDecidedPicks) * 100)
                 : 0;
               const netMoney = stats.moneyWon - stats.moneyLost;
-              
+
               return {
                 player,
-                record: `${stats.wins}-${stats.losses}-${stats.pushes}`,
+                record: stats.pushes > 0
+                  ? `${stats.wins}-${stats.losses}-${stats.pushes}`
+                  : `${stats.wins}-${stats.losses}`,
                 winPct,
                 netMoney,
                 and1s: stats.and1s,
