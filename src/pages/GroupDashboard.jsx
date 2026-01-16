@@ -54,7 +54,6 @@ const GroupDashboard = ({
   isMobile,
   handleESPNSync,
   isSyncing,
-  autoUpdateStatus,
   searchQuery,
   setSearchQuery,
   searchResults,

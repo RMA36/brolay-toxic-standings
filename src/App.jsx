@@ -1781,15 +1781,15 @@ const analyzeSearchQuery = (query) => {
 
 const generateSearchInsights = (searchResults) => {
   if (!searchResults || !searchResults.data) return [];
-  
+
   const insights = [];
-  const { data, matchedCategory, searchContext } = searchResults;
-  
+  const { data, matchedCategory, searchContext = {} } = searchResults;
+
   // Determine if search is specific or general
-  const isSpecific = (searchContext.players.length > 0 && 
-                     (searchContext.hasNFL || searchContext.hasNBA || 
+  const isSpecific = (searchContext.players?.length > 0 &&
+                     (searchContext.hasNFL || searchContext.hasNBA ||
                       searchContext.hasMLB || searchContext.hasNHL)) ||
-                     (searchContext.matchedTeam && 
+                     (searchContext.matchedTeam &&
                       (searchContext.hasMoneyline || searchContext.hasSpread));
   
   if (matchedCategory === 'player') {
@@ -2139,6 +2139,7 @@ const renderIndividualDashboard = () => {
     <IndividualDashboard
       parlays={parlays}
       players={players}
+      sports={sports}
       applyFilters={applyFilters}
       calculateStatsForPlayer={calculateStatsForPlayer}
       stats={stats}
@@ -2178,7 +2179,6 @@ const renderGroupDashboard = () => {
       isMobile={isMobile}
       handleESPNSync={handleAutoUpdate}
       isSyncing={autoUpdating}
-      autoUpdateStatus={autoUpdateStatus}
       searchQuery={searchQuery}
       setSearchQuery={setSearchQuery}
       searchResults={searchResults}

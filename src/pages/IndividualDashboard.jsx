@@ -31,6 +31,7 @@ import { formatDateForDisplay } from '../utils/formatters';
 const IndividualDashboard = ({
   parlays,
   players,
+  sports,
   applyFilters,
   calculateStatsForPlayer,
   stats,
