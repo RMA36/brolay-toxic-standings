@@ -32,6 +32,7 @@ import Rankings from './pages/Rankings';
 import IndividualDashboard from './pages/IndividualDashboard';
 import GroupDashboard from './pages/GroupDashboard';
 import AllBrolays from './pages/AllBrolays';
+import Payments from './pages/Payments';
 
 import { useBrolays } from './hooks/useBrolays';
 import { useESPN } from './hooks/useESPN';
@@ -2706,13 +2707,18 @@ const renderAllBrolays = () => {
 
 const renderPayments = () => {
   return (
-    <Card padding="default">
-      <h2 className="text-xl md:text-2xl font-bold text-yellow-400 mb-4">💰 Payments</h2>
-      <div className="text-center text-gray-400 py-8">
-        <p className="text-lg mb-2">Payments feature is being refactored.</p>
-        <p className="text-sm">This feature will be restored shortly.</p>
-      </div>
-    </Card>
+    <Payments
+      parlays={parlays}
+      players={players}
+      applyFilters={applyFilters}
+      filters={filters}
+      setFilters={setFilters}
+      isMobile={isMobile}
+      toggleSettlement={toggleSettlement}
+      saving={saving}
+      settledBrolaysToShow={settledBrolaysToShow}
+      setSettledBrolaysToShow={setSettledBrolaysToShow}
+    />
   );
 };
 
