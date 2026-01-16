@@ -40,6 +40,7 @@ import { getCurrentSportsInSeason, getCurrentDayOfWeek, findMoneyMaker, findDang
 const GroupDashboard = ({
   parlays,
   players,
+  sports,
   applyFilters,
   selectedCalendarDate,
   setSelectedCalendarDate,

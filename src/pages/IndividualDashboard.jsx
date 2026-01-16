@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import FilterBar from '../components/filters/FilterBar';
@@ -49,6 +49,7 @@ const IndividualDashboard = ({
   learnedTeams,
   isMobile
 }) => {
+    const [expandedPlayers, setExpandedPlayers] = useState(new Set());
     const filteredParlays = applyFilters([...parlays]);
 
     const pendingPicksCount = filteredParlays.reduce((count, parlay) => {

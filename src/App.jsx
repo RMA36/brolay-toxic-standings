@@ -2165,6 +2165,7 @@ const renderGroupDashboard = () => {
     <GroupDashboard
       parlays={parlays}
       players={players}
+      sports={sports}
       applyFilters={applyFilters}
       selectedCalendarDate={selectedCalendarDate}
       setSelectedCalendarDate={setSelectedCalendarDate}
@@ -2442,7 +2443,7 @@ const renderSearch = () => {
                 </div>
               </div>
                       
-              {searchResults.data.topPlayers.length > 0 && (
+              {searchResults.data.topPlayers?.length > 0 && (
                 <div className="mb-6">
                   <h4 className="font-semibold text-lg mb-3">🎯 Most Common Players Picked</h4>
                   <div className="space-y-2">
