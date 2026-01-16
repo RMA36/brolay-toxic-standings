@@ -2239,6 +2239,7 @@ const renderSearch = () => {
             onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
             placeholder='Try: "Anytime Touchdown Scorer record" or "Chiefs record" or "Management NBA stats"'
             className="flex-1 px-4 py-3 bg-gray-900 border border-gray-700 rounded-lg text-white focus:border-yellow-500 focus:outline-none"
+            style={{ fontSize: isMobile ? '16px' : '14px' }}
           />
           <Button
             onClick={handleSearch}
@@ -2698,6 +2699,18 @@ const renderAllBrolays = () => {
       preloadedTeams={PRELOADED_TEAMS}
       learnedTeams={learnedTeams}
     />
+  );
+};
+
+const renderPayments = () => {
+  return (
+    <Card padding="default">
+      <h2 className="text-xl md:text-2xl font-bold text-yellow-400 mb-4">💰 Payments</h2>
+      <div className="text-center text-gray-400 py-8">
+        <p className="text-lg mb-2">Payments feature is being refactored.</p>
+        <p className="text-sm">This feature will be restored shortly.</p>
+      </div>
+    </Card>
   );
 };
 
