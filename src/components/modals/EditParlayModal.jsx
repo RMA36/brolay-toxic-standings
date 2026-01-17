@@ -21,6 +21,7 @@ import PickEntry from '../forms/PickEntry';
  * @param {Function} props.onPropTypeInput - Callback for prop type input changes
  * @param {Function} props.onAwayTeamInput - Callback for away team input changes
  * @param {Function} props.onHomeTeamInput - Callback for home team input changes
+ * @param {Function} props.onPlayerInput - Callback for player input changes (H2H, Either, Combined props)
  * @param {Function} props.onSelectSuggestion - Callback when suggestion is selected
  * @param {boolean} props.isMobile - Whether on mobile device
  * @param {boolean} props.saving - Whether save operation is in progress
@@ -41,6 +42,7 @@ const EditParlayModal = ({
   onPropTypeInput,
   onAwayTeamInput,
   onHomeTeamInput,
+  onPlayerInput,
   onSelectSuggestion,
   isMobile = false,
   saving = false
@@ -141,6 +143,22 @@ const EditParlayModal = ({
     setEditedParlay(updated);
     if (onHomeTeamInput) {
       onHomeTeamInput(partId, value, sport);
+    }
+  };
+
+  const handlePlayerInputWrapper = (partId, field, value, sport) => {
+    // Extract base participant ID (remove -player1, -player2 suffixes)
+    const baseId = partId.replace(/-player[12]$/, '');
+    const updated = { ...editedParlay };
+
+    // Update the specific player field
+    if (field === 'player1' || field === 'player2') {
+      updated.participants[baseId][field] = value;
+    }
+
+    setEditedParlay(updated);
+    if (onPlayerInput) {
+      onPlayerInput(partId, field, value, sport);
     }
   };
 
@@ -266,6 +284,7 @@ const EditParlayModal = ({
                 onPropTypeInput={handlePropTypeInputWrapper}
                 onAwayTeamInput={handleAwayTeamInputWrapper}
                 onHomeTeamInput={handleHomeTeamInputWrapper}
+                onPlayerInput={handlePlayerInputWrapper}
                 onSelectSuggestion={onSelectSuggestion}
                 isMobile={isMobile}
                 isEditMode={true}

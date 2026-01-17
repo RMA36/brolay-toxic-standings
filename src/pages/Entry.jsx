@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { AlertCircle, PlusCircle } from 'lucide-react';
 import { useBrolayContext } from '../contexts/BrolayContext';
-import { PLAYERS, SPORTS, PICK_TYPES, PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
+import { PLAYERS, SPORTS, PICK_TYPES, PRELOADED_TEAMS, COMMON_PROP_TYPES, PRELOADED_PLAYERS } from '../constants/sports';
 import { formatDateForDisplay, getCurrentETDate } from '../utils/formatters';
 import { saveLearnedData, createDefaultParticipant } from '../utils/actionHandlers';
 import Button from '../components/common/Button';
@@ -32,8 +32,10 @@ const Entry = () => {
     isMobile,
     learnedTeams,
     learnedPropTypes,
+    learnedPlayers,
     setLearnedTeams,
     setLearnedPropTypes,
+    setLearnedPlayers,
     suggestions,
     setSuggestions,
     showSuggestions,
@@ -169,6 +171,19 @@ const Entry = () => {
       .slice(0, 8);
   };
 
+  // Get player suggestions for autocomplete (separate from teams)
+  const getPlayerSuggestions = (input, sport) => {
+    if (!input || input.length < 2) return [];
+
+    const inputLower = input.toLowerCase();
+    const preloaded = PRELOADED_PLAYERS[sport] || [];
+    const allPlayers = [...new Set([...preloaded, ...learnedPlayers])];
+
+    return allPlayers
+      .filter(player => player.toLowerCase().includes(inputLower))
+      .slice(0, 8);
+  };
+
   // Handle team input with autocomplete
   const handleTeamInput = (id, value, sport) => {
     // Only update newParlay if this is a real participant ID (not editing mode with modified IDs)
@@ -205,6 +220,14 @@ const Entry = () => {
     const suggestions = getTeamSuggestions(value, sport);
     setSuggestions(suggestions);
     setShowSuggestions({ ...showSuggestions, [`homeTeam-${id}`]: suggestions.length > 0 });
+  };
+
+  // Handle player input with autocomplete (for H2H, Either, Combined props)
+  const handlePlayerInput = (id, field, value, sport) => {
+    updateParticipant(id, field, value);
+    const suggestions = getPlayerSuggestions(value, sport);
+    setSuggestions(suggestions);
+    setShowSuggestions({ ...showSuggestions, [`player-${id}`]: suggestions.length > 0 });
   };
 
   // Select a suggestion from autocomplete
@@ -320,6 +343,7 @@ const Entry = () => {
     // Learn from new entries
     const newTeams = [...learnedTeams];
     const newPropTypes = [...learnedPropTypes];
+    const newPlayers = [...learnedPlayers];
 
     Object.values(parlayData.participants).forEach(p => {
       if (p.team && !newTeams.includes(p.team)) {
@@ -328,11 +352,22 @@ const Entry = () => {
       if (p.propType && !newPropTypes.includes(p.propType)) {
         newPropTypes.push(p.propType);
       }
+      // Learn player names from multi-entity props
+      if (p.player1 && !newPlayers.includes(p.player1)) {
+        newPlayers.push(p.player1);
+      }
+      if (p.player2 && !newPlayers.includes(p.player2)) {
+        newPlayers.push(p.player2);
+      }
+      if (p.selectedPlayer && !newPlayers.includes(p.selectedPlayer)) {
+        newPlayers.push(p.selectedPlayer);
+      }
     });
 
     setLearnedTeams(newTeams);
     setLearnedPropTypes(newPropTypes);
-    saveLearnedData(newTeams, newPropTypes);
+    setLearnedPlayers(newPlayers);
+    saveLearnedData(newTeams, newPropTypes, newPlayers);
 
     try {
       // Save to Firebase using the hook
@@ -507,6 +542,7 @@ const Entry = () => {
               onPropTypeInput={handlePropTypeInput}
               onAwayTeamInput={handleAwayTeamInput}
               onHomeTeamInput={handleHomeTeamInput}
+              onPlayerInput={handlePlayerInput}
               onSelectSuggestion={selectSuggestion}
               isMobile={isMobile}
             />

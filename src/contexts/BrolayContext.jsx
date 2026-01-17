@@ -118,6 +118,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [learnedTeams, setLearnedTeams] = useState([]);
   const [learnedPropTypes, setLearnedPropTypes] = useState([]);
+  const [learnedPlayers, setLearnedPlayers] = useState([]);
 
   // Mobile state
   const [isMobile, setIsMobile] = useState(false);
@@ -131,6 +132,17 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   const [picksToShow, setPicksToShow] = useState(20);
   const [brolaysToShow, setBrolaysToShow] = useState(10);
   const [settledBrolaysToShow, setSettledBrolaysToShow] = useState(10);
+
+  // Load learned data from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('brolay-learned-data');
+    if (stored) {
+      const learned = JSON.parse(stored);
+      setLearnedTeams(learned.teams || []);
+      setLearnedPropTypes(learned.propTypes || []);
+      setLearnedPlayers(learned.players || []);
+    }
+  }, []);
 
   // Detect mobile device
   useEffect(() => {
@@ -382,6 +394,8 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     setLearnedTeams,
     learnedPropTypes,
     setLearnedPropTypes,
+    learnedPlayers,
+    setLearnedPlayers,
 
     // Mobile state
     isMobile,

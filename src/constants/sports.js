@@ -93,6 +93,39 @@ export const COMMON_PROP_TYPES = [
   'Shots on Goal'
 ];
 
+// Preloaded popular players by sport (app will learn more via localStorage)
+export const PRELOADED_PLAYERS = {
+  NFL: [
+    'Patrick Mahomes', 'Josh Allen', 'Lamar Jackson', 'Jalen Hurts', 'Joe Burrow',
+    'Dak Prescott', 'Justin Herbert', 'Tua Tagovailoa', 'Brock Purdy', 'C.J. Stroud',
+    'Christian McCaffrey', 'Saquon Barkley', 'Derrick Henry', 'Austin Ekeler', 'Nick Chubb',
+    'Tyreek Hill', 'Justin Jefferson', 'Ja\'Marr Chase', 'CeeDee Lamb', 'Stefon Diggs',
+    'Travis Kelce', 'George Kittle', 'Mark Andrews', 'T.J. Hockenson', 'Dallas Goedert'
+  ],
+  NBA: [
+    'LeBron James', 'Stephen Curry', 'Kevin Durant', 'Giannis Antetokounmpo', 'Luka Doncic',
+    'Nikola Jokic', 'Joel Embiid', 'Jayson Tatum', 'Damian Lillard', 'Devin Booker',
+    'Anthony Davis', 'Ja Morant', 'Trae Young', 'Donovan Mitchell', 'Jimmy Butler',
+    'Kawhi Leonard', 'Paul George', 'Anthony Edwards', 'Tyrese Haliburton', 'Shai Gilgeous-Alexander'
+  ],
+  MLB: [
+    'Shohei Ohtani', 'Aaron Judge', 'Mookie Betts', 'Ronald Acuna Jr.', 'Mike Trout',
+    'Freddie Freeman', 'Juan Soto', 'Bryce Harper', 'Manny Machado', 'Pete Alonso',
+    'Gerrit Cole', 'Spencer Strider', 'Corbin Burnes', 'Blake Snell', 'Sandy Alcantara',
+    'Jacob deGrom', 'Shane Bieber', 'Kevin Gausman', 'Dylan Cease', 'Zack Wheeler'
+  ],
+  NHL: [
+    'Connor McDavid', 'Auston Matthews', 'Nathan MacKinnon', 'Leon Draisaitl', 'Cale Makar',
+    'David Pastrnak', 'Nikita Kucherov', 'Erik Karlsson', 'Matthew Tkachuk', 'Kirill Kaprizov',
+    'Igor Shesterkin', 'Andrei Vasilevskiy', 'Connor Hellebuyck', 'Ilya Sorokin', 'Linus Ullmark'
+  ],
+  Soccer: [
+    'Lionel Messi', 'Cristiano Ronaldo', 'Kylian Mbappe', 'Erling Haaland', 'Neymar',
+    'Mohamed Salah', 'Kevin De Bruyne', 'Vinicius Jr', 'Harry Kane', 'Robert Lewandowski'
+  ],
+  Other: []
+};
+
 // Prop type variations for normalization
 export const PROP_TYPE_VARIATIONS = {
   'passing yards': ['pass yards', 'passing yds', 'pass yds'],

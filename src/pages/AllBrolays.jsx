@@ -874,6 +874,7 @@ const AllBrolays = () => {
           onPropTypeInput={() => {}}
           onAwayTeamInput={() => {}}
           onHomeTeamInput={() => {}}
+          onPlayerInput={() => {}}
           onSelectSuggestion={() => {}}
           isMobile={isMobile}
           saving={saving}

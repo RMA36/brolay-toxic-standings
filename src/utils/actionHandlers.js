@@ -32,27 +32,31 @@ export const matchPlayerName = (pickPlayer, apiPlayer) => {
 };
 
 /**
- * Saves learned teams and prop types to localStorage
+ * Saves learned teams, prop types, and players to localStorage
  * @param {string[]} teams - Array of team names
  * @param {string[]} propTypes - Array of prop types
+ * @param {string[]} players - Array of player names
  */
-export const saveLearnedData = (teams, propTypes) => {
+export const saveLearnedData = (teams, propTypes, players = []) => {
   localStorage.setItem('brolay-learned-data', JSON.stringify({
     teams: teams,
-    propTypes: propTypes
+    propTypes: propTypes,
+    players: players
   }));
 };
 
 /**
- * Extracts teams and prop types from existing parlays
+ * Extracts teams, prop types, and players from existing parlays
  * @param {Object[]} parlays - Array of parlay objects
  * @param {string[]} currentLearnedTeams - Current learned teams
  * @param {string[]} currentLearnedPropTypes - Current learned prop types
- * @returns {Object} Object with newTeams and newPropTypes arrays
+ * @param {string[]} currentLearnedPlayers - Current learned players
+ * @returns {Object} Object with newTeams, newPropTypes, and newPlayers arrays
  */
-export const extractTeamsFromParlays = (parlays, currentLearnedTeams = [], currentLearnedPropTypes = []) => {
+export const extractTeamsFromParlays = (parlays, currentLearnedTeams = [], currentLearnedPropTypes = [], currentLearnedPlayers = []) => {
   const newTeams = [...currentLearnedTeams];
   const newPropTypes = [...currentLearnedPropTypes];
+  const newPlayers = [...currentLearnedPlayers];
 
   parlays.forEach(parlay => {
     Object.values(parlay.participants || {}).forEach(p => {
@@ -68,14 +72,26 @@ export const extractTeamsFromParlays = (parlays, currentLearnedTeams = [], curre
       if (p.propType && !newPropTypes.includes(p.propType)) {
         newPropTypes.push(p.propType);
       }
+      // Extract player names from multi-entity props
+      if (p.player1 && !newPlayers.includes(p.player1)) {
+        newPlayers.push(p.player1);
+      }
+      if (p.player2 && !newPlayers.includes(p.player2)) {
+        newPlayers.push(p.player2);
+      }
+      if (p.selectedPlayer && !newPlayers.includes(p.selectedPlayer)) {
+        newPlayers.push(p.selectedPlayer);
+      }
     });
   });
 
   return {
     newTeams,
     newPropTypes,
+    newPlayers,
     teamsAdded: newTeams.length - currentLearnedTeams.length,
-    propTypesAdded: newPropTypes.length - currentLearnedPropTypes.length
+    propTypesAdded: newPropTypes.length - currentLearnedPropTypes.length,
+    playersAdded: newPlayers.length - currentLearnedPlayers.length
   };
 };
 
