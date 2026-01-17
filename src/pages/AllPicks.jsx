@@ -1,4 +1,6 @@
 import React from 'react';
+import { useBrolayContext } from '../contexts/BrolayContext';
+import { PLAYERS, SPORTS, PICK_TYPES, COMMON_PROP_TYPES } from '../constants/sports';
 import Button from '../components/common/Button';
 import { formatDateForDisplay, formatBetDescription, normalizePropType } from '../utils/formatters';
 
@@ -8,47 +10,30 @@ import { formatDateForDisplay, formatBetDescription, normalizePropType } from '.
  * Displays all individual picks flattened from parlays with comprehensive filtering.
  * Supports inline editing of picks with full bet detail modification.
  * Includes pagination for performance with large datasets.
- *
- * @param {Object} props
- * @param {Array} props.parlays - Array of all parlays containing participants
- * @param {Array} props.players - Array of player names
- * @param {Array} props.sports - Array of sport names
- * @param {Array} props.betTypes - Array of bet type options
- * @param {Array} props.commonPropTypes - Common prop types for autocomplete
- * @param {Array} props.learnedPropTypes - Learned prop types from history
- * @param {Object} props.filters - Current filter values
- * @param {Function} props.setFilters - Update filter values
- * @param {boolean} props.filtersExpanded - Whether filters are expanded
- * @param {Function} props.setFiltersExpanded - Toggle filter expansion
- * @param {boolean} props.isMobile - Whether on mobile device
- * @param {Object|null} props.editingPick - Pick currently being edited
- * @param {Function} props.setEditingPick - Set pick to edit
- * @param {boolean} props.saving - Whether save operation is in progress
- * @param {Function} props.setSaving - Set saving state
- * @param {Function} props.updateBrolay - Update brolay in database
- * @param {number} props.picksToShow - Number of picks to display
- * @param {Function} props.setPicksToShow - Set number of picks to show
  */
-const AllPicks = ({
-  parlays,
-  players,
-  sports,
-  betTypes,
-  commonPropTypes,
-  learnedPropTypes,
-  filters,
-  setFilters,
-  filtersExpanded,
-  setFiltersExpanded,
-  isMobile,
-  editingPick,
-  setEditingPick,
-  saving,
-  setSaving,
-  updateBrolay,
-  picksToShow,
-  setPicksToShow
-}) => {
+const AllPicks = () => {
+  // Get context values
+  const {
+    parlays,
+    filters,
+    setFilters,
+    filtersExpanded,
+    setFiltersExpanded,
+    isMobile,
+    editingPick,
+    setEditingPick,
+    saving,
+    setSaving,
+    updateBrolay,
+    picksToShow,
+    setPicksToShow,
+    learnedPropTypes
+  } = useBrolayContext();
+
+  const players = PLAYERS;
+  const sports = SPORTS;
+  const betTypes = PICK_TYPES;
+  const commonPropTypes = COMMON_PROP_TYPES;
   // Flatten all picks with parlay context
   const allPicks = [];
   parlays.forEach(parlay => {

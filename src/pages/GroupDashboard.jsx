@@ -1,4 +1,6 @@
 import React from 'react';
+import { useBrolayContext } from '../contexts/BrolayContext';
+import { PLAYERS, SPORTS, PRELOADED_TEAMS } from '../constants/sports';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import StatCard from '../components/dashboard/StatCard';
@@ -9,61 +11,25 @@ import { getCurrentSportsInSeason, getCurrentDayOfWeek, findMoneyMaker, findDang
 
 /**
  * GroupDashboard - Group statistics overview with insights, calendar, and settlement tracking
- *
- * @param {Object} props
- * @param {Array} props.parlays - Array of parlay objects
- * @param {Array} props.players - Array of player names
- * @param {function} props.applyFilters - Function to filter parlays
- * @param {Date} props.selectedCalendarDate - Selected calendar date
- * @param {function} props.setSelectedCalendarDate - Setter for calendar date
- * @param {Date} props.calendarMonth - Current calendar month
- * @param {function} props.setCalendarMonth - Setter for calendar month
- * @param {Object} props.filters - Current filter values
- * @param {function} props.setFilters - Setter for filters
- * @param {boolean} props.filtersExpanded - Whether filters are expanded
- * @param {function} props.setFiltersExpanded - Setter for filters expanded
- * @param {Object} props.preloadedTeams - Preloaded team data
- * @param {Array} props.learnedTeams - Learned team names
- * @param {boolean} props.isMobile - Whether on mobile device
- * @param {function} props.handleESPNSync - Function to trigger ESPN sync
- * @param {boolean} props.isSyncing - Whether ESPN sync is in progress
- * @param {Object} props.autoUpdateStatus - Auto-update status object
- * @param {string} props.searchQuery - Current search query
- * @param {function} props.setSearchQuery - Setter for search query
- * @param {Object} props.searchResults - Current search results
- * @param {function} props.setSearchResults - Setter for search results
- * @param {string} props.lastSearchedQuery - Last searched query
- * @param {function} props.setLastSearchedQuery - Setter for last searched query
- * @param {Object} props.showSuggestions - Show suggestions state
- * @param {function} props.generateSearchInsights - Function to generate search insights
  */
-const GroupDashboard = ({
-  parlays,
-  players,
-  sports,
-  applyFilters,
-  selectedCalendarDate,
-  setSelectedCalendarDate,
-  calendarMonth,
-  setCalendarMonth,
-  filters,
-  setFilters,
-  filtersExpanded,
-  setFiltersExpanded,
-  preloadedTeams,
-  learnedTeams,
-  isMobile,
-  handleESPNSync,
-  isSyncing,
-  searchQuery,
-  setSearchQuery,
-  searchResults,
-  setSearchResults,
-  lastSearchedQuery,
-  setLastSearchedQuery,
-  showSuggestions,
-  generateSearchInsights
-}) => {
+const GroupDashboard = () => {
+  // Get context values
+  const {
+    parlays,
+    applyFilters,
+    filters,
+    setFilters,
+    filtersExpanded,
+    setFiltersExpanded,
+    learnedTeams,
+    isMobile,
+    handleAutoUpdate,
+    autoUpdating
+  } = useBrolayContext();
+
+  const players = PLAYERS;
+  const sports = SPORTS;
+  const preloadedTeams = PRELOADED_TEAMS;
   const filteredParlays = applyFilters([...parlays]);
   
   const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
@@ -897,9 +863,7 @@ const GroupDashboard = ({
   );
 };
 
-const renderPayments = () => {
-  const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
-    const dateCompare = new Date(a.date) - new Date(b.date);
+export default GroupDashboard;
     if (dateCompare !== 0) return dateCompare;
     if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
       return a.sortOrder - b.sortOrder;

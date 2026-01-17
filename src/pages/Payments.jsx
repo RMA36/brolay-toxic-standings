@@ -1,4 +1,6 @@
 import React from 'react';
+import { useBrolayContext } from '../contexts/BrolayContext';
+import { PLAYERS } from '../constants/sports';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import { AlertCircle } from 'lucide-react';
@@ -7,30 +9,42 @@ import { formatDateForDisplay } from '../utils/formatters';
 /**
  * Payments - Payment tracking and settlement interface
  *
- * @param {Object} props
- * @param {Array} props.parlays - Array of parlay objects
- * @param {Array} props.players - Array of player names
- * @param {function} props.applyFilters - Function to filter parlays
- * @param {Object} props.filters - Current filter values
- * @param {function} props.setFilters - Setter for filters
- * @param {boolean} props.isMobile - Whether on mobile device
- * @param {function} props.toggleSettlement - Function to toggle settlement status
- * @param {boolean} props.saving - Whether save operation is in progress
- * @param {number} props.settledBrolaysToShow - Number of settled brolays to display
- * @param {function} props.setSettledBrolaysToShow - Setter for settled brolays count
+ * Features:
+ * - Track who owes who
+ * - Settle won/lost parlays
+ * - View settlement history
+ * - Net payment calculations
  */
-const Payments = ({
-  parlays,
-  players,
-  applyFilters,
-  filters,
-  setFilters,
-  isMobile,
-  toggleSettlement,
-  saving,
-  settledBrolaysToShow,
-  setSettledBrolaysToShow
-}) => {
+const Payments = () => {
+  // Get context values
+  const {
+    parlays,
+    filters,
+    setFilters,
+    isMobile,
+    handleToggleSettlement,
+    saving,
+    settledBrolaysToShow,
+    setSettledBrolaysToShow
+  } = useBrolayContext();
+
+  const players = PLAYERS;
+  const toggleSettlement = handleToggleSettlement;
+
+  // Apply filters to parlays
+  const applyFilters = (parlayList) => {
+    return parlayList.filter(parlay => {
+      // Date filters
+      if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
+      if (filters.dateTo && parlay.date > filters.dateTo) return false;
+
+      // PlacedBy filter
+      if (filters.placedBy && parlay.placedBy !== filters.placedBy) return false;
+
+      return true;
+    });
+  };
+
   const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
     const dateCompare = new Date(a.date) - new Date(b.date);
     if (dateCompare !== 0) return dateCompare;

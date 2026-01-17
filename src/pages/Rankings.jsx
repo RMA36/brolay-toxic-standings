@@ -1,15 +1,21 @@
 import React from 'react';
+import { useBrolayContext } from '../contexts/BrolayContext';
+import { PLAYERS } from '../constants/sports';
 import Card from '../components/common/Card';
 import { formatDateForDisplay } from '../utils/formatters';
 
 /**
  * Rankings - Rankings & Records page showing sole survivors, streaks, and player/team/sport combinations
  *
- * @param {Object} props
- * @param {Array} props.parlays - Array of parlay objects (already filtered)
- * @param {Array} props.players - Array of player names
+ * Features:
+ * - Sole survivors (only winner in a lost parlay)
+ * - Hot/cold streaks
+ * - Player/team/sport combination records
  */
-const Rankings = ({ parlays, players }) => {
+const Rankings = () => {
+  // Get context values
+  const { parlays } = useBrolayContext();
+  const players = PLAYERS;
   // Calculate Sole Survivors
   const soleSurvivors = {};
   players.forEach(player => { soleSurvivors[player] = 0; });

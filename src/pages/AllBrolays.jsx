@@ -1,6 +1,10 @@
 import React from 'react';
+import { useBrolayContext } from '../contexts/BrolayContext';
+import { PLAYERS, SPORTS, PRELOADED_TEAMS } from '../constants/sports';
+import { formatBetDescription, formatCalendarDate, formatDateForDisplay } from '../utils/formatters';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
+import FilterBar from '../components/filters/FilterBar';
 import { RefreshCw } from 'lucide-react';
 
 /**
@@ -9,63 +13,101 @@ import { RefreshCw } from 'lucide-react';
  * Displays all brolays in either calendar view or list view with filtering capabilities.
  * Calendar view shows financial performance color-coded by profit/loss.
  * List view shows detailed brolay information with filtering options.
- *
- * @param {Object} props
- * @param {Array} props.parlays - Array of all parlays/brolays
- * @param {Array} props.players - Array of player names
- * @param {Array} props.sports - Array of sport names
- * @param {Function} props.applyFilters - Function to apply current filters to parlays
- * @param {Date} props.calendarMonth - Current month being viewed in calendar
- * @param {Function} props.setCalendarMonth - Set the calendar month
- * @param {Function} props.getCalendarDays - Get array of days for calendar grid
- * @param {string|null} props.selectedCalendarDate - Currently selected date in calendar
- * @param {Function} props.setSelectedCalendarDate - Set the selected calendar date
- * @param {boolean} props.calendarView - Whether calendar view is active
- * @param {Function} props.setCalendarView - Toggle calendar view
- * @param {Function} props.changeMonth - Navigate to previous/next month
- * @param {Function} props.formatCalendarDate - Format date for calendar
- * @param {Function} props.getBrolaysForDate - Get brolays for specific date
- * @param {Function} props.formatBetDescription - Format bet description text
- * @param {Function} props.setEditingParlay - Set parlay to edit
- * @param {Function} props.deleteParlay - Delete a parlay
- * @param {Function} props.handleAutoUpdate - Trigger auto-update for pending picks
- * @param {boolean} props.autoUpdating - Whether auto-update is in progress
- * @param {boolean} props.isMobile - Whether on mobile device
- * @param {Object} props.filters - Current filter values
- * @param {Function} props.setFilters - Update filter values
- * @param {boolean} props.filtersExpanded - Whether filters are expanded
- * @param {Function} props.setFiltersExpanded - Toggle filter expansion
- * @param {Object} props.preloadedTeams - Preloaded teams by sport
- * @param {Array} props.learnedTeams - Dynamically learned team names
  */
-const AllBrolays = ({
-  parlays,
-  players,
-  sports,
-  applyFilters,
-  calendarMonth,
-  setCalendarMonth,
-  getCalendarDays,
-  selectedCalendarDate,
-  setSelectedCalendarDate,
-  calendarView,
-  setCalendarView,
-  changeMonth,
-  formatCalendarDate,
-  getBrolaysForDate,
-  formatBetDescription,
-  setEditingParlay,
-  deleteParlay,
-  handleAutoUpdate,
-  autoUpdating,
-  isMobile,
-  filters,
-  setFilters,
-  filtersExpanded,
-  setFiltersExpanded,
-  preloadedTeams,
-  learnedTeams
-}) => {
+const AllBrolays = () => {
+  // Get context values
+  const {
+    parlays,
+    calendarMonth,
+    setCalendarMonth,
+    selectedCalendarDate,
+    setSelectedCalendarDate,
+    calendarView,
+    setCalendarView,
+    setEditingParlay,
+    handleDeleteParlay,
+    handleAutoUpdate,
+    autoUpdating,
+    isMobile,
+    filters,
+    setFilters,
+    filtersExpanded,
+    setFiltersExpanded,
+    learnedTeams
+  } = useBrolayContext();
+
+  const players = PLAYERS;
+  const sports = SPORTS;
+  const preloadedTeams = PRELOADED_TEAMS;
+  const deleteParlay = handleDeleteParlay;
+
+  // Helper functions
+  const getCalendarDays = (month, year) => {
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const days = [];
+
+    // Add empty slots for days before the first of the month
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null);
+    }
+
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day);
+    }
+
+    return days;
+  };
+
+  const changeMonth = (direction) => {
+    const newMonth = new Date(calendarMonth);
+    newMonth.setMonth(newMonth.getMonth() + direction);
+    setCalendarMonth(newMonth);
+  };
+
+  const getBrolaysForDate = (year, month, day) => {
+    const dateStr = formatCalendarDate(year, month, day);
+    return parlays.filter(p => p.date === dateStr);
+  };
+
+  // Apply filters to parlays
+  const applyFilters = (parlayList) => {
+    return parlayList.filter(parlay => {
+      // Date filters
+      if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
+      if (filters.dateTo && parlay.date > filters.dateTo) return false;
+
+      // PlacedBy filter
+      if (filters.placedBy && parlay.placedBy !== filters.placedBy) return false;
+
+      // Payout filters
+      if (filters.minPayout && parlay.totalPayout < parseFloat(filters.minPayout)) return false;
+      if (filters.maxPayout && parlay.totalPayout > parseFloat(filters.maxPayout)) return false;
+
+      // Settlement filter
+      if (filters.result === 'settled' && !parlay.settled) return false;
+      if (filters.result === 'pending' && parlay.settled) return false;
+
+      // Participant-level filters
+      const participants = Object.values(parlay.participants || {});
+
+      // Player filter
+      if (filters.player && !participants.some(p => p.player === filters.player)) return false;
+
+      // Sport filter
+      if (filters.sport && !participants.some(p => p.sport === filters.sport)) return false;
+
+      // Team/Player filter
+      if (filters.teamPlayer && !participants.some(p =>
+        p.teamPlayer?.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
+        p.teamPlayer2?.toLowerCase().includes(filters.teamPlayer.toLowerCase())
+      )) return false;
+
+      return true;
+    });
+  };
+
   const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
     const dateCompare = new Date(b.date) - new Date(a.date);
     if (dateCompare !== 0) return dateCompare;
