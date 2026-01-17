@@ -5,6 +5,7 @@ import { formatBetDescription, formatCalendarDate, formatDateForDisplay } from '
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import FilterBar from '../components/filters/FilterBar';
+import EditParlayModal from '../components/modals/EditParlayModal';
 import { RefreshCw } from 'lucide-react';
 
 /**
@@ -24,8 +25,10 @@ const AllBrolays = () => {
     setSelectedCalendarDate,
     calendarView,
     setCalendarView,
+    editingParlay,
     setEditingParlay,
     handleDeleteParlay,
+    handleSaveEditedParlay,
     handleAutoUpdate,
     autoUpdating,
     isMobile,
@@ -35,7 +38,10 @@ const AllBrolays = () => {
     setFiltersExpanded,
     learnedTeams,
     brolaysToShow,
-    setBrolaysToShow
+    setBrolaysToShow,
+    suggestions,
+    showSuggestions,
+    saving
   } = useBrolayContext();
 
   const players = PLAYERS;
@@ -849,6 +855,29 @@ const AllBrolays = () => {
             )}
           </div>
         </>
+      )}
+
+      {/* Edit Parlay Modal */}
+      {editingParlay && (
+        <EditParlayModal
+          isOpen={!!editingParlay}
+          onClose={() => setEditingParlay(null)}
+          parlay={editingParlay}
+          onSave={handleSaveEditedParlay}
+          onDelete={handleDeleteParlay}
+          players={players}
+          sports={sports}
+          betTypes={['Spread', 'Moneyline', 'Total', 'Prop Bet', 'H2H Prop', 'Either Prop', 'Combined Prop', 'First Half Moneyline', 'First Half Total', 'First Inning Runs', 'Quarter Moneyline', 'Quarter Total']}
+          suggestions={suggestions}
+          showSuggestions={showSuggestions}
+          onTeamInput={() => {}}
+          onPropTypeInput={() => {}}
+          onAwayTeamInput={() => {}}
+          onHomeTeamInput={() => {}}
+          onSelectSuggestion={() => {}}
+          isMobile={isMobile}
+          saving={saving}
+        />
       )}
     </div>
   );

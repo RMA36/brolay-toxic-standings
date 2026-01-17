@@ -91,7 +91,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   const [showSuggestions, setShowSuggestions] = useState({});
 
   // Calendar state
-  const [calendarView, setCalendarView] = useState(true);
+  const [calendarView, setCalendarView] = useState(false); // Default to list view
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
   const [calendarMonth, setCalendarMonth] = useState(new Date());
 
