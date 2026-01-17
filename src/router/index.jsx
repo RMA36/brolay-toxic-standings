@@ -82,6 +82,10 @@ export const router = createBrowserRouter([
       {
         path: 'import',
         element: <Import />
+      },
+      {
+        path: '*',
+        element: <Navigate to="/entry" replace />
       }
     ]
   }
