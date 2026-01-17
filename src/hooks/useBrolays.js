@@ -15,10 +15,14 @@ export const useBrolays = (db) => {
     if (!db) return;
 
     const brolaysRef = collection(db, 'parlays');
-    
-    // Set up real-time listener
+
+    // Set up real-time listener with better error handling
     const unsubscribe = onSnapshot(
       brolaysRef,
+      {
+        // Add options for better mobile/flaky connection handling
+        includeMetadataChanges: false  // Only react to actual data changes, not metadata
+      },
       (snapshot) => {
         const brolaysData = snapshot.docs.map(doc => {
           const data = doc.data();
@@ -31,16 +35,31 @@ export const useBrolays = (db) => {
         });
         setParlays(brolaysData);
         setLoading(false);
+        setError(null); // Clear any previous errors on successful update
       },
       (err) => {
-        console.error('Error fetching brolays:', err);
+        console.error('🔥 Firestore listener error:', err);
+        console.error('Error code:', err.code);
+        console.error('Error message:', err.message);
+
+        // Don't set loading to false - keep trying to reconnect
+        // Firestore will automatically retry the connection
         setError(err);
-        setLoading(false);
+
+        // Only show user-friendly error for certain cases
+        if (err.code === 'permission-denied') {
+          console.error('❌ Permission denied - check Firestore rules');
+        } else if (err.code === 'unavailable') {
+          console.warn('⚠️ Firestore temporarily unavailable - will retry automatically');
+        }
       }
     );
 
     // Cleanup listener on unmount
-    return () => unsubscribe();
+    return () => {
+      console.log('🧹 Cleaning up Firestore listener');
+      unsubscribe();
+    };
   }, [db]);
 
   // Add a new brolay

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RouterProvider } from 'react-router-dom';
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { BrolayProvider } from './contexts/BrolayContext';
 import { router } from './router';
 import LoadingSpinner from './components/common/LoadingSpinner';
@@ -19,6 +19,20 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+// Enable offline persistence for better mobile experience
+// This allows the app to work offline and reduces network requests
+enableIndexedDbPersistence(db).catch((err) => {
+  if (err.code === 'failed-precondition') {
+    // Multiple tabs open, persistence can only be enabled in one tab at a time.
+    console.warn('⚠️ Firestore persistence: Multiple tabs open, persistence only enabled in one tab');
+  } else if (err.code === 'unimplemented') {
+    // The current browser doesn't support persistence.
+    console.warn('⚠️ Firestore persistence: Browser does not support offline persistence');
+  } else {
+    console.error('❌ Firestore persistence error:', err);
+  }
+});
 
 // Constants
 const PASSWORD = 'manipulation';
