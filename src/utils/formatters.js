@@ -32,14 +32,16 @@ export const formatCalendarDate = (year, month, day) => {
  * Format bet description for display
  */
 export const formatBetDescription = (participant) => {
-  const { betType, team, line, overUnder, awayTeam, homeTeam, propType, player1, player2, player1PropType, player2PropType } = participant;
+  const { betType, team, line, spread, overUnder, awayTeam, homeTeam, propType, player1, player2, player1PropType, player2PropType } = participant;
 
   if (betType === 'Spread') {
-    if (line === '' || line === undefined || line === null) {
-      return `${team} (No Line)`;
+    // Use spread field if available, otherwise fall back to line
+    const spreadValue = spread !== undefined && spread !== '' ? spread : line;
+    if (spreadValue === '' || spreadValue === undefined || spreadValue === null) {
+      return `${team} (No Spread)`;
     }
-    const numLine = parseFloat(line);
-    return `${team} ${numLine >= 0 ? '+' : ''}${numLine}`;
+    const numSpread = parseFloat(spreadValue);
+    return `${team} ${numSpread >= 0 ? '+' : ''}${numSpread}`;
   } else if (betType === 'Moneyline' || betType === 'First Half Moneyline' || betType === 'Quarter Moneyline') {
     return `${team} ML`;
   } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total') {
