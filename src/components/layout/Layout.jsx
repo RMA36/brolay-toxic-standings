@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { Menu, X, RefreshCw } from 'lucide-react';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Menu, X, RefreshCw, Loader } from 'lucide-react';
 import { useBrolayContext } from '../../contexts/BrolayContext';
 import Button from '../common/Button';
 
@@ -8,8 +8,8 @@ import Button from '../common/Button';
  * Layout - Main application layout with navigation
  *
  * Features:
- * - Responsive navigation (desktop sidebar, mobile hamburger)
- * - Navigation links with active state
+ * - Horizontal navbar on desktop with dropdowns
+ * - Mobile sidebar navigation
  * - Pull-to-refresh on mobile
  * - Outlet for child routes
  */
@@ -18,7 +18,7 @@ const Layout = () => {
     isMobile,
     sidebarOpen,
     setSidebarOpen,
-    autoUpdating,
+    saving,
     refreshing,
     pullDistance,
     handleTouchStart,
@@ -28,10 +28,9 @@ const Layout = () => {
 
   const [mobileDropdownOpen, setMobileDropdownOpen] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
 
-  // Feature flags (could be moved to context or config)
-  const SHOW_SETTINGS_TAB = false;
-  const SHOW_IMPORT_TAB = false;
+  const currentPath = location.pathname;
 
   const toggleDropdown = (dropdown) => {
     setMobileDropdownOpen(mobileDropdownOpen === dropdown ? null : dropdown);
@@ -44,6 +43,9 @@ const Layout = () => {
       setMobileDropdownOpen(null);
     }
   };
+
+  const isActive = (path) => currentPath === path;
+  const isGroupActive = (paths) => paths.includes(currentPath);
 
   return (
     <div
@@ -64,84 +66,204 @@ const Layout = () => {
         </div>
       )}
 
-      {/* Mobile Navbar */}
-      {isMobile && (
-        <div className="bg-blue-600 text-white p-4 flex justify-between items-center sticky top-0 z-40">
-          <h1 className="text-xl font-bold">Brolay Toxic Standings</h1>
-          <Button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            variant="ghost"
-            className="text-white"
-          >
-            {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
-          </Button>
+      {/* Header - Desktop and Mobile */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 border-b border-gray-700 sticky top-0 z-40">
+        <div className="container mx-auto p-4 md:p-6">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl md:text-3xl">👑</span>
+              <div>
+                <h1 className="text-xl md:text-3xl font-bold bg-gradient-to-r from-yellow-400 to-amber-500 text-transparent bg-clip-text">
+                  Brolay Toxic Standings
+                </h1>
+                <p className="text-gray-400 text-xs md:text-sm">5 Big Guys, Inc.</p>
+              </div>
+            </div>
+            {isMobile && (
+              <Button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                variant="ghost"
+                className="text-white"
+              >
+                {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+              </Button>
+            )}
+            {!isMobile && saving && (
+              <div className="text-sm bg-gray-800 px-3 py-1 rounded-lg border border-gray-700">
+                <Loader className="inline animate-spin text-yellow-400" size={16} />
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
 
-      {/* Desktop Sidebar / Mobile Drawer */}
+      {/* Navigation */}
       <div
-        className={`
-          ${isMobile ? 'fixed inset-y-0 left-0 z-50 w-64 bg-gray-800 shadow-lg transform transition-transform' : 'fixed left-0 top-0 h-screen w-64 bg-gray-800 border-r border-gray-700 overflow-y-auto'}
-          ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}
-        `}
+        className={`${
+          isMobile
+            ? `fixed top-0 left-0 h-full w-64 bg-gray-900 shadow-lg z-50 transform transition-transform duration-300 ${
+                sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+              }`
+            : 'container mx-auto p-4 md:p-6'
+        }`}
       >
-        {/* Desktop Header */}
-        {!isMobile && (
-          <div className="p-6 bg-blue-600 text-white">
-            <h1 className="text-2xl font-bold">Brolay Toxic Standings</h1>
-          </div>
-        )}
+        <div className={isMobile ? 'pt-20 px-4' : 'mb-6'}>
+          <div
+            className={`${
+              isMobile
+                ? 'space-y-2'
+                : 'bg-gray-900/80 backdrop-blur-md rounded-xl p-2 border border-gray-700 shadow-xl flex gap-2 flex-wrap'
+            }`}
+          >
+            {/* New Brolay Button */}
+            <Button
+              onClick={() => handleNavClick('/entry')}
+              variant={isActive('/entry') ? 'primary' : 'secondary'}
+              className={isMobile ? 'w-full min-h-[44px]' : ''}
+            >
+              ✨ New Brolay
+            </Button>
 
-        {/* Navigation */}
-        <div className="p-4 space-y-2">
-          {/* Entry Button */}
-          <NavLink to="/entry">
-            {({ isActive }) => (
+            {/* Brolays Dropdown */}
+            <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
               <Button
-                variant={isActive ? 'primary' : 'secondary'}
-                className={`w-full text-left ${isMobile ? 'min-h-[44px]' : ''}`}
+                onClick={() => {
+                  if (isMobile) {
+                    toggleDropdown('brolays');
+                  }
+                }}
+                onMouseEnter={(e) =>
+                  !isMobile && e.currentTarget.parentElement.classList.add('dropdown-open')
+                }
+                variant={isGroupActive(['/brolays', '/picks']) ? 'primary' : 'secondary'}
+                className={isMobile ? 'w-full min-h-[44px]' : ''}
               >
-                ➕ New Brolay
+                📚 Brolays {isMobile ? (mobileDropdownOpen === 'brolays' ? '▲' : '▼') : '▼'}
               </Button>
-            )}
-          </NavLink>
+              {!isMobile && (
+                <div
+                  className="dropdown-content"
+                  onMouseLeave={(e) => e.currentTarget.parentElement.classList.remove('dropdown-open')}
+                >
+                  <div className="bg-gray-800 rounded-lg border border-yellow-500/30 shadow-2xl overflow-hidden">
+                    <Button
+                      onClick={() => handleNavClick('/brolays')}
+                      variant="ghost"
+                      className="w-full text-left"
+                    >
+                      📅 All Brolays
+                    </Button>
+                    <Button
+                      onClick={() => handleNavClick('/picks')}
+                      variant="ghost"
+                      className="w-full text-left"
+                    >
+                      📊 All Picks
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {isMobile && mobileDropdownOpen === 'brolays' && (
+                <div className="ml-4 mt-2 space-y-2">
+                  <Button
+                    onClick={() => handleNavClick('/brolays')}
+                    variant="ghost"
+                    className="w-full text-left min-h-[44px]"
+                  >
+                    📅 All Brolays
+                  </Button>
+                  <Button
+                    onClick={() => handleNavClick('/picks')}
+                    variant="ghost"
+                    className="w-full text-left min-h-[44px]"
+                  >
+                    📊 All Picks
+                  </Button>
+                </div>
+              )}
+            </div>
 
-          {/* All Brolays Button */}
-          <NavLink to="/brolays">
-            {({ isActive }) => (
+            {/* Analytics Dropdown */}
+            <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
               <Button
-                variant={isActive ? 'primary' : 'secondary'}
-                className={`w-full text-left ${isMobile ? 'min-h-[44px]' : ''}`}
+                onClick={() => {
+                  if (isMobile) {
+                    toggleDropdown('analytics');
+                  }
+                }}
+                onMouseEnter={(e) =>
+                  !isMobile && e.currentTarget.parentElement.classList.add('dropdown-open')
+                }
+                variant={
+                  isGroupActive(['/search', '/individual', '/group', '/rankings', '/grid'])
+                    ? 'primary'
+                    : 'secondary'
+                }
+                className={isMobile ? 'w-full min-h-[44px]' : ''}
               >
-                📅 All Brolays
+                📈 Analytics {isMobile ? (mobileDropdownOpen === 'analytics' ? '▲' : '▼') : '▼'}
               </Button>
-            )}
-          </NavLink>
-
-          {/* All Picks Button */}
-          <NavLink to="/picks">
-            {({ isActive }) => (
-              <Button
-                variant={isActive ? 'primary' : 'secondary'}
-                className={`w-full text-left ${isMobile ? 'min-h-[44px]' : ''}`}
-              >
-                📋 All Picks
-              </Button>
-            )}
-          </NavLink>
-
-          {/* Insights Dropdown - Mobile */}
-          {isMobile && (
-            <div>
-              <Button
-                onClick={() => toggleDropdown('insights')}
-                variant="secondary"
-                className="w-full text-left min-h-[44px]"
-              >
-                🔍 Insights
-              </Button>
-              {mobileDropdownOpen === 'insights' && (
-                <div className="pl-4 space-y-2 mt-2">
+              {!isMobile && (
+                <div
+                  className="dropdown-content"
+                  onMouseLeave={(e) => e.currentTarget.parentElement.classList.remove('dropdown-open')}
+                >
+                  <div className="bg-gray-800 rounded-lg border border-yellow-500/30 shadow-2xl overflow-hidden">
+                    <Button
+                      onClick={() => handleNavClick('/search')}
+                      variant="ghost"
+                      className="w-full text-left"
+                    >
+                      🔍 Insights
+                    </Button>
+                    <Button
+                      onClick={() => handleNavClick('/individual')}
+                      variant="ghost"
+                      className="w-full text-left"
+                    >
+                      👤 Individual Stats
+                    </Button>
+                    <Button
+                      onClick={() => handleNavClick('/group')}
+                      variant="ghost"
+                      className="w-full text-left"
+                    >
+                      👥 Group Stats
+                    </Button>
+                    <Button
+                      onClick={() => handleNavClick('/rankings')}
+                      variant="ghost"
+                      className="w-full text-left"
+                    >
+                      🏆 Rankings
+                    </Button>
+                    <Button
+                      onClick={() => handleNavClick('/grid')}
+                      variant="ghost"
+                      className="w-full text-left"
+                    >
+                      🎯 Grid View
+                    </Button>
+                  </div>
+                </div>
+              )}
+              {isMobile && mobileDropdownOpen === 'analytics' && (
+                <div className="ml-4 mt-2 space-y-2">
+                  <Button
+                    onClick={() => handleNavClick('/search')}
+                    variant="ghost"
+                    className="w-full text-left min-h-[44px]"
+                  >
+                    🔍 Insights
+                  </Button>
                   <Button
                     onClick={() => handleNavClick('/individual')}
                     variant="ghost"
@@ -173,110 +295,22 @@ const Layout = () => {
                 </div>
               )}
             </div>
-          )}
 
-          {/* Insights Links - Desktop (expanded list) */}
-          {!isMobile && (
-            <div className="space-y-2">
-              <div className="text-xs uppercase text-gray-400 font-semibold px-3 mt-2">Insights</div>
-              <NavLink to="/individual">
-                {({ isActive }) => (
-                  <Button
-                    variant={isActive ? 'primary' : 'ghost'}
-                    className="w-full text-left"
-                  >
-                    👤 Individual Stats
-                  </Button>
-                )}
-              </NavLink>
-              <NavLink to="/group">
-                {({ isActive }) => (
-                  <Button
-                    variant={isActive ? 'primary' : 'ghost'}
-                    className="w-full text-left"
-                  >
-                    👥 Group Stats
-                  </Button>
-                )}
-              </NavLink>
-              <NavLink to="/rankings">
-                {({ isActive }) => (
-                  <Button
-                    variant={isActive ? 'primary' : 'ghost'}
-                    className="w-full text-left"
-                  >
-                    🏆 Rankings
-                  </Button>
-                )}
-              </NavLink>
-              <NavLink to="/grid">
-                {({ isActive }) => (
-                  <Button
-                    variant={isActive ? 'primary' : 'ghost'}
-                    className="w-full text-left"
-                  >
-                    🎯 Grid View
-                  </Button>
-                )}
-              </NavLink>
-            </div>
-          )}
-
-          {/* Payments Button */}
-          <NavLink to="/payments">
-            {({ isActive }) => (
-              <Button
-                variant={isActive ? 'primary' : 'secondary'}
-                className={`w-full text-left ${isMobile ? 'min-h-[44px]' : ''}`}
-              >
-                💰 Payments
-              </Button>
-            )}
-          </NavLink>
-
-          {/* Settings (if enabled) */}
-          {SHOW_SETTINGS_TAB && (
-            <NavLink to="/settings">
-              {({ isActive }) => (
-                <Button
-                  variant={isActive ? 'primary' : 'secondary'}
-                  className={`w-full text-left ${isMobile ? 'min-h-[44px]' : ''}`}
-                >
-                  ⚙️ Settings
-                </Button>
-              )}
-            </NavLink>
-          )}
-
-          {/* Import (if enabled) */}
-          {SHOW_IMPORT_TAB && (
-            <NavLink to="/import">
-              {({ isActive }) => (
-                <Button
-                  variant={isActive ? 'primary' : 'secondary'}
-                  className={`w-full text-left ${isMobile ? 'min-h-[44px]' : ''}`}
-                >
-                  📥 Import Data
-                </Button>
-              )}
-            </NavLink>
-          )}
+            {/* Payments Button */}
+            <Button
+              onClick={() => handleNavClick('/payments')}
+              variant={isActive('/payments') ? 'primary' : 'secondary'}
+              className={isMobile ? 'w-full min-h-[44px]' : ''}
+            >
+              💰 Payments
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Mobile Overlay */}
-      {isMobile && sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-40"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       {/* Main Content */}
-      <div className={`${isMobile ? '' : 'ml-64'} min-h-screen`}>
-        <div className="container mx-auto p-4 md:p-6">
-          <Outlet />
-        </div>
+      <div className="container mx-auto p-4 md:p-6">
+        <Outlet />
       </div>
     </div>
   );
