@@ -173,11 +173,14 @@ const Entry = () => {
 
   // Get player suggestions for autocomplete (separate from teams)
   const getPlayerSuggestions = (input, sport) => {
+    console.log('🔍 getPlayerSuggestions:', { input, sport, learnedPlayersCount: learnedPlayers.length });
     if (!input || input.length < 2) return [];
 
     const inputLower = input.toLowerCase();
     const preloaded = PRELOADED_PLAYERS[sport] || [];
+    console.log('🔍 Preloaded players for', sport, ':', preloaded.length);
     const allPlayers = [...new Set([...preloaded, ...learnedPlayers])];
+    console.log('🔍 All players:', allPlayers.length);
 
     return allPlayers
       .filter(player => player.toLowerCase().includes(inputLower))
@@ -224,8 +227,10 @@ const Entry = () => {
 
   // Handle player input with autocomplete (for H2H, Either, Combined props)
   const handlePlayerInput = (id, field, value, sport) => {
+    console.log('🏈 handlePlayerInput called:', { id, field, value, sport });
     updateParticipant(id, field, value);
     const suggestions = getPlayerSuggestions(value, sport);
+    console.log('🏈 Player suggestions:', suggestions);
     setSuggestions(suggestions);
     setShowSuggestions({ ...showSuggestions, [`player-${id}`]: suggestions.length > 0 });
   };

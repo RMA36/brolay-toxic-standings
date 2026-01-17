@@ -9,7 +9,7 @@ import { inputClasses } from '../../constants/theme';
  * Renders a single pick/participant entry with all bet-specific fields
  * Used in both new brolay creation and editing existing brolays
  */
-const PickEntry = ({ 
+const PickEntry = ({
   participant,
   participantId,
   onUpdate,
@@ -23,6 +23,7 @@ const PickEntry = ({
   onPropTypeInput,
   onAwayTeamInput,
   onHomeTeamInput,
+  onPlayerInput,
   onSelectSuggestion,
   isMobile = false,
   isEditMode = false
@@ -218,7 +219,9 @@ const PickEntry = ({
                 value={participant.player1 || ''}
                 onChange={(e) => {
                   updateField('player1', e.target.value);
-                  onPlayerInput(`${participantId}-player1`, 'player1', e.target.value, participant.sport);
+                  if (onPlayerInput) {
+                    onPlayerInput(`${participantId}-player1`, 'player1', e.target.value, participant.sport);
+                  }
                 }}
                 className={inputClassName}
                 style={inputStyle}
@@ -280,7 +283,9 @@ const PickEntry = ({
                 value={participant.player2 || ''}
                 onChange={(e) => {
                   updateField('player2', e.target.value);
-                  onPlayerInput(`${participantId}-player2`, 'player2', e.target.value, participant.sport);
+                  if (onPlayerInput) {
+                    onPlayerInput(`${participantId}-player2`, 'player2', e.target.value, participant.sport);
+                  }
                 }}
                 className={inputClassName}
                 style={inputStyle}
@@ -436,7 +441,9 @@ const PickEntry = ({
                 value={participant.player1 || ''}
                 onChange={(e) => {
                   updateField('player1', e.target.value);
-                  onPlayerInput(`${participantId}-player1`, 'player1', e.target.value, participant.sport);
+                  if (onPlayerInput) {
+                    onPlayerInput(`${participantId}-player1`, 'player1', e.target.value, participant.sport);
+                  }
                 }}
                 className={inputClassName}
                 style={inputStyle}
@@ -466,7 +473,9 @@ const PickEntry = ({
                 value={participant.player2 || ''}
                 onChange={(e) => {
                   updateField('player2', e.target.value);
-                  onPlayerInput(`${participantId}-player2`, 'player2', e.target.value, participant.sport);
+                  if (onPlayerInput) {
+                    onPlayerInput(`${participantId}-player2`, 'player2', e.target.value, participant.sport);
+                  }
                 }}
                 className={inputClassName}
                 style={inputStyle}
@@ -552,7 +561,9 @@ const PickEntry = ({
                 value={participant.player1 || ''}
                 onChange={(e) => {
                   updateField('player1', e.target.value);
-                  onPlayerInput(`${participantId}-player1`, 'player1', e.target.value, participant.sport);
+                  if (onPlayerInput) {
+                    onPlayerInput(`${participantId}-player1`, 'player1', e.target.value, participant.sport);
+                  }
                 }}
                 className={inputClassName}
                 style={inputStyle}
@@ -582,7 +593,9 @@ const PickEntry = ({
                 value={participant.player2 || ''}
                 onChange={(e) => {
                   updateField('player2', e.target.value);
-                  onPlayerInput(`${participantId}-player2`, 'player2', e.target.value, participant.sport);
+                  if (onPlayerInput) {
+                    onPlayerInput(`${participantId}-player2`, 'player2', e.target.value, participant.sport);
+                  }
                 }}
                 className={inputClassName}
                 style={inputStyle}
