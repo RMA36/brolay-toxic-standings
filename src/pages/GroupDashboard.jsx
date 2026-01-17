@@ -16,7 +16,6 @@ const GroupDashboard = () => {
   // Get context values
   const {
     parlays,
-    applyFilters,
     filters,
     setFilters,
     filtersExpanded,
@@ -30,6 +29,54 @@ const GroupDashboard = () => {
   const players = PLAYERS;
   const sports = SPORTS;
   const preloadedTeams = PRELOADED_TEAMS;
+
+  // Apply filters to parlays
+  const applyFilters = (parlayList) => {
+    return parlayList.filter(parlay => {
+      // Date filters
+      if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
+      if (filters.dateTo && parlay.date > filters.dateTo) return false;
+
+      // PlacedBy filter
+      if (filters.placedBy && parlay.placedBy !== filters.placedBy) return false;
+
+      // Payout filters
+      if (filters.minPayout && parlay.totalPayout < parseFloat(filters.minPayout)) return false;
+      if (filters.maxPayout && parlay.totalPayout > parseFloat(filters.maxPayout)) return false;
+
+      // Settlement filter
+      if (filters.result === 'settled' && !parlay.settled) return false;
+      if (filters.result === 'pending' && parlay.settled) return false;
+
+      // Participant-level filters
+      const participants = Object.values(parlay.participants || {});
+
+      // Player filter
+      if (filters.player && !participants.some(p => p.player === filters.player)) return false;
+
+      // Sport filter
+      if (filters.sport && !participants.some(p => p.sport === filters.sport)) return false;
+
+      // Team/Player filter
+      if (filters.teamPlayer && !participants.some(p =>
+        p.teamPlayer?.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
+        p.teamPlayer2?.toLowerCase().includes(filters.teamPlayer.toLowerCase())
+      )) return false;
+
+      // Auto-updated filter
+      if (filters.autoUpdated === 'yes' && !participants.some(p => p.autoUpdated === true)) return false;
+      if (filters.autoUpdated === 'no' && !participants.some(p => p.autoUpdated === false)) return false;
+
+      // Bet type filter
+      if (filters.betType && !participants.some(p => p.pickType === filters.betType)) return false;
+
+      // Prop type filter
+      if (filters.propType && !participants.some(p => p.propType === filters.propType)) return false;
+
+      return true;
+    });
+  };
+
   const filteredParlays = applyFilters([...parlays]);
 
   const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
