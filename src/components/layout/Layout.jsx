@@ -47,7 +47,7 @@ const Layout = () => {
 
   return (
     <div
-      className="min-h-screen bg-gray-50"
+      className="min-h-screen bg-gray-900"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -81,7 +81,7 @@ const Layout = () => {
       {/* Desktop Sidebar / Mobile Drawer */}
       <div
         className={`
-          ${isMobile ? 'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform' : 'fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 overflow-y-auto'}
+          ${isMobile ? 'fixed inset-y-0 left-0 z-50 w-64 bg-gray-800 shadow-lg transform transition-transform' : 'fixed left-0 top-0 h-screen w-64 bg-gray-800 border-r border-gray-700 overflow-y-auto'}
           ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}
         `}
       >
@@ -130,96 +130,95 @@ const Layout = () => {
             )}
           </NavLink>
 
-          {/* Insights Dropdown */}
-          <div className="dropdown">
-            <Button
-              onClick={() => toggleDropdown('insights')}
-              variant="secondary"
-              className={`w-full text-left ${isMobile ? 'min-h-[44px]' : ''}`}
-            >
-              🔍 Insights
-            </Button>
-            {mobileDropdownOpen === 'insights' && isMobile && (
-              <div className="pl-4 space-y-2 mt-2">
-                <Button
-                  onClick={() => handleNavClick('/individual')}
-                  variant="ghost"
-                  className="w-full text-left min-h-[44px]"
-                >
-                  👤 Individual Stats
-                </Button>
-                <Button
-                  onClick={() => handleNavClick('/group')}
-                  variant="ghost"
-                  className="w-full text-left min-h-[44px]"
-                >
-                  👥 Group Stats
-                </Button>
-                <Button
-                  onClick={() => handleNavClick('/rankings')}
-                  variant="ghost"
-                  className="w-full text-left min-h-[44px]"
-                >
-                  🏆 Rankings
-                </Button>
-                <Button
-                  onClick={() => handleNavClick('/grid')}
-                  variant="ghost"
-                  className="w-full text-left min-h-[44px]"
-                >
-                  🎯 Grid View
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Desktop Insights Links (shown on hover) */}
-          {!isMobile && (
-            <div className="dropdown">
-              <div className="dropdown-content">
-                <div className="bg-white shadow-lg rounded-lg p-2 space-y-2">
-                  <NavLink to="/individual">
-                    {({ isActive }) => (
-                      <Button
-                        variant={isActive ? 'primary' : 'ghost'}
-                        className="w-full text-left"
-                      >
-                        👤 Individual Stats
-                      </Button>
-                    )}
-                  </NavLink>
-                  <NavLink to="/group">
-                    {({ isActive }) => (
-                      <Button
-                        variant={isActive ? 'primary' : 'ghost'}
-                        className="w-full text-left"
-                      >
-                        👥 Group Stats
-                      </Button>
-                    )}
-                  </NavLink>
-                  <NavLink to="/rankings">
-                    {({ isActive }) => (
-                      <Button
-                        variant={isActive ? 'primary' : 'ghost'}
-                        className="w-full text-left"
-                      >
-                        🏆 Rankings
-                      </Button>
-                    )}
-                  </NavLink>
-                  <NavLink to="/grid">
-                    {({ isActive }) => (
-                      <Button
-                        variant={isActive ? 'primary' : 'ghost'}
-                        className="w-full text-left"
-                      >
-                        🎯 Grid View
-                      </Button>
-                    )}
-                  </NavLink>
+          {/* Insights Dropdown - Mobile */}
+          {isMobile && (
+            <div>
+              <Button
+                onClick={() => toggleDropdown('insights')}
+                variant="secondary"
+                className="w-full text-left min-h-[44px]"
+              >
+                🔍 Insights
+              </Button>
+              {mobileDropdownOpen === 'insights' && (
+                <div className="pl-4 space-y-2 mt-2">
+                  <Button
+                    onClick={() => handleNavClick('/individual')}
+                    variant="ghost"
+                    className="w-full text-left min-h-[44px]"
+                  >
+                    👤 Individual Stats
+                  </Button>
+                  <Button
+                    onClick={() => handleNavClick('/group')}
+                    variant="ghost"
+                    className="w-full text-left min-h-[44px]"
+                  >
+                    👥 Group Stats
+                  </Button>
+                  <Button
+                    onClick={() => handleNavClick('/rankings')}
+                    variant="ghost"
+                    className="w-full text-left min-h-[44px]"
+                  >
+                    🏆 Rankings
+                  </Button>
+                  <Button
+                    onClick={() => handleNavClick('/grid')}
+                    variant="ghost"
+                    className="w-full text-left min-h-[44px]"
+                  >
+                    🎯 Grid View
+                  </Button>
                 </div>
-              </div>
+              )}
+            </div>
+          )}
+
+          {/* Insights Links - Desktop (expanded list) */}
+          {!isMobile && (
+            <div className="space-y-2">
+              <div className="text-xs uppercase text-gray-400 font-semibold px-3 mt-2">Insights</div>
+              <NavLink to="/individual">
+                {({ isActive }) => (
+                  <Button
+                    variant={isActive ? 'primary' : 'ghost'}
+                    className="w-full text-left"
+                  >
+                    👤 Individual Stats
+                  </Button>
+                )}
+              </NavLink>
+              <NavLink to="/group">
+                {({ isActive }) => (
+                  <Button
+                    variant={isActive ? 'primary' : 'ghost'}
+                    className="w-full text-left"
+                  >
+                    👥 Group Stats
+                  </Button>
+                )}
+              </NavLink>
+              <NavLink to="/rankings">
+                {({ isActive }) => (
+                  <Button
+                    variant={isActive ? 'primary' : 'ghost'}
+                    className="w-full text-left"
+                  >
+                    🏆 Rankings
+                  </Button>
+                )}
+              </NavLink>
+              <NavLink to="/grid">
+                {({ isActive }) => (
+                  <Button
+                    variant={isActive ? 'primary' : 'ghost'}
+                    className="w-full text-left"
+                  >
+                    🎯 Grid View
+                  </Button>
+                )}
+              </NavLink>
             </div>
           )}
 
