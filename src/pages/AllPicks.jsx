@@ -1,0 +1,671 @@
+import React from 'react';
+import Button from '../components/common/Button';
+import { formatDateForDisplay, formatBetDescription, normalizePropType } from '../utils/formatters';
+
+/**
+ * AllPicks Page Component
+ *
+ * Displays all individual picks flattened from parlays with comprehensive filtering.
+ * Supports inline editing of picks with full bet detail modification.
+ * Includes pagination for performance with large datasets.
+ *
+ * @param {Object} props
+ * @param {Array} props.parlays - Array of all parlays containing participants
+ * @param {Array} props.players - Array of player names
+ * @param {Array} props.sports - Array of sport names
+ * @param {Array} props.betTypes - Array of bet type options
+ * @param {Array} props.commonPropTypes - Common prop types for autocomplete
+ * @param {Array} props.learnedPropTypes - Learned prop types from history
+ * @param {Object} props.filters - Current filter values
+ * @param {Function} props.setFilters - Update filter values
+ * @param {boolean} props.filtersExpanded - Whether filters are expanded
+ * @param {Function} props.setFiltersExpanded - Toggle filter expansion
+ * @param {boolean} props.isMobile - Whether on mobile device
+ * @param {Object|null} props.editingPick - Pick currently being edited
+ * @param {Function} props.setEditingPick - Set pick to edit
+ * @param {boolean} props.saving - Whether save operation is in progress
+ * @param {Function} props.setSaving - Set saving state
+ * @param {Function} props.updateBrolay - Update brolay in database
+ * @param {number} props.picksToShow - Number of picks to display
+ * @param {Function} props.setPicksToShow - Set number of picks to show
+ */
+const AllPicks = ({
+  parlays,
+  players,
+  sports,
+  betTypes,
+  commonPropTypes,
+  learnedPropTypes,
+  filters,
+  setFilters,
+  filtersExpanded,
+  setFiltersExpanded,
+  isMobile,
+  editingPick,
+  setEditingPick,
+  saving,
+  setSaving,
+  updateBrolay,
+  picksToShow,
+  setPicksToShow
+}) => {
+  // Flatten all picks with parlay context
+  const allPicks = [];
+  parlays.forEach(parlay => {
+    Object.entries(parlay.participants || {}).forEach(([participantId, pick]) => {
+      allPicks.push({
+        ...pick,
+        participantId,
+        parlayId: parlay.id,
+        parlayDate: parlay.date,
+        parlayBetAmount: parlay.betAmount,
+        parlayTotalPayout: parlay.totalPayout,
+        parlayPlacedBy: parlay.placedBy
+      });
+    });
+  });
+
+  // Apply filters
+  const filteredPicks = allPicks.filter(pick => {
+    if (filters.dateFrom && pick.parlayDate < filters.dateFrom) return false;
+    if (filters.dateTo && pick.parlayDate > filters.dateTo) return false;
+    if (filters.player && pick.player !== filters.player) return false;
+    if (filters.sport && pick.sport !== filters.sport) return false;
+    if (filters.placedBy && pick.parlayPlacedBy !== filters.placedBy) return false;
+    if (filters.result && pick.result !== filters.result) return false;
+    if (filters.autoUpdated === 'true' && !pick.autoUpdated) return false;
+    if (filters.autoUpdated === 'false' && pick.autoUpdated) return false;
+
+    // Bet Type filter
+    if (filters.betType && pick.betType !== filters.betType) return false;
+
+    // Prop Type filter (only applies to Prop Bets)
+    if (filters.propType) {
+      if (pick.betType !== 'Prop Bet') return false;
+      if (!pick.propType) return false;
+
+      const normalizedPickProp = normalizePropType(pick.propType);
+      const normalizedFilterProp = normalizePropType(filters.propType);
+
+      if (!normalizedPickProp.includes(normalizedFilterProp) &&
+          !normalizedFilterProp.includes(normalizedPickProp)) {
+        return false;
+      }
+    }
+
+    if (filters.teamPlayer) {
+      const normalizedFilter = filters.teamPlayer.toLowerCase();
+      const hasTeamPlayer = (pick.team && pick.team.toLowerCase().includes(normalizedFilter)) ||
+                            (pick.awayTeam && pick.awayTeam.toLowerCase().includes(normalizedFilter)) ||
+                            (pick.homeTeam && pick.homeTeam.toLowerCase().includes(normalizedFilter));
+      if (!hasTeamPlayer) return false;
+    }
+
+    return true;
+  });
+
+  // Sort by date descending
+  const sortedPicks = filteredPicks.sort((a, b) =>
+    new Date(b.parlayDate) - new Date(a.parlayDate)
+  );
+
+  const handleSavePickEdit = async () => {
+    console.log('🎯 handleSavePickEdit called');
+    console.log('📋 editingPick:', editingPick);
+
+    if (!editingPick) {
+      console.log('❌ No editingPick found, exiting');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Find the parlay this pick belongs to
+      const parlay = parlays.find(p => p.id === editingPick.parlayId);
+      if (!parlay) {
+        console.error('Parlay not found for ID:', editingPick.parlayId);
+        alert('Parlay not found');
+        return;
+      }
+
+      console.log('Found parlay:', parlay);
+      console.log('Editing participant:', editingPick.participantId);
+      console.log('Current participant data:', parlay.participants[editingPick.participantId]);
+
+      // Get the original participant to preserve any fields we're not editing
+      const originalParticipant = parlay.participants[editingPick.participantId];
+
+      // Update the specific participant, preserving all original fields
+      const updatedParticipants = { ...parlay.participants };
+      updatedParticipants[editingPick.participantId] = {
+        ...originalParticipant, // Start with original to preserve any extra fields
+        player: editingPick.player,
+        sport: editingPick.sport,
+        team: editingPick.team || '',
+        awayTeam: editingPick.awayTeam || '',
+        homeTeam: editingPick.homeTeam || '',
+        betType: editingPick.betType,
+        favorite: editingPick.favorite || 'Favorite',
+        spread: editingPick.spread || '',
+        total: editingPick.total || '',
+        overUnder: editingPick.overUnder || 'Over',
+        propType: editingPick.propType || '',
+        line: editingPick.line || '',
+        odds: editingPick.odds || '',
+        yesNoRuns: editingPick.yesNoRuns || '',
+        quarter: editingPick.quarter || '',
+        result: editingPick.result,
+        actualStats: editingPick.actualStats || null,
+        autoUpdated: editingPick.autoUpdated || false,
+        manuallyOverridden: true // Mark as manually edited
+      };
+
+      console.log('Updated participant data:', updatedParticipants[editingPick.participantId]);
+
+      // Update in Firebase
+      if (parlay.id) {
+        console.log('🔄 Updating Firebase document:', parlay.id);
+        console.log('📝 Parlay object:', parlay);
+        console.log('📝 Updated participants:', updatedParticipants);
+
+        try {
+          const result = await updateBrolay(parlay.id, {
+            participants: updatedParticipants
+          });
+
+          console.log('✅ Update result:', result);
+
+          if (!result.success) {
+            throw new Error(result.error?.message || 'Update failed without error details');
+          }
+
+          console.log('✅ Firebase update successful');
+        } catch (fbError) {
+          console.error('💥 Firebase update error:', fbError);
+          console.error('Error code:', fbError.code);
+          console.error('Error message:', fbError.message);
+          console.error('Full error object:', fbError);
+          throw fbError;
+        }
+      } else {
+        console.error('❌ No Firestore ID found for parlay');
+        console.log('Parlay object:', parlay);
+        alert('Cannot update: Parlay has no Firestore ID');
+        return;
+      }
+
+      // Close the modal and show success
+      setEditingPick(null);
+      alert('Pick updated successfully!');
+      console.log('✅ Edit complete, modal closed');
+    } catch (error) {
+      console.error('Error updating pick:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        stack: error.stack
+      });
+      alert(`Failed to update pick: ${error.message || 'Unknown error'}. Check console for details.`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 md:space-y-6">
+      <h2 className="text-xl md:text-2xl font-bold text-yellow-400">📋 All Individual Picks</h2>
+
+      {/* Filters */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <Button
+          onClick={() => setFiltersExpanded(!filtersExpanded)}
+          variant="ghost"
+          className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
+        >
+          <span>Filters</span>
+          <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
+        </Button>
+
+        {filtersExpanded && (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Date From</label>
+                <input
+                  type="date"
+                  value={filters.dateFrom}
+                  onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Date To</label>
+                <input
+                  type="date"
+                  value={filters.dateTo}
+                  onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
+                <select
+                  value={filters.player}
+                  onChange={(e) => setFilters({...filters, player: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {players.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Sport</label>
+                <select
+                  value={filters.sport}
+                  onChange={(e) => setFilters({...filters, sport: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {sports.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
+                <select
+                  value={filters.placedBy}
+                  onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {players.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
+                <select
+                  value={filters.result}
+                  onChange={(e) => setFilters({...filters, result: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  <option value="win">Win</option>
+                  <option value="loss">Loss</option>
+                  <option value="push">Push</option>
+                  <option value="pending">Pending</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Auto-Updated</label>
+                <select
+                  value={filters.autoUpdated}
+                  onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  <option value="true">Auto-Updated Only</option>
+                  <option value="false">Manual Only</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
+                <input
+                  type="text"
+                  value={filters.teamPlayer}
+                  onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="Search teams/players..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Bet Type</label>
+                <select
+                  value={filters.betType || ''}
+                  onChange={(e) => setFilters({...filters, betType: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                >
+                  <option value="">All</option>
+                  {betTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Prop Type</label>
+                <input
+                  type="text"
+                  value={filters.propType || ''}
+                  onChange={(e) => setFilters({...filters, propType: e.target.value})}
+                  className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                  style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  placeholder="e.g., Passing Touchdowns"
+                  list="prop-type-filter-suggestions"
+                />
+                <datalist id="prop-type-filter-suggestions">
+                  {[...new Set([...commonPropTypes, ...learnedPropTypes])].map((prop, idx) => (
+                    <option key={idx} value={prop} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+            <Button
+              onClick={() => setFilters({
+                dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
+                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
+                betType: '', propType: ''
+              })}
+              variant="secondary"
+              className={`mt-4 ${isMobile ? 'min-h-[44px]' : ''}`}
+            >
+              Clear Filters
+            </Button>
+          </>
+        )}
+      </div>
+
+      {/* Picks List */}
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg md:text-xl font-bold text-yellow-400">
+            {sortedPicks.length} Pick{sortedPicks.length !== 1 ? 's' : ''}
+          </h3>
+        </div>
+
+        <div className="space-y-3">
+          {sortedPicks.length === 0 ? (
+            <p className="text-gray-500 text-center py-8">No picks match your filters</p>
+          ) : (
+            sortedPicks.slice(0, picksToShow).map((pick, idx) => {
+              let teamDisplay = '';
+              if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(pick.betType)) {
+                teamDisplay = `${pick.awayTeam} @ ${pick.homeTeam}`;
+              } else {
+                teamDisplay = pick.team;
+              }
+
+              const betDetails = formatBetDescription(pick);
+
+              return (
+                <div key={`${pick.parlayId}-${pick.participantId}-${idx}`} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50 hover:bg-gray-800/70 transition">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-400 mb-1">
+                        {formatDateForDisplay(pick.parlayDate)} • Placed by {pick.parlayPlacedBy || 'Unknown'}
+                      </div>
+                      <div className="font-semibold text-white">
+                        <strong className="text-yellow-400">{pick.player}</strong> - {pick.sport} - {teamDisplay} {betDetails}
+                      </div>
+                      <div className="text-sm text-gray-400">
+                        {pick.betType}
+                        {pick.odds && ` • ${pick.odds}`}
+                      </div>
+                      {pick.actualStats && (
+                        <div className="text-sm text-blue-400 font-semibold mt-1">
+                          [{pick.actualStats}]
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 ml-4">
+                      {pick.autoUpdated && (
+                        <span
+                          className="text-blue-600 cursor-help"
+                          title={`Auto-updated on ${new Date(pick.autoUpdatedAt).toLocaleString()}`}
+                        >
+                          🤖
+                        </span>
+                      )}
+                      <span className={`font-semibold text-sm ${
+                        pick.result === 'win' ? 'text-green-400' :
+                        pick.result === 'loss' ? 'text-red-400' :
+                        pick.result === 'push' ? 'text-yellow-400' :
+                        'text-gray-400'
+                      }`}>
+                        {pick.result.toUpperCase()}
+                      </span>
+                      <Button
+                        onClick={() => setEditingPick(pick)}
+                        variant="ghost"
+                        size="small"
+                        className="text-blue-400 hover:text-blue-300"
+                      >
+                        Edit
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Pagination */}
+        {sortedPicks.length > picksToShow && (
+          <div className="mt-4 flex gap-3 justify-center">
+            <Button
+              onClick={() => setPicksToShow(prev => prev + 20)}
+              variant="blue"
+              className={isMobile ? 'min-h-[44px]' : ''}
+            >
+              Show More (20)
+            </Button>
+            <Button
+              onClick={() => setPicksToShow(sortedPicks.length)}
+              variant="secondary"
+              className={isMobile ? 'min-h-[44px]' : ''}
+            >
+              Show All ({sortedPicks.length})
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Edit Pick Modal */}
+      {editingPick && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 md:p-4 overflow-y-auto"
+          onClick={(e) => {
+            // Close modal if clicking the backdrop
+            if (e.target === e.currentTarget) {
+              setEditingPick(null);
+            }
+          }}
+        >
+          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-lg shadow-xl w-full max-h-[90vh] overflow-y-auto border border-yellow-500/20" style={{ maxWidth: isMobile ? '100%' : '800px' }}>
+            <div className="p-4 md:p-6">
+              <h2 className="text-xl md:text-2xl font-bold mb-4 text-yellow-400">Edit Pick</h2>
+
+              <div className="mb-4 p-3 bg-gray-900/50 border border-gray-700 rounded text-sm">
+                <div className="font-semibold text-gray-300">From Brolay:</div>
+                <div className="text-gray-400">
+                  {formatDateForDisplay(editingPick.parlayDate)} • Placed by {editingPick.parlayPlacedBy || 'Unknown'}
+                </div>
+              </div>
+
+              {editingPick.autoUpdated && (
+                <div className="mb-4 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  ✓ This pick was auto-updated on {new Date(editingPick.autoUpdatedAt).toLocaleString()}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
+                  <select
+                    value={editingPick.player}
+                    onChange={(e) => setEditingPick({...editingPick, player: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    <option value="">Select</option>
+                    {players.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Sport</label>
+                  <select
+                    value={editingPick.sport}
+                    onChange={(e) => setEditingPick({...editingPick, sport: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    {sports.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Bet Type</label>
+                  <select
+                    value={editingPick.betType}
+                    onChange={(e) => setEditingPick({...editingPick, betType: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    {betTypes.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(editingPick.betType) && (
+                <div className="mb-3">
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
+                  <input
+                    type="text"
+                    value={editingPick.team || ''}
+                    onChange={(e) => setEditingPick({...editingPick, team: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  />
+                </div>
+              )}
+
+              {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(editingPick.betType) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Away Team</label>
+                    <input
+                      type="text"
+                      value={editingPick.awayTeam || ''}
+                      onChange={(e) => setEditingPick({...editingPick, awayTeam: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Home Team</label>
+                    <input
+                      type="text"
+                      value={editingPick.homeTeam || ''}
+                      onChange={(e) => setEditingPick({...editingPick, homeTeam: e.target.value})}
+                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                      style={{ fontSize: isMobile ? '16px' : '14px' }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+                {editingPick.betType === 'Prop Bet' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-300">Prop Type</label>
+                      <input
+                        type="text"
+                        value={editingPick.propType || ''}
+                        onChange={(e) => setEditingPick({...editingPick, propType: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                        style={{ fontSize: isMobile ? '16px' : '14px' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-300">Over/Under</label>
+                      <select
+                        value={editingPick.overUnder || 'Over'}
+                        onChange={(e) => setEditingPick({...editingPick, overUnder: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                        style={{ fontSize: isMobile ? '16px' : '14px' }}
+                      >
+                        <option value="Over">Over</option>
+                        <option value="Under">Under</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-300">Line</label>
+                      <input
+                        type="text"
+                        value={editingPick.line || ''}
+                        onChange={(e) => setEditingPick({...editingPick, line: e.target.value})}
+                        className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                        style={{ fontSize: isMobile ? '16px' : '14px' }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Odds (Optional)</label>
+                  <input
+                    type="text"
+                    value={editingPick.odds || ''}
+                    onChange={(e) => setEditingPick({...editingPick, odds: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
+                  <select
+                    value={editingPick.result}
+                    onChange={(e) => setEditingPick({...editingPick, result: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="win">Win</option>
+                    <option value="loss">Loss</option>
+                    <option value="push">Push</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-300">Actual Stats (Optional)</label>
+                  <input
+                    type="text"
+                    value={editingPick.actualStats || ''}
+                    onChange={(e) => setEditingPick({...editingPick, actualStats: e.target.value})}
+                    className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end mt-6">
+                <Button
+                  onClick={() => setEditingPick(null)}
+                  variant="secondary"
+                  className={isMobile ? 'min-h-[44px]' : ''}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSavePickEdit}
+                  disabled={saving}
+                  variant="primary"
+                  className={isMobile ? 'min-h-[44px]' : ''}
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AllPicks;
