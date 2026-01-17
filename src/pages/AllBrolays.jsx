@@ -471,9 +471,9 @@ const AllBrolays = () => {
                           </Button>
                           <Button
                             onClick={() => deleteParlay(parlay.id)}
-                            variant="ghost"
+                            variant="danger"
                             size="small"
-                            className={`text-red-400 hover:text-red-300 ${isMobile ? 'min-h-[44px]' : ''}`}
+                            className={isMobile ? 'min-h-[44px]' : ''}
                           >
                             Delete
                           </Button>
@@ -766,9 +766,9 @@ const AllBrolays = () => {
                         </Button>
                         <Button
                           onClick={() => deleteParlay(parlay.id)}
-                          variant="ghost"
+                          variant="danger"
                           size="small"
-                          className={`text-red-400 hover:text-red-300 ${isMobile ? 'min-h-[44px]' : ''}`}
+                          className={isMobile ? 'min-h-[44px]' : ''}
                         >
                           Delete
                         </Button>
