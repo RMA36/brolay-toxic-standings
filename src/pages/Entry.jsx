@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AlertCircle, PlusCircle } from 'lucide-react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS, SPORTS, PICK_TYPES, PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
@@ -368,7 +368,8 @@ const Entry = () => {
     });
   };
 
-  const playerOutInfo = getPlayerOut();
+  // Memoize player out calculation to prevent blocking on every render
+  const playerOutInfo = useMemo(() => getPlayerOut(), [parlays]);
 
   return (
     <div className="space-y-4 md:space-y-6">

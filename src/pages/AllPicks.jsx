@@ -432,13 +432,13 @@ const AllPicks = () => {
 
         {/* Pagination */}
         {sortedPicks.length > picksToShow && (
-          <div className="mt-4 flex gap-3 justify-center">
+          <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
             <Button
               onClick={() => setPicksToShow(prev => prev + 20)}
-              variant="blue"
+              variant="secondary"
               className={isMobile ? 'min-h-[44px]' : ''}
             >
-              Show More (20)
+              Show 20 More
             </Button>
             <Button
               onClick={() => setPicksToShow(sortedPicks.length)}
@@ -446,6 +446,17 @@ const AllPicks = () => {
               className={isMobile ? 'min-h-[44px]' : ''}
             >
               Show All ({sortedPicks.length})
+            </Button>
+          </div>
+        )}
+        {picksToShow > 20 && picksToShow >= sortedPicks.length && (
+          <div className="mt-4 text-center">
+            <Button
+              onClick={() => setPicksToShow(20)}
+              variant="secondary"
+              className={isMobile ? 'min-h-[44px]' : ''}
+            >
+              Show Less
             </Button>
           </div>
         )}
