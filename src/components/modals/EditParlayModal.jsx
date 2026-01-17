@@ -308,22 +308,31 @@ const EditParlayModal = ({
                 </Button>
               )}
             </div>
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3 justify-between">
               <Button
-                variant="secondary"
-                onClick={onClose}
+                variant="danger"
+                onClick={handleDelete}
                 className={isMobile ? 'min-h-[44px]' : ''}
               >
-                Cancel
+                Delete Brolay
               </Button>
-              <Button
-                variant="primary"
-                onClick={handleSave}
-                disabled={saving}
-                className={isMobile ? 'min-h-[44px]' : ''}
-              >
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
+              <div className="flex gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={onClose}
+                  className={isMobile ? 'min-h-[44px]' : ''}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className={isMobile ? 'min-h-[44px]' : ''}
+                >
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

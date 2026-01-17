@@ -33,13 +33,14 @@ const AllBrolays = () => {
     setFilters,
     filtersExpanded,
     setFiltersExpanded,
-    learnedTeams
+    learnedTeams,
+    brolaysToShow,
+    setBrolaysToShow
   } = useBrolayContext();
 
   const players = PLAYERS;
   const sports = SPORTS;
   const preloadedTeams = PRELOADED_TEAMS;
-  const deleteParlay = handleDeleteParlay;
 
   // Helper functions
   const getCalendarDays = (month, year) => {
@@ -469,14 +470,6 @@ const AllBrolays = () => {
                           >
                             Edit
                           </Button>
-                          <Button
-                            onClick={() => deleteParlay(parlay.id)}
-                            variant="danger"
-                            size="small"
-                            className={isMobile ? 'min-h-[44px]' : ''}
-                          >
-                            Delete
-                          </Button>
                         </div>
                       </div>
 
@@ -706,7 +699,7 @@ const AllBrolays = () => {
             </div>
 
             <div className="space-y-3">
-              {filteredParlays.map(parlay => {
+              {filteredParlays.slice(0, brolaysToShow).map(parlay => {
                 const participants = Object.values(parlay.participants);
                 const losers = participants.filter(p => p.result === 'loss');
                 const winners = participants.filter(p => p.result === 'win');
@@ -763,14 +756,6 @@ const AllBrolays = () => {
                           className={`text-blue-400 hover:text-blue-300 ${isMobile ? 'min-h-[44px]' : ''}`}
                         >
                           Edit
-                        </Button>
-                        <Button
-                          onClick={() => deleteParlay(parlay.id)}
-                          variant="danger"
-                          size="small"
-                          className={isMobile ? 'min-h-[44px]' : ''}
-                        >
-                          Delete
                         </Button>
                       </div>
                     </div>
@@ -831,6 +816,37 @@ const AllBrolays = () => {
                 );
               })}
             </div>
+
+            {/* Pagination Controls */}
+            {filteredParlays.length > brolaysToShow && (
+              <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
+                <Button
+                  onClick={() => setBrolaysToShow(brolaysToShow + 10)}
+                  variant="secondary"
+                  className={isMobile ? 'min-h-[44px]' : ''}
+                >
+                  Show 10 More
+                </Button>
+                <Button
+                  onClick={() => setBrolaysToShow(filteredParlays.length)}
+                  variant="secondary"
+                  className={isMobile ? 'min-h-[44px]' : ''}
+                >
+                  Show All ({filteredParlays.length})
+                </Button>
+              </div>
+            )}
+            {brolaysToShow > 10 && brolaysToShow >= filteredParlays.length && (
+              <div className="mt-4 text-center">
+                <Button
+                  onClick={() => setBrolaysToShow(10)}
+                  variant="secondary"
+                  className={isMobile ? 'min-h-[44px]' : ''}
+                >
+                  Show Less
+                </Button>
+              </div>
+            )}
           </div>
         </>
       )}
