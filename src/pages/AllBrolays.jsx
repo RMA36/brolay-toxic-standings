@@ -66,8 +66,7 @@ const AllBrolays = () => {
     setCalendarMonth(newMonth);
   };
 
-  const getBrolaysForDate = (year, month, day) => {
-    const dateStr = formatCalendarDate(year, month, day);
+  const getBrolaysForDate = (dateStr) => {
     return parlays.filter(p => p.date === dateStr);
   };
 

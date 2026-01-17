@@ -35,7 +35,11 @@ export const formatBetDescription = (participant) => {
   const { betType, team, line, overUnder, awayTeam, homeTeam, propType, player1, player2, player1PropType, player2PropType } = participant;
 
   if (betType === 'Spread') {
-    return `${team} ${line >= 0 ? '+' : ''}${line}`;
+    if (line === '' || line === undefined || line === null) {
+      return `${team} (No Line)`;
+    }
+    const numLine = parseFloat(line);
+    return `${team} ${numLine >= 0 ? '+' : ''}${numLine}`;
   } else if (betType === 'Moneyline' || betType === 'First Half Moneyline' || betType === 'Quarter Moneyline') {
     return `${team} ML`;
   } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total') {
