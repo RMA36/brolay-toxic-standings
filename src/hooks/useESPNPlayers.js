@@ -89,6 +89,8 @@ export const useESPNPlayers = () => {
       // Wait for all roster fetches to complete
       const rosters = await Promise.all(rosterPromises);
 
+      console.log(`Searching for "${playerName}" across ${rosters.filter(r => r).length} team rosters`);
+
       // Search through all rosters
       for (const roster of rosters) {
         if (!roster || !Array.isArray(roster.athletes)) continue;
@@ -105,7 +107,7 @@ export const useESPNPlayers = () => {
 
           // Exact match
           if (normalizedFullName === normalizedSearch) {
-            console.log(`Found exact match: ${fullName} - ${team.displayName}`);
+            console.log(`✅ Found exact match: ${fullName} - ${team.displayName}`);
             return {
               team: team.displayName,
               position: athlete.position?.abbreviation || athlete.position?.name || 'N/A',
@@ -127,6 +129,8 @@ export const useESPNPlayers = () => {
           }
         }
       }
+
+      console.log(`Searched ${playerName}, normalized: ${normalizePlayerName(playerName)}, found ${suggestions.length} suggestions`);
 
       // No exact match - return suggestions
       if (suggestions.length > 0) {
