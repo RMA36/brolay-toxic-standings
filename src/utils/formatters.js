@@ -32,7 +32,7 @@ export const formatCalendarDate = (year, month, day) => {
  * Format bet description for display
  */
 export const formatBetDescription = (participant) => {
-  const { betType, team, line, spread, overUnder, awayTeam, homeTeam, propType, player1, player2, player1PropType, player2PropType, playerTeam, playerPosition } = participant;
+  const { betType, team, line, spread, overUnder, awayTeam, homeTeam, propType, player1, player2, player1PropType, player2PropType, playerTeam, playerPosition, favorite } = participant;
 
   if (betType === 'Spread') {
     // Use spread field if available, otherwise fall back to line
@@ -41,11 +41,15 @@ export const formatBetDescription = (participant) => {
       return `(No Spread)`;
     }
     const numSpread = parseFloat(spreadValue);
-    return `${numSpread >= 0 ? '+' : ''}${numSpread}`;
+    // Favorites get negative spreads, Dogs get positive spreads
+    const isFavorite = favorite === 'Favorite';
+    const displaySpread = isFavorite ? -Math.abs(numSpread) : Math.abs(numSpread);
+    return `${displaySpread > 0 ? '+' : ''}${displaySpread}`;
   } else if (betType === 'Moneyline' || betType === 'First Half Moneyline' || betType === 'Quarter Moneyline') {
     return `ML`;
   } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total') {
-    return `${awayTeam} @ ${homeTeam} ${overUnder} ${line}`;
+    // Don't duplicate team names - they're displayed separately
+    return `${overUnder} ${line}`;
   } else if (betType === 'Player Prop') {
     // Don't include player name (team field) since it's displayed separately as teamDisplay
     // Only show team/position context and prop details
