@@ -734,12 +734,17 @@ const AllBrolays = () => {
                     <div className="flex flex-col md:flex-row md:justify-between md:items-start mb-3 gap-2">
                       <div className="flex-1">
                         <div className="text-white font-semibold text-sm md:text-base">
-                          {new Date(parlay.date).toLocaleDateString('en-US', {
-                            weekday: 'short',
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })} • {parlayType} • {participants.length} picks
+                          {(() => {
+                            // Parse date as local time to avoid timezone issues
+                            const [year, month, day] = parlay.date.split('-').map(Number);
+                            const localDate = new Date(year, month - 1, day);
+                            return localDate.toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            });
+                          })()} • {parlayType} • {participants.length} picks
                         </div>
                         <div className="text-gray-400 text-xs md:text-sm mt-1">
                           ${parlay.betAmount * participants.length} Risked •

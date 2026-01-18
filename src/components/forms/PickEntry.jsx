@@ -986,8 +986,8 @@ const PickEntry = ({
               <input
                 type="text"
                 value={participant.playerTeam || ''}
-                readOnly
-                className={`${inputClassName} bg-gray-700/50 cursor-not-allowed`}
+                onChange={(e) => updateField('playerTeam', e.target.value)}
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="Auto-filled from ESPN"
               />
@@ -997,8 +997,8 @@ const PickEntry = ({
               <input
                 type="text"
                 value={participant.playerPosition || ''}
-                readOnly
-                className={`${inputClassName} bg-gray-700/50 cursor-not-allowed`}
+                onChange={(e) => updateField('playerPosition', e.target.value)}
+                className={inputClassName}
                 style={inputStyle}
                 placeholder="Auto-filled from ESPN"
               />
