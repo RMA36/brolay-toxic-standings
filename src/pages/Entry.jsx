@@ -128,6 +128,8 @@ const Entry = () => {
       return;
     }
 
+    console.log('📝 updateParticipant called:', { id, baseId, field, value });
+
     setNewParlay({
       ...newParlay,
       participants: {
