@@ -1122,20 +1122,31 @@ export const useESPN = () => {
   // Main check game result function
   const checkGameResult = async (participant, gameDate) => {
     const { sport, betType, team, awayTeam, homeTeam, favorite, spread, overUnder, total } = participant;
-    
+
+    console.log('🔍 checkGameResult - betType:', betType, 'sport:', sport, 'team:', team);
+
     // Handle special bet types
-    if (betType === 'Prop Bet') {
+    // Support both "Prop Bet" (legacy) and "Player Prop" (new)
+    if (betType === 'Prop Bet' || betType === 'Player Prop') {
+      console.log('✅ Detected Player Prop - calling checkPropBetResult');
       return await checkPropBetResult(participant, gameDate);
     }
-    
+
+    // Team Prop and Game Prop - these need specialized handling
+    // For now, they're not auto-updatable (would need team-level stat tracking)
+    if (betType === 'Team Prop' || betType === 'Game Prop') {
+      console.log(`⚠️ ${betType} auto-update not yet implemented`);
+      return { result: 'pending', stats: null };
+    }
+
     if (betType === 'H2H Prop') {
       return await checkH2HPropResult(participant, gameDate);
     }
-    
+
     if (betType === 'Either Prop') {
       return await checkEitherPropResult(participant, gameDate);
     }
-    
+
     if (betType === 'Combined Prop') {
       return await checkCombinedPropResult(participant, gameDate);
     }
