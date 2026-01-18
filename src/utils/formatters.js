@@ -47,9 +47,10 @@ export const formatBetDescription = (participant) => {
   } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total') {
     return `${awayTeam} @ ${homeTeam} ${overUnder} ${line}`;
   } else if (betType === 'Player Prop') {
-    // Show player with team/position context
-    const teamInfo = playerTeam ? ` (${playerTeam}${playerPosition ? ' ' + playerPosition : ''})` : '';
-    return `${team}${teamInfo} ${propType} ${overUnder} ${line}`;
+    // Don't include player name (team field) since it's displayed separately as teamDisplay
+    // Only show team/position context and prop details
+    const teamInfo = playerTeam ? `(${playerTeam}${playerPosition ? ' ' + playerPosition : ''}) ` : '';
+    return `${teamInfo}${propType} ${overUnder} ${line}`;
   } else if (betType === 'Team Prop') {
     // Team-based prop (team is already displayed separately)
     return `${propType} ${overUnder} ${line}`;
