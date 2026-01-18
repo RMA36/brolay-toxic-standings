@@ -11,7 +11,6 @@ export const PICK_TYPES = [
   'Spread',
   'Moneyline',
   'Total',
-  'Prop Bet',
   'Player Prop',
   'Team Prop',
   'Game Prop',
@@ -26,7 +25,8 @@ export const PICK_TYPES = [
   'First Inning Runs',
   'Quarter Moneyline',
   'Quarter Total',
-  'Quarter Team Total'
+  'Quarter Team Total',
+  'Prop Bet'  // Legacy - kept for backwards compatibility with existing data
 ];
 
 // Pre-loaded teams by sport (these are the base teams, app will learn more via localStorage)

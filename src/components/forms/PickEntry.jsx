@@ -254,6 +254,61 @@ const PickEntry = ({
           </>
         );
 
+      case 'Player Prop':
+      case 'Team Prop':
+      case 'Game Prop':
+        return (
+          <>
+            <div className="relative">
+              <label className="block text-xs font-medium mb-1 text-white">Prop Type</label>
+              <input
+                type="text"
+                value={participant.propType || ''}
+                onChange={(e) => onPropTypeInput(participantId, e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="e.g., Passing Yards, Rushing TDs"
+              />
+              {showSuggestions[`prop-${participantId}`] && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
+                      onClick={() => onSelectSuggestion(participantId, 'propType', suggestion)}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
+              <select
+                value={participant.overUnder || 'Over'}
+                onChange={(e) => updateField('overUnder', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+              >
+                <option value="Over">Over</option>
+                <option value="Under">Under</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Line</label>
+              <input
+                type="text"
+                value={participant.line || ''}
+                onChange={(e) => updateField('line', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="e.g., 250.5"
+              />
+            </div>
+          </>
+        );
+
       case 'H2H Prop':
         return (
           <>
