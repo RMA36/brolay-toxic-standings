@@ -123,8 +123,6 @@ const Entry = () => {
     // IDs like "participant-1-player2" should become "participant-1"
     const baseId = id.includes('-player') || id.includes('-prop') ? id.split('-').slice(0, 2).join('-') : id;
 
-    console.log('📝 updateParticipant called:', { id, baseId, field, value });
-
     // Use functional setState to avoid stale state issues when multiple updates happen rapidly
     setNewParlay(prevParlay => {
       // Only update if the base participant exists
