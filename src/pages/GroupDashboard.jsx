@@ -6,8 +6,8 @@ import Card from '../components/common/Card';
 import StatCard from '../components/dashboard/StatCard';
 import FilterBar from '../components/filters/FilterBar';
 import { Users, TrendingUp, Award, AlertCircle, RefreshCw } from 'lucide-react';
-import { formatDateForDisplay, formatComboDescription } from '../utils/formatters';
-import { getCurrentSportsInSeason, getCurrentDayOfWeek, findMoneyMaker, findDangerZone, getSeasonalTip } from '../insightsHelper';
+import { formatDateForDisplay } from '../utils/formatters';
+import { getCurrentSportsInSeason, getCurrentDayOfWeek, findMoneyMaker, findDangerZone, getSeasonalTip, formatComboDescription } from '../insightsHelper';
 
 /**
  * GroupDashboard - Group statistics overview with insights, calendar, and settlement tracking

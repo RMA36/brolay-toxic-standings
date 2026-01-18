@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Button from '../common/Button';
 
 import { colors } from '../../constants/theme';
 import { inputClasses } from '../../constants/theme';
+import { useESPNPlayers } from '../../hooks/useESPNPlayers';
 
 /**
  * PickEntry Component
@@ -31,8 +32,52 @@ const PickEntry = ({
   const inputStyle = { fontSize: isMobile ? '16px' : '14px' };
   const inputClassName = inputClasses.base;
 
+  // Player lookup state
+  const [playerSuggestions, setPlayerSuggestions] = useState([]);
+  const [showPlayerSuggestions, setShowPlayerSuggestions] = useState(false);
+  const [loadingPlayerData, setLoadingPlayerData] = useState(false);
+  const { lookupPlayer } = useESPNPlayers();
+
   const updateField = (field, value) => {
     onUpdate(participantId, field, value);
+  };
+
+  // Player lookup handler (called on blur for Player Prop bet type)
+  const handlePlayerBlur = async (playerName, sport) => {
+    if (!playerName || playerName.length < 3) return;
+    if (participant.betType !== 'Player Prop') return;
+
+    setLoadingPlayerData(true);
+
+    const result = await lookupPlayer(playerName, sport);
+
+    setLoadingPlayerData(false);
+
+    if (result) {
+      if (result.team && result.position) {
+        // Exact match - auto-fill
+        updateField('playerTeam', result.team);
+        updateField('playerPosition', result.position);
+        if (result.fullName !== playerName) {
+          updateField('team', result.fullName); // Normalize name
+        }
+        setPlayerSuggestions([]);
+        setShowPlayerSuggestions(false);
+      } else if (result.suggestions && result.suggestions.length > 0) {
+        // Show suggestions
+        setPlayerSuggestions(result.suggestions);
+        setShowPlayerSuggestions(true);
+      }
+    }
+  };
+
+  // Handle selecting a player suggestion
+  const handleSelectPlayerSuggestion = (suggestion) => {
+    updateField('team', suggestion.name);
+    updateField('playerTeam', suggestion.team);
+    updateField('playerPosition', suggestion.position);
+    setPlayerSuggestions([]);
+    setShowPlayerSuggestions(false);
   };
 
   // Render bet-specific fields based on betType
@@ -801,35 +846,85 @@ const PickEntry = ({
 
       {/* Team/Player Fields - Conditional rendering based on bet type */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 mb-3">
-        {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', 'H2H Prop', 'Either Prop', 'Combined Prop'].includes(participant.betType) && (
-          <div className="relative">
-            <label className="block text-xs font-medium mb-1 text-white">Team/Player</label>
-            <input
-              type="text"
-              value={participant.team || ''}
-              onChange={(e) => onTeamInput(participantId, e.target.value, participant.sport)}
-              className={inputClassName}
-              style={inputStyle}
-              placeholder="Start typing..."
-            />
-            {showSuggestions[`team-${participantId}`] && suggestions.length > 0 && (
-              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                {suggestions.map((suggestion, idx) => (
-                  <div
-                    key={idx}
-                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
-                    onClick={() => onSelectSuggestion(participantId, 'team', suggestion)}
-                  >
-                    {suggestion}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Player field for Player Props and individual sports */}
+        {(() => {
+          const individualSports = ['Tennis', 'Tennis (Women\'s)', 'Golf', 'UFC'];
+          const showPlayerField = individualSports.includes(participant.sport) || participant.betType === 'Player Prop';
+          const showTeamField = !individualSports.includes(participant.sport) &&
+            ['Spread', 'Moneyline', 'First Half Spread', 'First Half Moneyline',
+             'Team Total', 'First Half Team Total', 'Quarter Moneyline',
+             'Quarter Team Total', 'Team Prop'].includes(participant.betType);
 
-        {/* Away/Home Team fields for Total bets */}
-        {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType) && (
+          if (!showPlayerField && !showTeamField) return null;
+
+          return (
+            <div className="relative">
+              <label className="block text-xs font-medium mb-1 text-white">
+                {showPlayerField ? 'Player' : 'Team'}
+              </label>
+              <input
+                type="text"
+                value={participant.team || ''}
+                onChange={(e) => onTeamInput(participantId, e.target.value, participant.sport)}
+                onBlur={() => {
+                  if (showPlayerField) {
+                    handlePlayerBlur(participant.team, participant.sport);
+                  }
+                }}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder={showPlayerField ? "Enter player name" : "Start typing..."}
+              />
+
+              {/* Player suggestions dropdown (for Player Props) */}
+              {showPlayerField && showPlayerSuggestions && playerSuggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-48 overflow-y-auto">
+                  <div className="px-3 py-2 text-xs font-semibold text-gray-600 border-b">
+                    Did you mean?
+                  </div>
+                  {playerSuggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
+                      onClick={() => handleSelectPlayerSuggestion(suggestion)}
+                    >
+                      <div className="font-medium text-sm text-black">{suggestion.name}</div>
+                      <div className="text-xs text-gray-600">
+                        {suggestion.team} • {suggestion.position}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Team suggestions dropdown (for team bets) */}
+              {!showPlayerField && showSuggestions[`team-${participantId}`] && suggestions.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                  {suggestions.map((suggestion, idx) => (
+                    <div
+                      key={idx}
+                      className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-black"
+                      onClick={() => onSelectSuggestion(participantId, 'team', suggestion)}
+                    >
+                      {suggestion}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Auto-filled team/position display (for Player Props) */}
+              {showPlayerField && participant.playerTeam && (
+                <div className="mt-1 text-xs text-gray-300">
+                  {participant.playerTeam} • {participant.playerPosition}
+                  {loadingPlayerData && <span className="ml-2">Loading...</span>}
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* Away/Home Team fields for Game Prop and Total bets */}
+        {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', 'Game Prop'].includes(participant.betType) && (
           <>
             <div className="relative">
               <label className="block text-xs font-medium mb-1 text-white">Away Team</label>

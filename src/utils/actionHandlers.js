@@ -158,6 +158,8 @@ export const createDefaultParticipant = () => ({
   player: '',
   sport: 'NFL',
   team: '',
+  playerTeam: '',           // Auto-filled from ESPN for Player Props
+  playerPosition: '',       // Auto-filled from ESPN for Player Props
   awayTeam: '',
   homeTeam: '',
   betType: 'Spread',

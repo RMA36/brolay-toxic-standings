@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Button from '../common/Button';
 import PickEntry from '../forms/PickEntry';
+import { createDefaultParticipant } from '../../utils/actionHandlers';
 
 /**
  * EditParlayModal - Reusable modal for editing parlays across different pages
@@ -75,24 +76,7 @@ const EditParlayModal = ({
   const handleAddParticipant = () => {
     const participantId = Object.keys(editedParlay.participants).length;
     const updated = { ...editedParlay };
-    updated.participants[participantId] = {
-      player: '',
-      sport: 'NFL',
-      team: '',
-      awayTeam: '',
-      homeTeam: '',
-      betType: 'Spread',
-      favorite: 'Favorite',
-      spread: '',
-      total: '',
-      overUnder: 'Over',
-      propType: '',
-      line: '',
-      odds: '',
-      yesNoRuns: '',
-      quarter: '',
-      result: 'pending'
-    };
+    updated.participants[participantId] = createDefaultParticipant();
     setEditedParlay(updated);
   };
 

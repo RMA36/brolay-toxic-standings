@@ -32,7 +32,7 @@ export const formatCalendarDate = (year, month, day) => {
  * Format bet description for display
  */
 export const formatBetDescription = (participant) => {
-  const { betType, team, line, spread, overUnder, awayTeam, homeTeam, propType, player1, player2, player1PropType, player2PropType } = participant;
+  const { betType, team, line, spread, overUnder, awayTeam, homeTeam, propType, player1, player2, player1PropType, player2PropType, playerTeam, playerPosition } = participant;
 
   if (betType === 'Spread') {
     // Use spread field if available, otherwise fall back to line
@@ -46,7 +46,18 @@ export const formatBetDescription = (participant) => {
     return `${team} ML`;
   } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total') {
     return `${awayTeam} @ ${homeTeam} ${overUnder} ${line}`;
+  } else if (betType === 'Player Prop') {
+    // Show player with team/position context
+    const teamInfo = playerTeam ? ` (${playerTeam}${playerPosition ? ' ' + playerPosition : ''})` : '';
+    return `${team}${teamInfo} ${propType} ${overUnder} ${line}`;
+  } else if (betType === 'Team Prop') {
+    // Team-based prop
+    return `${team} ${propType} ${overUnder} ${line}`;
+  } else if (betType === 'Game Prop') {
+    // Game total/combined prop
+    return `${awayTeam} @ ${homeTeam} ${propType} ${overUnder} ${line}`;
   } else if (betType === 'Prop Bet') {
+    // Legacy prop bet format
     return `${team} ${propType} ${overUnder} ${line}`;
   } else if (betType === 'H2H Prop') {
     if (player1PropType === player2PropType) {

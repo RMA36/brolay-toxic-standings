@@ -40,7 +40,8 @@ const Entry = () => {
     setSuggestions,
     showSuggestions,
     setShowSuggestions,
-    fetchOddsFromTheOddsAPI
+    fetchOddsFromTheOddsAPI,
+    prefetchEventsBySport
   } = useBrolayContext();
 
   // Helper function to get day of week from date string
@@ -268,45 +269,8 @@ const Entry = () => {
       if (!p.odds) sportsNeeded.add(p.sport);
     });
 
-    const eventsBySport = {};
-    const sportMap = {
-      'NFL': 'americanfootball_nfl',
-      'NBA': 'basketball_nba',
-      'MLB': 'baseball_mlb',
-      'NHL': 'icehockey_nhl',
-      'College Football': 'americanfootball_ncaaf',
-      'College Basketball': 'basketball_ncaab',
-      'College Basketball (Women\'s)': 'basketball_wncaab',
-      'WNBA': 'basketball_wnba',
-      'Soccer': 'soccer_usa_mls',
-      'Soccer (Women\'s)': 'soccer_usa_nwsl',
-      'College Baseball': 'baseball_ncaa'
-    };
-
-    for (const sport of sportsNeeded) {
-      const oddsApiSport = sportMap[sport];
-      if (!oddsApiSport) continue;
-
-      try {
-        const gameDateObj = new Date(newParlay.date + 'T00:00:00');
-        const commenceTimeFrom = gameDateObj.toISOString();
-        const gameDateNext = new Date(gameDateObj);
-        gameDateNext.setDate(gameDateNext.getDate() + 1);
-        const commenceTimeTo = gameDateNext.toISOString();
-
-        const oddsApiKey = process.env.REACT_APP_THE_ODDS_API_KEY;
-        const eventsUrl = `https://api.the-odds-api.com/v4/sports/${oddsApiSport}/events?apiKey=${oddsApiKey}&commenceTimeFrom=${commenceTimeFrom}&commenceTimeTo=${commenceTimeTo}`;
-
-        console.log(`Pre-fetching events for ${sport}`);
-        const eventsResponse = await fetch(eventsUrl);
-        const eventsData = await eventsResponse.json();
-
-        eventsBySport[sport] = eventsData || [];
-      } catch (error) {
-        console.error(`Error fetching events for ${sport}:`, error);
-        eventsBySport[sport] = [];
-      }
-    }
+    // Use the context function to pre-fetch events
+    const eventsBySport = await prefetchEventsBySport(Array.from(sportsNeeded), newParlay.date);
 
     // Now fetch odds for each pick, using the pre-fetched events
     for (const [id, participant] of Object.entries(newParlay.participants)) {

@@ -31,7 +31,7 @@ export const useOdds = (apiKey, matchTeamName) => {
    * @returns {Object|null} Odds data with price and bookmaker, or null if not found
    */
   const fetchOddsFromTheOddsAPI = async (participant, gameDate, eventsData = null) => {
-    const { sport, betType, team, awayTeam, homeTeam, propType, overUnder, line, favorite } = participant;
+    const { sport, betType, team, awayTeam, homeTeam, propType, overUnder, line, favorite, playerTeam } = participant;
 
     if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
       console.warn('The Odds API key not configured');
@@ -63,10 +63,11 @@ export const useOdds = (apiKey, matchTeamName) => {
       // Use pre-fetched events if available, otherwise fetch them
       if (!eventsData) {
         const gameDateObj = new Date(gameDate + 'T00:00:00');
-        const commenceTimeFrom = gameDateObj.toISOString();
+        // Remove milliseconds from ISO string (API wants YYYY-MM-DDTHH:MM:SSZ format)
+        const commenceTimeFrom = gameDateObj.toISOString().replace(/\.\d{3}Z$/, 'Z');
         const gameDateNext = new Date(gameDateObj);
         gameDateNext.setDate(gameDateNext.getDate() + 1);
-        const commenceTimeTo = gameDateNext.toISOString();
+        const commenceTimeTo = gameDateNext.toISOString().replace(/\.\d{3}Z$/, 'Z');
 
         const eventsUrl = `https://api.the-odds-api.com/v4/sports/${oddsApiSport}/events?apiKey=${apiKey}&commenceTimeFrom=${commenceTimeFrom}&commenceTimeTo=${commenceTimeTo}`;
 
@@ -83,11 +84,26 @@ export const useOdds = (apiKey, matchTeamName) => {
       // Find the matching game
       let matchingEvent = null;
       for (const event of eventsData) {
-        if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total') {
+        if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total' || betType === 'Game Prop') {
           // Match by both teams
           if (matchTeamName(awayTeam, event.away_team) && matchTeamName(homeTeam, event.home_team)) {
             matchingEvent = event;
             break;
+          }
+        } else if (betType === 'Player Prop') {
+          // Match by player's team (if playerTeam is available)
+          if (playerTeam) {
+            if (matchTeamName(playerTeam, event.home_team) || matchTeamName(playerTeam, event.away_team)) {
+              matchingEvent = event;
+              break;
+            }
+          } else {
+            // Fallback: try matching by team field (legacy behavior)
+            console.warn('Player Prop missing playerTeam field, using team field as fallback');
+            if (matchTeamName(team, event.home_team) || matchTeamName(team, event.away_team)) {
+              matchingEvent = event;
+              break;
+            }
           }
         } else {
           // Match by single team
@@ -100,6 +116,12 @@ export const useOdds = (apiKey, matchTeamName) => {
 
       if (!matchingEvent) {
         console.log('No matching game found');
+        if (betType === 'Player Prop' && playerTeam) {
+          console.log('Searched for player team:', playerTeam);
+        } else {
+          console.log('Searched for team:', team || `${awayTeam} @ ${homeTeam}`);
+        }
+        console.log('Available games:', eventsData.map(e => `${e.away_team} @ ${e.home_team}`));
         return null;
       }
 
@@ -113,7 +135,7 @@ export const useOdds = (apiKey, matchTeamName) => {
         markets = ['h2h'];
       } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'Quarter Total') {
         markets = ['totals'];
-      } else if (betType === 'Prop Bet') {
+      } else if (betType === 'Prop Bet' || betType === 'Player Prop' || betType === 'H2H Prop' || betType === 'Either Prop' || betType === 'Combined Prop') {
         // Comprehensive prop type mapping
         const propTypeMapping = ODDS_API_PROP_MAPPINGS;
 
@@ -122,10 +144,15 @@ export const useOdds = (apiKey, matchTeamName) => {
 
         if (!oddsApiMarket) {
           console.log(`Prop type "${propType}" (normalized: "${normalizedPropType}") not available in The Odds API`);
+          console.log(`Bet type: ${betType}`);
           return null;
         }
 
         markets = [oddsApiMarket];
+      } else if (betType === 'Team Prop' || betType === 'Game Prop') {
+        // Team/Game props - may need team-specific markets in the future
+        console.log(`${betType} odds fetching not yet fully implemented`);
+        return null;
       } else {
         console.log(`Bet type ${betType} not yet supported`);
         return null;
@@ -209,11 +236,26 @@ export const useOdds = (apiKey, matchTeamName) => {
           return { odds: outcome.price, bookmaker: bookmakerName };
         }
 
-      } else if (betType === 'Prop Bet') {
+      } else if (betType === 'Prop Bet' || betType === 'Player Prop' || betType === 'H2H Prop' || betType === 'Either Prop' || betType === 'Combined Prop') {
         const market = bookmaker.markets[0]; // We only requested one market
-        if (!market || !market.outcomes) return null;
+        if (!market || !market.outcomes) {
+          console.log(`No market data available for ${betType}`);
+          return null;
+        }
 
+        console.log(`Searching for ${betType}: ${propType}`);
         const playerName = participant.team; // For props, player name is in 'team' field
+        if (betType === 'Player Prop' && playerTeam) {
+          console.log(`Player: ${playerName} (${playerTeam} ${participant.playerPosition || ''}), Line: ${line}, ${overUnder}`);
+        } else {
+          console.log(`Player: ${playerName}, Line: ${line}, ${overUnder}`);
+        }
+        console.log(`Available outcomes in market:`, market.outcomes.map(o => ({
+          player: o.description,
+          name: o.name,
+          point: o.point,
+          price: o.price
+        })));
 
         // Search for matching player
         for (const outcome of market.outcomes) {
@@ -224,9 +266,13 @@ export const useOdds = (apiKey, matchTeamName) => {
           const searchPlayerName = playerName.toLowerCase();
 
           if (outcomePlayerName.includes(searchPlayerName) || searchPlayerName.includes(outcomePlayerName)) {
+            console.log(`Found player match: ${outcome.description}`);
+
             // Check if line matches
             const outcomeLine = parseFloat(outcome.point);
             const pickLine = parseFloat(line);
+
+            console.log(`Line comparison: API has ${outcomeLine}, pick has ${pickLine}`);
 
             if (Math.abs(outcomeLine - pickLine) <= 0.5) {
               // Match over/under direction
@@ -234,10 +280,13 @@ export const useOdds = (apiKey, matchTeamName) => {
                   (overUnder === 'Under' && outcome.name === 'Under')) {
                 console.log(`Found prop odds: ${outcome.price} for ${playerName} ${propType} from ${bookmakerName}`);
                 return { odds: outcome.price, bookmaker: bookmakerName };
+              } else {
+                console.log(`Over/Under mismatch: API has ${outcome.name}, pick wants ${overUnder}`);
               }
             }
           }
         }
+        console.log(`No matching prop found for ${playerName}`);
       }
 
       console.log('No matching odds found');
@@ -252,7 +301,87 @@ export const useOdds = (apiKey, matchTeamName) => {
     }
   };
 
+  /**
+   * Pre-fetch events for multiple sports on a given date
+   * This reduces API calls by fetching events once per sport instead of once per pick
+   *
+   * @param {Array<string>} sports - Array of sport names (e.g., ['NFL', 'NBA'])
+   * @param {string} gameDate - Date of the games (YYYY-MM-DD)
+   * @returns {Object} Object mapping sport names to their events data
+   */
+  const prefetchEventsBySport = async (sports, gameDate) => {
+    const sportMap = {
+      'NFL': 'americanfootball_nfl',
+      'NBA': 'basketball_nba',
+      'MLB': 'baseball_mlb',
+      'NHL': 'icehockey_nhl',
+      'College Football': 'americanfootball_ncaaf',
+      'College Basketball': 'basketball_ncaab',
+      'College Basketball (Women\'s)': 'basketball_wncaab',
+      'WNBA': 'basketball_wnba',
+      'Soccer': 'soccer_usa_mls',
+      'Soccer (Women\'s)': 'soccer_usa_nwsl',
+      'College Baseball': 'baseball_ncaa'
+    };
+
+    const eventsBySport = {};
+
+    if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+      console.warn('The Odds API key not configured');
+      return eventsBySport;
+    }
+
+    for (const sport of sports) {
+      const oddsApiSport = sportMap[sport];
+      if (!oddsApiSport) {
+        console.log(`Sport ${sport} not supported by The Odds API`);
+        eventsBySport[sport] = [];
+        continue;
+      }
+
+      try {
+        const gameDateObj = new Date(gameDate + 'T00:00:00');
+        // Remove milliseconds from ISO string (API wants YYYY-MM-DDTHH:MM:SSZ format)
+        const commenceTimeFrom = gameDateObj.toISOString().replace(/\.\d{3}Z$/, 'Z');
+        const gameDateNext = new Date(gameDateObj);
+        gameDateNext.setDate(gameDateNext.getDate() + 1);
+        const commenceTimeTo = gameDateNext.toISOString().replace(/\.\d{3}Z$/, 'Z');
+
+        const eventsUrl = `https://api.the-odds-api.com/v4/sports/${oddsApiSport}/events?apiKey=${apiKey}&commenceTimeFrom=${commenceTimeFrom}&commenceTimeTo=${commenceTimeTo}`;
+
+        console.log(`Pre-fetching events for ${sport} on ${gameDate}`);
+        const eventsResponse = await fetch(eventsUrl);
+
+        if (!eventsResponse.ok) {
+          const errorText = await eventsResponse.text();
+          console.error(`Failed to fetch events for ${sport}: ${eventsResponse.status} ${eventsResponse.statusText}`);
+          console.error(`Error details:`, errorText);
+          eventsBySport[sport] = [];
+          continue;
+        }
+
+        const eventsData = await eventsResponse.json();
+
+        // Check if response is an error object instead of an array
+        if (!Array.isArray(eventsData)) {
+          console.error(`Invalid events data for ${sport}:`, eventsData);
+          eventsBySport[sport] = [];
+          continue;
+        }
+
+        eventsBySport[sport] = eventsData;
+        console.log(`Found ${eventsData.length} events for ${sport}`);
+      } catch (error) {
+        console.error(`Error fetching events for ${sport}:`, error);
+        eventsBySport[sport] = [];
+      }
+    }
+
+    return eventsBySport;
+  };
+
   return {
-    fetchOddsFromTheOddsAPI
+    fetchOddsFromTheOddsAPI,
+    prefetchEventsBySport
   };
 };

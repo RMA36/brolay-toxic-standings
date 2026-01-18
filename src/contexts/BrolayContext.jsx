@@ -57,7 +57,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   const { stats, calculateStatsForPlayer } = useStats(parlays, players, editingParlay);
 
   // Odds API
-  const { fetchOddsFromTheOddsAPI } = useOdds(oddsApiKey, matchTeamName);
+  const { fetchOddsFromTheOddsAPI, prefetchEventsBySport } = useOdds(oddsApiKey, matchTeamName);
 
   // Insights data (memoized)
   const moneyMaker = useMemo(() => findMoneyMaker(parlays, players), [parlays, players]);
@@ -333,6 +333,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
 
     // Odds API
     fetchOddsFromTheOddsAPI,
+    prefetchEventsBySport,
 
     // Insights
     moneyMaker,
