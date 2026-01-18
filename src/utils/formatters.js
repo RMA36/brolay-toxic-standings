@@ -49,7 +49,9 @@ export const formatBetDescription = (participant) => {
     return `ML`;
   } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total') {
     // Don't duplicate team names - they're displayed separately
-    return `${overUnder} ${line}`;
+    // Use total field for totals, line field for other bet types
+    const totalValue = participant.total !== undefined && participant.total !== '' ? participant.total : line;
+    return `${overUnder} ${totalValue}`;
   } else if (betType === 'Player Prop') {
     // Don't include player name (team field) since it's displayed separately as teamDisplay
     // Only show team/position context and prop details
