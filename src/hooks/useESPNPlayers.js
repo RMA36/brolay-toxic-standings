@@ -80,21 +80,18 @@ export const useESPNPlayers = () => {
 
           const rosterData = await rosterResponse.json();
 
-          // DEBUG: Log first roster response to see structure
-          if (team.id === teams[0].team.id) {
-            console.log('🔍 Sample roster response structure:', {
-              teamName: team.displayName,
-              keys: Object.keys(rosterData),
-              hasAthletes: !!rosterData.athletes,
-              hasRoster: !!rosterData.roster,
-              hasRosterEntries: !!rosterData.rosterEntries,
-              athletesCount: rosterData.athletes?.length || 0,
-              rosterCount: rosterData.roster?.length || 0,
-              firstItemSample: rosterData.athletes?.[0] || rosterData.roster?.[0]
-            });
+          // ESPN returns athletes grouped by position (offense, defense, special teams)
+          // We need to flatten all the groups' items arrays into one athlete list
+          const athletes = [];
+          if (rosterData.athletes && Array.isArray(rosterData.athletes)) {
+            for (const group of rosterData.athletes) {
+              if (group.items && Array.isArray(group.items)) {
+                athletes.push(...group.items);
+              }
+            }
           }
 
-          return { team, athletes: rosterData.athletes || [] };
+          return { team, athletes };
         } catch (error) {
           console.warn(`Error fetching roster for ${team.displayName}:`, error);
           return null;
@@ -114,8 +111,10 @@ export const useESPNPlayers = () => {
         const team = roster.team;
 
         // Search athletes
-        for (const athlete of roster.athletes) {
-          const fullName = athlete.displayName || athlete.fullName;
+        for (const entry of roster.athletes) {
+          // Handle both nested (entry.athlete) and flat (entry) structures
+          const athlete = entry.athlete || entry;
+          const fullName = athlete.fullName || athlete.displayName;
           if (!fullName) continue;
 
           const normalizedFullName = normalizePlayerName(fullName);
