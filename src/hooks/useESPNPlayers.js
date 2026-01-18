@@ -79,6 +79,21 @@ export const useESPNPlayers = () => {
           }
 
           const rosterData = await rosterResponse.json();
+
+          // DEBUG: Log first roster response to see structure
+          if (team.id === teams[0].team.id) {
+            console.log('🔍 Sample roster response structure:', {
+              teamName: team.displayName,
+              keys: Object.keys(rosterData),
+              hasAthletes: !!rosterData.athletes,
+              hasRoster: !!rosterData.roster,
+              hasRosterEntries: !!rosterData.rosterEntries,
+              athletesCount: rosterData.athletes?.length || 0,
+              rosterCount: rosterData.roster?.length || 0,
+              firstItemSample: rosterData.athletes?.[0] || rosterData.roster?.[0]
+            });
+          }
+
           return { team, athletes: rosterData.athletes || [] };
         } catch (error) {
           console.warn(`Error fetching roster for ${team.displayName}:`, error);
