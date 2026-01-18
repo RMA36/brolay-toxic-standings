@@ -122,10 +122,12 @@ export const useESPNPlayers = () => {
 
           // Exact match
           if (normalizedFullName === normalizedSearch) {
-            console.log(`✅ Found exact match: ${fullName} - ${team.displayName}`);
+            const position = athlete.position?.abbreviation || athlete.position?.name || 'N/A';
+            console.log(`✅ Found exact match: ${fullName} - ${team.displayName} (${position})`);
+            console.log('Player data:', { fullName, team: team.displayName, position, positionObj: athlete.position });
             return {
               team: team.displayName,
-              position: athlete.position?.abbreviation || athlete.position?.name || 'N/A',
+              position: position,
               fullName: fullName,
               suggestions: []
             };
