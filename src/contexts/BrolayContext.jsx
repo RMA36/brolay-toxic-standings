@@ -6,6 +6,7 @@ import { useStats } from '../hooks/useStats';
 import { useOdds } from '../hooks/useOdds';
 import { getCurrentETDate } from '../utils/formatters';
 import { findMoneyMaker, findDangerZone, getCurrentDayOfWeek, getCurrentSportsInSeason, getSeasonalTip } from '../insightsHelper';
+import { PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
 
 /**
  * BrolayContext - Provides shared application state and handlers
@@ -300,6 +301,66 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     }
   };
 
+  // Autocomplete suggestion helpers
+  const getTeamSuggestions = (input, sport) => {
+    if (!input || input.length < 2) return [];
+
+    const inputLower = input.toLowerCase();
+    const preloaded = PRELOADED_TEAMS[sport] || [];
+    const allTeams = [...new Set([...preloaded, ...learnedTeams])];
+
+    return allTeams
+      .filter(team => team.toLowerCase().includes(inputLower))
+      .slice(0, 8);
+  };
+
+  const getPropTypeSuggestions = (input) => {
+    if (!input || input.length < 2) return [];
+
+    const inputLower = input.toLowerCase();
+    const allPropTypes = [...new Set([...COMMON_PROP_TYPES, ...learnedPropTypes])];
+
+    return allPropTypes
+      .filter(prop => prop.toLowerCase().includes(inputLower))
+      .slice(0, 8);
+  };
+
+  // Input handlers for autocomplete
+  const handleTeamInput = (id, value, sport) => {
+    const suggestions = getTeamSuggestions(value, sport);
+    setSuggestions(suggestions);
+    setShowSuggestions({ ...showSuggestions, [`team-${id}`]: suggestions.length > 0 });
+  };
+
+  const handlePropTypeInput = (id, value) => {
+    const suggestions = getPropTypeSuggestions(value);
+    setSuggestions(suggestions);
+    setShowSuggestions({ ...showSuggestions, [`prop-${id}`]: suggestions.length > 0 });
+  };
+
+  const handleAwayTeamInput = (id, value, sport) => {
+    const suggestions = getTeamSuggestions(value, sport);
+    setSuggestions(suggestions);
+    setShowSuggestions({ ...showSuggestions, [`awayTeam-${id}`]: suggestions.length > 0 });
+  };
+
+  const handleHomeTeamInput = (id, value, sport) => {
+    const suggestions = getTeamSuggestions(value, sport);
+    setSuggestions(suggestions);
+    setShowSuggestions({ ...showSuggestions, [`homeTeam-${id}`]: suggestions.length > 0 });
+  };
+
+  const handlePlayerInput = (id, field, value, sport) => {
+    const suggestions = getTeamSuggestions(value, sport); // Reuse team suggestions for now
+    setSuggestions(suggestions);
+    setShowSuggestions({ ...showSuggestions, [`player-${id}`]: suggestions.length > 0 });
+  };
+
+  const handleSelectSuggestion = (id, field, value) => {
+    setShowSuggestions({});
+    setSuggestions([]);
+  };
+
   // Context value with all shared state and handlers
   const value = {
     // Data
@@ -361,6 +422,12 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     setShowSuggestions,
     suggestions,
     setSuggestions,
+    handleTeamInput,
+    handlePropTypeInput,
+    handleAwayTeamInput,
+    handleHomeTeamInput,
+    handlePlayerInput,
+    handleSelectSuggestion,
 
     // Calendar state
     calendarView,

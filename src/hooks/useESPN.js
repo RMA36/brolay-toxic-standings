@@ -273,16 +273,51 @@ export const useESPN = () => {
           
           for (const athlete of statCategory.athletes) {
             if (!matchPlayerName(playerName, athlete.athlete?.displayName)) continue;
-            
+
             playerFound = true;
-            
+
             console.log('✅ Found player in category:', statCategory.name, 'Labels:', statCategory.labels);
             console.log('🔍 Prop type:', normalizedPropType, 'Should check this category?', shouldCheckCategory);
-            
+
             if (isTDScorerProp && sport === 'NFL') {
-              const rushingTDs = getStatValue(athlete.stats, 'rushing touchdowns', sport, statCategory.labels) || 0;
-              const receivingTDs = getStatValue(athlete.stats, 'receiving touchdowns', sport, statCategory.labels) || 0;
-              totalTDs += rushingTDs + receivingTDs;
+              // Check all relevant categories for TD scorer props
+              // Include: rushing, receiving, kick returns, punt returns, interceptions, fumble returns, defensive
+              if (categoryName.includes('rushing')) {
+                const rushingTDs = getStatValue(athlete.stats, 'rushing touchdowns', sport, statCategory.labels) || 0;
+                console.log('🏈 Rushing TDs:', rushingTDs);
+                totalTDs += rushingTDs;
+              } else if (categoryName.includes('receiving')) {
+                const receivingTDs = getStatValue(athlete.stats, 'receiving touchdowns', sport, statCategory.labels) || 0;
+                console.log('🏈 Receiving TDs:', receivingTDs);
+                totalTDs += receivingTDs;
+              } else if (categoryName.includes('kick') && categoryName.includes('return')) {
+                // Kick return TDs
+                const kickReturnTDs = getStatValue(athlete.stats, 'total touchdowns', sport, statCategory.labels) || 0;
+                console.log('🏈 Kick Return TDs:', kickReturnTDs);
+                totalTDs += kickReturnTDs;
+              } else if (categoryName.includes('punt') && categoryName.includes('return')) {
+                // Punt return TDs
+                const puntReturnTDs = getStatValue(athlete.stats, 'total touchdowns', sport, statCategory.labels) || 0;
+                console.log('🏈 Punt Return TDs:', puntReturnTDs);
+                totalTDs += puntReturnTDs;
+              } else if (categoryName.includes('interception')) {
+                // Interception return TDs
+                const intReturnTDs = getStatValue(athlete.stats, 'total touchdowns', sport, statCategory.labels) || 0;
+                console.log('🏈 Interception Return TDs:', intReturnTDs);
+                totalTDs += intReturnTDs;
+              } else if (categoryName.includes('fumble')) {
+                // Fumble return TDs (for defensive players)
+                const fumbleReturnTDs = getStatValue(athlete.stats, 'total touchdowns', sport, statCategory.labels) || 0;
+                console.log('🏈 Fumble Return TDs:', fumbleReturnTDs);
+                totalTDs += fumbleReturnTDs;
+              } else if (categoryName.includes('defensive')) {
+                // Defensive TDs (catch-all for defensive scoring plays)
+                const defensiveTDs = getStatValue(athlete.stats, 'total touchdowns', sport, statCategory.labels) || 0;
+                console.log('🏈 Defensive TDs:', defensiveTDs);
+                totalTDs += defensiveTDs;
+              } else {
+                console.log('⏭️ Skipping category for TD scorer:', categoryName);
+              }
               continue;
             }
             

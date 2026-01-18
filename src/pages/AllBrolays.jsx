@@ -41,6 +41,12 @@ const AllBrolays = () => {
     setBrolaysToShow,
     suggestions,
     showSuggestions,
+    handleTeamInput,
+    handlePropTypeInput,
+    handleAwayTeamInput,
+    handleHomeTeamInput,
+    handlePlayerInput,
+    handleSelectSuggestion,
     saving
   } = useBrolayContext();
 
@@ -870,12 +876,12 @@ const AllBrolays = () => {
           betTypes={['Spread', 'Moneyline', 'Total', 'Prop Bet', 'H2H Prop', 'Either Prop', 'Combined Prop', 'First Half Moneyline', 'First Half Total', 'First Inning Runs', 'Quarter Moneyline', 'Quarter Total']}
           suggestions={suggestions}
           showSuggestions={showSuggestions}
-          onTeamInput={() => {}}
-          onPropTypeInput={() => {}}
-          onAwayTeamInput={() => {}}
-          onHomeTeamInput={() => {}}
-          onPlayerInput={() => {}}
-          onSelectSuggestion={() => {}}
+          onTeamInput={handleTeamInput}
+          onPropTypeInput={handlePropTypeInput}
+          onAwayTeamInput={handleAwayTeamInput}
+          onHomeTeamInput={handleHomeTeamInput}
+          onPlayerInput={handlePlayerInput}
+          onSelectSuggestion={handleSelectSuggestion}
           isMobile={isMobile}
           saving={saving}
         />

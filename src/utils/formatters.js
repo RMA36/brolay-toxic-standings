@@ -38,12 +38,12 @@ export const formatBetDescription = (participant) => {
     // Use spread field if available, otherwise fall back to line
     const spreadValue = spread !== undefined && spread !== '' ? spread : line;
     if (spreadValue === '' || spreadValue === undefined || spreadValue === null) {
-      return `${team} (No Spread)`;
+      return `(No Spread)`;
     }
     const numSpread = parseFloat(spreadValue);
-    return `${team} ${numSpread >= 0 ? '+' : ''}${numSpread}`;
+    return `${numSpread >= 0 ? '+' : ''}${numSpread}`;
   } else if (betType === 'Moneyline' || betType === 'First Half Moneyline' || betType === 'Quarter Moneyline') {
-    return `${team} ML`;
+    return `ML`;
   } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total') {
     return `${awayTeam} @ ${homeTeam} ${overUnder} ${line}`;
   } else if (betType === 'Player Prop') {
@@ -51,14 +51,16 @@ export const formatBetDescription = (participant) => {
     const teamInfo = playerTeam ? ` (${playerTeam}${playerPosition ? ' ' + playerPosition : ''})` : '';
     return `${team}${teamInfo} ${propType} ${overUnder} ${line}`;
   } else if (betType === 'Team Prop') {
-    // Team-based prop
-    return `${team} ${propType} ${overUnder} ${line}`;
+    // Team-based prop (team is already displayed separately)
+    return `${propType} ${overUnder} ${line}`;
   } else if (betType === 'Game Prop') {
     // Game total/combined prop
     return `${awayTeam} @ ${homeTeam} ${propType} ${overUnder} ${line}`;
   } else if (betType === 'Prop Bet') {
     // Legacy prop bet format
-    return `${team} ${propType} ${overUnder} ${line}`;
+    // Check if this is a player prop or team prop based on whether it has a propType
+    // If team field is already displayed separately, don't duplicate it
+    return `${propType} ${overUnder} ${line}`;
   } else if (betType === 'H2H Prop') {
     if (player1PropType === player2PropType) {
       return `${player1} vs ${player2} ${player1PropType}`;
