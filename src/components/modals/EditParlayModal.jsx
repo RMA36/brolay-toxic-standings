@@ -300,16 +300,6 @@ const EditParlayModal = ({
                   {editedParlay.settled ? 'Mark Unsettled' : 'Mark Settled'}
                 </Button>
               )}
-              {onDelete && (
-                <Button
-                  variant="danger"
-                  onClick={handleDelete}
-                  disabled={saving}
-                  className={isMobile ? 'min-h-[44px]' : ''}
-                >
-                  Delete
-                </Button>
-              )}
             </div>
             <div className="flex gap-3 justify-between">
               <Button
