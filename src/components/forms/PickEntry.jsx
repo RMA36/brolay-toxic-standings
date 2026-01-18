@@ -900,7 +900,7 @@ const PickEntry = ({
       </div>
 
       {/* Team/Player Fields - Conditional rendering based on bet type */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3 mb-3">
+      <div className={`grid gap-2 md:gap-3 mb-3 ${participant.betType === 'Player Prop' ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2'}`}>
         {/* Player field for Player Props and individual sports */}
         {(() => {
           const individualSports = ['Tennis', 'Tennis (Women\'s)', 'Golf', 'UFC'];
@@ -977,6 +977,34 @@ const PickEntry = ({
             </div>
           );
         })()}
+
+        {/* Player Team and Position fields for Player Props */}
+        {participant.betType === 'Player Prop' && (
+          <>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Player Team</label>
+              <input
+                type="text"
+                value={participant.playerTeam || ''}
+                readOnly
+                className={`${inputClassName} bg-gray-700/50 cursor-not-allowed`}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium mb-1 text-white">Position</label>
+              <input
+                type="text"
+                value={participant.playerPosition || ''}
+                readOnly
+                className={`${inputClassName} bg-gray-700/50 cursor-not-allowed`}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+          </>
+        )}
 
         {/* Away/Home Team fields for Game Prop and Total bets */}
         {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', 'Game Prop'].includes(participant.betType) && (
