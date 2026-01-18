@@ -175,11 +175,15 @@ export const ODDS_API_PROP_MAPPINGS = {
   'receiving yards': 'player_reception_yds',
   'receptions': 'player_receptions',
   'receiving touchdowns': 'player_reception_tds',
-  'rushing & receiving yards': 'player_rush_receive_yds',
+  'rushing & receiving yards': 'player_rush_reception_yds',
   'anytime touchdown scorer': 'player_anytime_td',
-  'first touchdown scorer': 'player_first_td',
+  'first touchdown scorer': 'player_1st_td',
   'last touchdown scorer': 'player_last_td',
-  
+  'sacks': 'player_sacks',
+  'tackles': 'player_solo_tackles',
+  'field goals': 'player_field_goals',
+  'kicking points': 'player_kicking_points',
+
   // NBA Props
   'points': 'player_points',
   'rebounds': 'player_rebounds',
@@ -192,25 +196,39 @@ export const ODDS_API_PROP_MAPPINGS = {
   'points + assists': 'player_points_assists',
   'rebounds + assists': 'player_rebounds_assists',
   'points + rebounds + assists': 'player_points_rebounds_assists',
-  
+  'blocks + steals': 'player_blocks_steals',
+  'double double': 'player_double_double',
+  'triple double': 'player_triple_double',
+
   // MLB Props
-  'strikeouts': 'player_strikeouts',
+  'strikeouts': 'batter_strikeouts',
   'pitcher strikeouts': 'pitcher_strikeouts',
-  'hits': 'player_hits',
-  'total bases': 'player_total_bases',
-  'home runs': 'player_home_runs',
-  'rbis': 'player_rbis',
-  'runs': 'player_runs_scored',
-  'stolen bases': 'player_stolen_bases',
+  'hits': 'batter_hits',
+  'total bases': 'batter_total_bases',
+  'home runs': 'batter_home_runs',
+  'rbis': 'batter_rbis',
+  'runs': 'batter_runs_scored',
+  'stolen bases': 'batter_stolen_bases',
   'hits allowed': 'pitcher_hits_allowed',
   'walks allowed': 'pitcher_walks',
   'earned runs allowed': 'pitcher_earned_runs',
-  
+  'singles': 'batter_singles',
+  'doubles': 'batter_doubles',
+  'triples': 'batter_triples',
+  'walks': 'batter_walks',
+  'hits runs rbis': 'batter_hits_runs_rbis',
+
   // NHL Props
   'goals': 'player_goals',
   'shots on goal': 'player_shots_on_goal',
-  'saves': 'goalie_saves',
-  'goals against': 'goalie_goals_against'
+  'saves': 'player_total_saves',
+  'assists': 'player_assists',
+  'points': 'player_points',
+  'power play points': 'player_power_play_points',
+  'blocked shots': 'player_blocked_shots',
+  'anytime goal scorer': 'player_goal_scorer_anytime',
+  'first goal scorer': 'player_goal_scorer_first',
+  'last goal scorer': 'player_goal_scorer_last'
 };
 
 // ESPN API stat mappings for auto-updates
