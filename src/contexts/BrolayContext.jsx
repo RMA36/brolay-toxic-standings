@@ -248,16 +248,20 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
         // Build update object that explicitly deletes actualStats fields
         const updateObject = {};
 
-        // For participants being set to pending, delete their actualStats
-        participantsToClean.forEach(participantId => {
-          updateObject[`participants.${participantId}.actualStats`] = deleteField();
-          updateObject[`participants.${participantId}.result`] = 'pending';
-          updateObject[`participants.${participantId}.autoUpdated`] = false;
-        });
-
-        // For other participants, just update normally
+        // Update all participants
         Object.entries(editedParlay.participants).forEach(([id, participant]) => {
-          if (!participantsToClean.includes(id)) {
+          // For participants with pending status, we need to delete actualStats
+          // but still update all other fields
+          if (participantsToClean.includes(id)) {
+            // Update the full participant object first
+            updateObject[`participants.${id}`] = participant;
+            // Then explicitly delete actualStats field
+            updateObject[`participants.${id}.actualStats`] = deleteField();
+            // Ensure result and autoUpdated are set correctly
+            updateObject[`participants.${id}.result`] = 'pending';
+            updateObject[`participants.${id}.autoUpdated`] = false;
+          } else {
+            // For non-pending participants, just update normally
             updateObject[`participants.${id}`] = participant;
           }
         });
