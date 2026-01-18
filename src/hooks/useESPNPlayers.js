@@ -89,7 +89,8 @@ export const useESPNPlayers = () => {
       // Wait for all roster fetches to complete
       const rosters = await Promise.all(rosterPromises);
 
-      console.log(`Searching for "${playerName}" across ${rosters.filter(r => r).length} team rosters`);
+      const totalAthletes = rosters.reduce((sum, r) => sum + (r?.athletes?.length || 0), 0);
+      console.log(`Searching for "${playerName}" across ${rosters.filter(r => r).length} team rosters (${totalAthletes} total players)`);
 
       // Search through all rosters
       for (const roster of rosters) {
@@ -116,11 +117,24 @@ export const useESPNPlayers = () => {
             };
           }
 
-          // Fuzzy match for suggestions (if name contains search or vice versa)
+          // Fuzzy match for suggestions
           const fullNameLower = fullName.toLowerCase();
           const searchLower = playerName.toLowerCase();
 
-          if (fullNameLower.includes(searchLower) || searchLower.includes(fullNameLower)) {
+          // Check if names match when split by words (helps with partial names)
+          const fullNameWords = fullNameLower.split(/\s+/);
+          const searchWords = searchLower.split(/\s+/);
+
+          // Match if search contains any part of the full name, or vice versa
+          const hasWordMatch = searchWords.some(searchWord =>
+            fullNameWords.some(nameWord =>
+              nameWord.includes(searchWord) || searchWord.includes(nameWord)
+            )
+          );
+
+          if (fullNameLower.includes(searchLower) ||
+              searchLower.includes(fullNameLower) ||
+              hasWordMatch) {
             suggestions.push({
               name: fullName,
               team: team.displayName,
