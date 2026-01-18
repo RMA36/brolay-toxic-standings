@@ -66,59 +66,65 @@ export const useESPNPlayers = () => {
       const suggestions = [];
       const teams = teamsData.sports[0].leagues[0].teams;
 
-      // Search through all teams' rosters
-      for (const teamObj of teams) {
+      // Fetch all team rosters in parallel for much faster lookups
+      const rosterPromises = teams.map(async (teamObj) => {
         const team = teamObj.team;
-
         try {
-          // Fetch team roster
           const rosterUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/teams/${team.id}/roster`;
           const rosterResponse = await fetch(rosterUrl);
 
           if (!rosterResponse.ok) {
             console.warn(`Failed to fetch roster for ${team.displayName}`);
-            continue;
+            return null;
           }
 
           const rosterData = await rosterResponse.json();
-
-          if (!rosterData.athletes || !Array.isArray(rosterData.athletes)) {
-            continue;
-          }
-
-          // Search athletes
-          for (const athlete of rosterData.athletes) {
-            const fullName = athlete.displayName || athlete.fullName;
-            if (!fullName) continue;
-
-            const normalizedFullName = normalizePlayerName(fullName);
-            const normalizedSearch = normalizePlayerName(playerName);
-
-            // Exact match
-            if (normalizedFullName === normalizedSearch) {
-              console.log(`Found exact match: ${fullName} - ${team.displayName}`);
-              return {
-                team: team.displayName,
-                position: athlete.position?.abbreviation || athlete.position?.name || 'N/A',
-                fullName: fullName,
-                suggestions: []
-              };
-            }
-
-            // Fuzzy match for suggestions (if name contains search or vice versa)
-            const fullNameLower = fullName.toLowerCase();
-            const searchLower = playerName.toLowerCase();
-
-            if (fullNameLower.includes(searchLower) || searchLower.includes(fullNameLower)) {
-              suggestions.push({
-                name: fullName,
-                team: team.displayName,
-                position: athlete.position?.abbreviation || 'N/A'
-              });
-            }
-          }
+          return { team, athletes: rosterData.athletes || [] };
         } catch (error) {
           console.warn(`Error fetching roster for ${team.displayName}:`, error);
+          return null;
+        }
+      });
+
+      // Wait for all roster fetches to complete
+      const rosters = await Promise.all(rosterPromises);
+
+      // Search through all rosters
+      for (const roster of rosters) {
+        if (!roster || !Array.isArray(roster.athletes)) continue;
+
+        const team = roster.team;
+
+        // Search athletes
+        for (const athlete of roster.athletes) {
+          const fullName = athlete.displayName || athlete.fullName;
+          if (!fullName) continue;
+
+          const normalizedFullName = normalizePlayerName(fullName);
+          const normalizedSearch = normalizePlayerName(playerName);
+
+          // Exact match
+          if (normalizedFullName === normalizedSearch) {
+            console.log(`Found exact match: ${fullName} - ${team.displayName}`);
+            return {
+              team: team.displayName,
+              position: athlete.position?.abbreviation || athlete.position?.name || 'N/A',
+              fullName: fullName,
+              suggestions: []
+            };
+          }
+
+          // Fuzzy match for suggestions (if name contains search or vice versa)
+          const fullNameLower = fullName.toLowerCase();
+          const searchLower = playerName.toLowerCase();
+
+          if (fullNameLower.includes(searchLower) || searchLower.includes(fullNameLower)) {
+            suggestions.push({
+              name: fullName,
+              team: team.displayName,
+              position: athlete.position?.abbreviation || 'N/A'
+            });
+          }
         }
       }
 
