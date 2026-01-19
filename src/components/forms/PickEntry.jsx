@@ -36,6 +36,7 @@ const PickEntry = ({
   const [playerSuggestions, setPlayerSuggestions] = useState([]);
   const [showPlayerSuggestions, setShowPlayerSuggestions] = useState(false);
   const [loadingPlayerData, setLoadingPlayerData] = useState(false);
+  const [currentPlayerField, setCurrentPlayerField] = useState(null); // 'player1', 'player2', or null
   const { lookupPlayer } = useESPNPlayers();
 
   const updateField = (field, value) => {
@@ -76,6 +77,82 @@ const PickEntry = ({
     updateField('team', suggestion.name);
     updateField('playerTeam', suggestion.team);
     updateField('playerPosition', suggestion.position);
+    setPlayerSuggestions([]);
+    setShowPlayerSuggestions(false);
+  };
+
+  // Player 1 lookup handler for multi-player props (H2H, Either, Combined)
+  const handlePlayer1Blur = async (playerName, sport) => {
+    if (!playerName || playerName.length < 3) return;
+    if (!['H2H Prop', 'Either Prop', 'Combined Prop'].includes(participant.betType)) return;
+
+    setLoadingPlayerData(true);
+
+    const result = await lookupPlayer(playerName, sport);
+
+    setLoadingPlayerData(false);
+
+    if (result) {
+      if (result.team && result.position) {
+        // Exact match - auto-fill
+        updateField('player1Team', result.team);
+        updateField('player1Position', result.position);
+        if (result.fullName !== playerName) {
+          updateField('player1', result.fullName); // Normalize name
+        }
+        setPlayerSuggestions([]);
+        setShowPlayerSuggestions(false);
+      } else if (result.suggestions && result.suggestions.length > 0) {
+        // Show suggestions
+        setPlayerSuggestions(result.suggestions);
+        setShowPlayerSuggestions(true);
+      }
+    }
+  };
+
+  // Player 2 lookup handler for multi-player props (H2H, Either, Combined)
+  const handlePlayer2Blur = async (playerName, sport) => {
+    if (!playerName || playerName.length < 3) return;
+    if (!['H2H Prop', 'Either Prop', 'Combined Prop'].includes(participant.betType)) return;
+
+    setLoadingPlayerData(true);
+
+    const result = await lookupPlayer(playerName, sport);
+
+    setLoadingPlayerData(false);
+
+    if (result) {
+      if (result.team && result.position) {
+        // Exact match - auto-fill
+        updateField('player2Team', result.team);
+        updateField('player2Position', result.position);
+        if (result.fullName !== playerName) {
+          updateField('player2', result.fullName); // Normalize name
+        }
+        setPlayerSuggestions([]);
+        setShowPlayerSuggestions(false);
+      } else if (result.suggestions && result.suggestions.length > 0) {
+        // Show suggestions
+        setPlayerSuggestions(result.suggestions);
+        setShowPlayerSuggestions(true);
+      }
+    }
+  };
+
+  // Handle selecting a player1 suggestion
+  const handleSelectPlayer1Suggestion = (suggestion) => {
+    updateField('player1', suggestion.name);
+    updateField('player1Team', suggestion.team);
+    updateField('player1Position', suggestion.position);
+    setPlayerSuggestions([]);
+    setShowPlayerSuggestions(false);
+  };
+
+  // Handle selecting a player2 suggestion
+  const handleSelectPlayer2Suggestion = (suggestion) => {
+    updateField('player2', suggestion.name);
+    updateField('player2Team', suggestion.team);
+    updateField('player2Position', suggestion.position);
     setPlayerSuggestions([]);
     setShowPlayerSuggestions(false);
   };
@@ -323,10 +400,21 @@ const PickEntry = ({
                     onPlayerInput(`${participantId}-player1`, 'player1', e.target.value, participant.sport);
                   }
                 }}
+                onBlur={() => {
+                  setCurrentPlayerField('player1');
+                  handlePlayer1Blur(participant.player1, participant.sport);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="First player name"
               />
+              {/* Auto-filled team/position display for Player 1 */}
+              {participant.player1Team && (
+                <div className="mt-1 text-xs text-gray-300">
+                  {participant.player1Team} • {participant.player1Position}
+                  {loadingPlayerData && currentPlayerField === 'player1' && <span className="ml-2">Loading...</span>}
+                </div>
+              )}
               {showSuggestions[`player-${participantId}-player1`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
@@ -387,10 +475,21 @@ const PickEntry = ({
                     onPlayerInput(`${participantId}-player2`, 'player2', e.target.value, participant.sport);
                   }
                 }}
+                onBlur={() => {
+                  setCurrentPlayerField('player2');
+                  handlePlayer2Blur(participant.player2, participant.sport);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="Second player name"
               />
+              {/* Auto-filled team/position display for Player 2 */}
+              {participant.player2Team && (
+                <div className="mt-1 text-xs text-gray-300">
+                  {participant.player2Team} • {participant.player2Position}
+                  {loadingPlayerData && currentPlayerField === 'player2' && <span className="ml-2">Loading...</span>}
+                </div>
+              )}
               {showSuggestions[`player-${participantId}-player2`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
@@ -481,9 +580,55 @@ const PickEntry = ({
                 placeholder="e.g., 18.5 (leave empty for straight up)"
               />
             </div>
+
+            {/* Editable team/position fields */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 1 Team</label>
+              <input
+                type="text"
+                value={participant.player1Team || ''}
+                onChange={(e) => updateField('player1Team', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 1 Position</label>
+              <input
+                type="text"
+                value={participant.player1Position || ''}
+                onChange={(e) => updateField('player1Position', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 2 Team</label>
+              <input
+                type="text"
+                value={participant.player2Team || ''}
+                onChange={(e) => updateField('player2Team', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 2 Position</label>
+              <input
+                type="text"
+                value={participant.player2Position || ''}
+                onChange={(e) => updateField('player2Position', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
           </>
         );
-      
+
       case 'Either Prop':
         return (
           <>
@@ -545,10 +690,21 @@ const PickEntry = ({
                     onPlayerInput(`${participantId}-player1`, 'player1', e.target.value, participant.sport);
                   }
                 }}
+                onBlur={() => {
+                  setCurrentPlayerField('player1');
+                  handlePlayer1Blur(participant.player1, participant.sport);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="First player name"
               />
+              {/* Auto-filled team/position display for Player 1 */}
+              {participant.player1Team && (
+                <div className="mt-1 text-xs text-gray-300">
+                  {participant.player1Team} • {participant.player1Position}
+                  {loadingPlayerData && currentPlayerField === 'player1' && <span className="ml-2">Loading...</span>}
+                </div>
+              )}
               {showSuggestions[`player-${participantId}-player1`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
@@ -577,10 +733,20 @@ const PickEntry = ({
                     onPlayerInput(`${participantId}-player2`, 'player2', e.target.value, participant.sport);
                   }
                 }}
+                onBlur={() => {
+                  setCurrentPlayerField('player2');
+                  handlePlayer2Blur(participant.player2, participant.sport);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="Second player name"
               />
+              {participant.player2Team && (
+                <div className="mt-1 text-xs text-gray-300">
+                  {participant.player2Team} • {participant.player2Position}
+                  {loadingPlayerData && currentPlayerField === 'player2' && <span className="ml-2">Loading...</span>}
+                </div>
+              )}
               {showSuggestions[`player-${participantId}-player2`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
@@ -601,9 +767,55 @@ const PickEntry = ({
                 Win if EITHER player/team hits the line
               </p>
             </div>
+
+            {/* Editable team/position fields */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 1 Team</label>
+              <input
+                type="text"
+                value={participant.player1Team || ''}
+                onChange={(e) => updateField('player1Team', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 1 Position</label>
+              <input
+                type="text"
+                value={participant.player1Position || ''}
+                onChange={(e) => updateField('player1Position', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 2 Team</label>
+              <input
+                type="text"
+                value={participant.player2Team || ''}
+                onChange={(e) => updateField('player2Team', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 2 Position</label>
+              <input
+                type="text"
+                value={participant.player2Position || ''}
+                onChange={(e) => updateField('player2Position', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
           </>
         );
-      
+
       case 'Combined Prop':
         return (
           <>
@@ -665,10 +877,21 @@ const PickEntry = ({
                     onPlayerInput(`${participantId}-player1`, 'player1', e.target.value, participant.sport);
                   }
                 }}
+                onBlur={() => {
+                  setCurrentPlayerField('player1');
+                  handlePlayer1Blur(participant.player1, participant.sport);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="First player name"
               />
+              {/* Auto-filled team/position display for Player 1 */}
+              {participant.player1Team && (
+                <div className="mt-1 text-xs text-gray-300">
+                  {participant.player1Team} • {participant.player1Position}
+                  {loadingPlayerData && currentPlayerField === 'player1' && <span className="ml-2">Loading...</span>}
+                </div>
+              )}
               {showSuggestions[`player-${participantId}-player1`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
@@ -697,10 +920,21 @@ const PickEntry = ({
                     onPlayerInput(`${participantId}-player2`, 'player2', e.target.value, participant.sport);
                   }
                 }}
+                onBlur={() => {
+                  setCurrentPlayerField('player2');
+                  handlePlayer2Blur(participant.player2, participant.sport);
+                }}
                 className={inputClassName}
                 style={inputStyle}
                 placeholder="Second player name"
               />
+              {/* Auto-filled team/position display for Player 2 */}
+              {participant.player2Team && (
+                <div className="mt-1 text-xs text-gray-300">
+                  {participant.player2Team} • {participant.player2Position}
+                  {loadingPlayerData && currentPlayerField === 'player2' && <span className="ml-2">Loading...</span>}
+                </div>
+              )}
               {showSuggestions[`player-${participantId}-player2`] && suggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
                   {suggestions.map((suggestion, idx) => (
@@ -720,6 +954,52 @@ const PickEntry = ({
               <p className="text-xs text-gray-400 mt-1">
                 Win if COMBINED total hits the line
               </p>
+            </div>
+
+            {/* Editable team/position fields */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 1 Team</label>
+              <input
+                type="text"
+                value={participant.player1Team || ''}
+                onChange={(e) => updateField('player1Team', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 1 Position</label>
+              <input
+                type="text"
+                value={participant.player1Position || ''}
+                onChange={(e) => updateField('player1Position', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 2 Team</label>
+              <input
+                type="text"
+                value={participant.player2Team || ''}
+                onChange={(e) => updateField('player2Team', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-xs font-medium mb-1 text-white">Player 2 Position</label>
+              <input
+                type="text"
+                value={participant.player2Position || ''}
+                onChange={(e) => updateField('player2Position', e.target.value)}
+                className={inputClassName}
+                style={inputStyle}
+                placeholder="Auto-filled from ESPN"
+              />
             </div>
           </>
         );
@@ -931,7 +1211,7 @@ const PickEntry = ({
                 placeholder={showPlayerField ? "Enter player name" : "Start typing..."}
               />
 
-              {/* Player suggestions dropdown (for Player Props) */}
+              {/* Player suggestions dropdown (for Player Props and multi-player props) */}
               {showPlayerField && showPlayerSuggestions && playerSuggestions.length > 0 && (
                 <div className="absolute z-10 w-full mt-1 bg-white border rounded shadow-lg max-h-48 overflow-y-auto">
                   <div className="px-3 py-2 text-xs font-semibold text-gray-600 border-b">
@@ -941,7 +1221,15 @@ const PickEntry = ({
                     <div
                       key={idx}
                       className="px-3 py-2 hover:bg-blue-50 cursor-pointer border-b last:border-b-0"
-                      onClick={() => handleSelectPlayerSuggestion(suggestion)}
+                      onClick={() => {
+                        if (currentPlayerField === 'player1') {
+                          handleSelectPlayer1Suggestion(suggestion);
+                        } else if (currentPlayerField === 'player2') {
+                          handleSelectPlayer2Suggestion(suggestion);
+                        } else {
+                          handleSelectPlayerSuggestion(suggestion); // Original Player Prop handler
+                        }
+                      }}
                     >
                       <div className="font-medium text-sm text-black">{suggestion.name}</div>
                       <div className="text-xs text-gray-600">

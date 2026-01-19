@@ -180,5 +180,10 @@ export const createDefaultParticipant = () => ({
   player2PropType: '',      // For H2H Prop
   selectedPlayer: '',       // For H2H Prop - who you're betting on
   h2hLine: '',              // For H2H Prop - optional spread
-  h2hLineType: ''          // For H2H Prop - 'Favorite' or 'Dog'
+  h2hLineType: '',          // For H2H Prop - 'Favorite' or 'Dog'
+  // Player team/position fields for multi-player props
+  player1Team: '',          // Auto-filled from ESPN for H2H/Either/Combined
+  player1Position: '',      // Auto-filled from ESPN for H2H/Either/Combined
+  player2Team: '',          // Auto-filled from ESPN for H2H/Either/Combined
+  player2Position: ''       // Auto-filled from ESPN for H2H/Either/Combined
 });
