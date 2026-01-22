@@ -2,8 +2,36 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%231e40af'/><text x='16' y='24' text-anchor='middle' font-size='20' fill='%23fbbf24' font-weight='bold'>B</text></svg>" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Viewport -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Theme Colors -->
+    <meta name="theme-color" content="#FFD700" />
+    <meta name="msapplication-TileColor" content="#1a1a1a" />
+
+    <!-- iOS Specific Meta Tags -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Brolay" />
+
+    <!-- Apple Touch Icons (iOS Home Screen) -->
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/apple-touch-icon-120x120.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/apple-touch-icon-152x152.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!-- Standard Favicon -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512x512.png" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+    <!-- Description for SEO and sharing -->
+    <meta name="description" content="Track toxic picks and standings for the Brolay league" />
+
     <title>Brolay Toxic Standings</title>
     <style>
       .dropdown {
