@@ -22,6 +22,11 @@
     top: env(safe-area-inset-top);
     z-index: 40;
   }
+
+  /* Add safe area padding to top of page content so it doesn't scroll into status bar */
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
 }
 
 /* Dark background for PWA to match icon */
