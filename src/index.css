@@ -3,10 +3,9 @@
 @tailwind utilities;
 
 /* PWA Safe Area Support for iOS notched devices */
-@supports (padding: env(safe-area-inset-top)) {
+@supports (padding: env(safe-area-inset-bottom)) {
   body {
-    /* Apply safe area padding to push content below status bar */
-    padding-top: env(safe-area-inset-top);
+    /* Apply safe area padding for sides and bottom only */
     padding-bottom: env(safe-area-inset-bottom);
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
@@ -18,11 +17,13 @@
   }
 }
 
-/* Sticky header - positioned below safe area even when scrolling */
+/* Sticky header - positioned at top and fills safe area */
 .pwa-sticky-header {
   position: sticky;
-  top: env(safe-area-inset-top, 0);
+  top: 0;
   z-index: 40;
+  /* Add padding to top to fill the safe area above the header content */
+  padding-top: env(safe-area-inset-top, 0);
 }
 
 /* Dark background for PWA to match icon */
