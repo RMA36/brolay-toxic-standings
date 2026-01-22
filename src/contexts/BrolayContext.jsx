@@ -43,7 +43,8 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     loading: brolaysLoading,
     addBrolay,
     updateBrolay,
-    deleteBrolay
+    deleteBrolay,
+    forceRefresh
   } = useBrolays(authenticated ? db : null);
 
   // ESPN integration
@@ -408,6 +409,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     addBrolay,
     updateBrolay,
     deleteBrolay,
+    forceRefresh,
     handleToggleSettlement,
     handleDeleteParlay,
     handleSaveEditedParlay,

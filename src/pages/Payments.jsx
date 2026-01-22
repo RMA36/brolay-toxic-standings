@@ -25,7 +25,8 @@ const Payments = () => {
     handleToggleSettlement,
     saving,
     settledBrolaysToShow,
-    setSettledBrolaysToShow
+    setSettledBrolaysToShow,
+    forceRefresh
   } = useBrolayContext();
 
   const players = PLAYERS;
@@ -46,14 +47,14 @@ const Payments = () => {
   };
 
   const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
-    const dateCompare = new Date(a.date) - new Date(b.date);
+    const dateCompare = new Date(b.date) - new Date(a.date); // Reversed: newest first
     if (dateCompare !== 0) return dateCompare;
     if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
-      return a.sortOrder - b.sortOrder;
+      return b.sortOrder - a.sortOrder; // Reversed
     }
     const aKey = a.id || a.id;
     const bKey = b.id || b.id;
-    return String(aKey).localeCompare(String(bKey));
+    return String(bKey).localeCompare(String(aKey)); // Reversed
   });
 
   const unsettledParlays = filteredParlays.filter(p => !p.settled);
@@ -164,9 +165,27 @@ const Payments = () => {
     });
   });
 
+  const handleForceRefresh = async () => {
+    const result = await forceRefresh();
+    if (result.success) {
+      alert(`Refreshed! Loaded ${result.count} brolays from server.`);
+    } else {
+      alert('Error refreshing data. Check console for details.');
+    }
+  };
+
   return (
     <div className="space-y-4 md:space-y-6">
-      <h2 className="text-xl md:text-2xl font-bold text-yellow-400">💰 Payment Tracker</h2>
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl md:text-2xl font-bold text-yellow-400">💰 Payment Tracker</h2>
+        <Button
+          onClick={handleForceRefresh}
+          variant="outline"
+          size="small"
+        >
+          🔄 Force Refresh
+        </Button>
+      </div>
 
       {/* Filters - Compact for Payments */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, onSnapshot, getDocsFromServer } from 'firebase/firestore';
 
 /**
  * Custom hook for managing brolay data from Firebase
@@ -33,6 +33,27 @@ export const useBrolays = (db) => {
             id: doc.id  // Always use Firebase's document ID
           };
         });
+
+        // Diagnostic logging
+        console.log('📊 Firebase snapshot received:', {
+          totalDocs: snapshot.docs.length,
+          fromCache: snapshot.metadata.fromCache,
+          hasPendingWrites: snapshot.metadata.hasPendingWrites
+        });
+
+        // Log the most recent brolays by date
+        const sortedByDate = [...brolaysData].sort((a, b) => {
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          return dateB - dateA;
+        });
+        console.log('📅 Most recent 5 brolays:', sortedByDate.slice(0, 5).map(b => ({
+          id: b.id,
+          date: b.date,
+          placedBy: b.placedBy,
+          settled: b.settled
+        })));
+
         setParlays(brolaysData);
         setLoading(false);
         setError(null); // Clear any previous errors on successful update
@@ -102,6 +123,35 @@ export const useBrolays = (db) => {
     }
   };
 
+  // Force refresh from server (bypass cache)
+  const forceRefresh = async () => {
+    try {
+      console.log('🔄 Forcing refresh from server...');
+      const brolaysRef = collection(db, 'parlays');
+      const snapshot = await getDocsFromServer(brolaysRef);
+
+      const brolaysData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const { id: _, ...dataWithoutId } = data;
+        return {
+          ...dataWithoutId,
+          id: doc.id
+        };
+      });
+
+      console.log('✅ Server refresh complete:', {
+        totalDocs: snapshot.docs.length,
+        fromCache: snapshot.metadata.fromCache
+      });
+
+      setParlays(brolaysData);
+      return { success: true, count: brolaysData.length };
+    } catch (err) {
+      console.error('Error forcing refresh:', err);
+      return { success: false, error: err };
+    }
+  };
+
   return {
     parlays,
     loading,
@@ -109,5 +159,6 @@ export const useBrolays = (db) => {
     addBrolay,
     updateBrolay,
     deleteBrolay,
+    forceRefresh,
   };
 };
