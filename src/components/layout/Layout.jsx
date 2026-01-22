@@ -67,7 +67,7 @@ const Layout = () => {
       )}
 
       {/* Header - Desktop and Mobile */}
-      <div className="bg-gradient-to-br from-gray-800 to-gray-900 border-b border-gray-700 sticky top-0 z-40">
+      <div className="bg-gradient-to-br from-gray-800 to-gray-900 border-b border-gray-700 sticky z-40" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
         <div className="container mx-auto p-4 md:p-6">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
