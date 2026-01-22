@@ -47,15 +47,27 @@ const Payments = () => {
   };
 
   const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
-    const dateCompare = new Date(b.date) - new Date(a.date); // Reversed: newest first
+    // Since dates are stored as YYYY-MM-DD strings, we can compare them directly
+    // String comparison works for ISO date format (YYYY-MM-DD)
+    const dateCompare = b.date.localeCompare(a.date); // Descending (newest first)
+
     if (dateCompare !== 0) return dateCompare;
+
+    // If dates are equal, check sortOrder
     if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
-      return b.sortOrder - a.sortOrder; // Reversed
+      return b.sortOrder - a.sortOrder; // Descending
     }
-    const aKey = a.id || a.id;
-    const bKey = b.id || b.id;
-    return String(bKey).localeCompare(String(aKey)); // Reversed
+
+    // Finally, sort by ID (descending)
+    return String(b.id).localeCompare(String(a.id));
   });
+
+  console.log('📋 Filtered parlays order (first 5):', filteredParlays.slice(0, 5).map(p => ({
+    id: p.id,
+    date: p.date,
+    dateObj: new Date(p.date),
+    settled: p.settled
+  })));
 
   const unsettledParlays = filteredParlays.filter(p => !p.settled);
   const settledParlays = filteredParlays.filter(p => p.settled);
@@ -70,6 +82,10 @@ const Payments = () => {
     const losers = participants.filter(part => part.result === 'loss');
     return losers.length === 0 && participants.some(part => part.result === 'win');
   });
+
+  // Debug logging
+  console.log('🔍 Lost Parlays order:', lostParlays.map(p => ({ id: p.id, date: p.date })));
+  console.log('🔍 Won Parlays order:', wonParlays.map(p => ({ id: p.id, date: p.date })));
 
   // Calculate who owes who
   const payments = [];
