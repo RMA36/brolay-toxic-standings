@@ -36,7 +36,9 @@ const Search = () => {
     dangerZone,
     seasonalTip,
     currentDay,
-    currentSports
+    currentSports,
+    learnedTeams,
+    learnedPlayers
   } = useBrolayContext();
 
   // Constants
@@ -44,7 +46,6 @@ const Search = () => {
   const betTypes = PICK_TYPES;
   const preloadedTeams = PRELOADED_TEAMS;
   const commonPropTypes = COMMON_PROP_TYPES;
-  const learnedTeams = []; // Could be added to context if needed
 
   /**
    * Analyzes search query and returns matching results
@@ -67,8 +68,9 @@ const Search = () => {
     // Tokenize the search query
     const searchContext = tokenizeQuery(lowerQuery);
 
-    // Add players to context
-    searchContext.players = players.filter(player =>
+    // Add players to context - combine Big Guys + learned professional players
+    const allPlayers = [...new Set([...players, ...(learnedPlayers || [])])];
+    searchContext.players = allPlayers.filter(player =>
       lowerQuery.includes(player.toLowerCase())
     );
 

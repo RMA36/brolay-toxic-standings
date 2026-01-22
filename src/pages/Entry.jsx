@@ -321,6 +321,12 @@ const Entry = () => {
       if (p.team && !newTeams.includes(p.team)) {
         newTeams.push(p.team);
       }
+      if (p.awayTeam && !newTeams.includes(p.awayTeam)) {
+        newTeams.push(p.awayTeam);
+      }
+      if (p.homeTeam && !newTeams.includes(p.homeTeam)) {
+        newTeams.push(p.homeTeam);
+      }
       if (p.propType && !newPropTypes.includes(p.propType)) {
         newPropTypes.push(p.propType);
       }

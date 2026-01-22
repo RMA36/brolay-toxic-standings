@@ -7,6 +7,7 @@ import { useOdds } from '../hooks/useOdds';
 import { getCurrentETDate } from '../utils/formatters';
 import { findMoneyMaker, findDangerZone, getCurrentDayOfWeek, getCurrentSportsInSeason, getSeasonalTip } from '../insightsHelper';
 import { PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
+import { extractTeamsFromParlays, saveLearnedData } from '../utils/actionHandlers';
 
 /**
  * BrolayContext - Provides shared application state and handlers
@@ -144,6 +145,30 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
       setLearnedPlayers(learned.players || []);
     }
   }, []);
+
+  // Extract teams/players from existing Firestore data on first load
+  useEffect(() => {
+    if (parlays.length > 0 && learnedTeams.length === 0 && learnedPlayers.length === 0 && learnedPropTypes.length === 0) {
+      const extracted = extractTeamsFromParlays(
+        parlays,
+        learnedTeams,
+        learnedPropTypes,
+        learnedPlayers
+      );
+
+      if (extracted.teamsAdded > 0 || extracted.playersAdded > 0 || extracted.propTypesAdded > 0) {
+        console.log('📚 Extracted from existing parlays:', {
+          teamsAdded: extracted.teamsAdded,
+          playersAdded: extracted.playersAdded,
+          propTypesAdded: extracted.propTypesAdded
+        });
+        setLearnedTeams(extracted.newTeams);
+        setLearnedPropTypes(extracted.newPropTypes);
+        setLearnedPlayers(extracted.newPlayers);
+        saveLearnedData(extracted.newTeams, extracted.newPropTypes, extracted.newPlayers);
+      }
+    }
+  }, [parlays, learnedTeams, learnedPlayers, learnedPropTypes]);
 
   // Detect mobile device
   useEffect(() => {
