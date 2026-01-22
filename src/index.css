@@ -18,10 +18,10 @@
   }
 }
 
-/* Sticky header - positioned at top of viewport */
+/* Sticky header - positioned below safe area even when scrolling */
 .pwa-sticky-header {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0);
   z-index: 40;
 }
 
