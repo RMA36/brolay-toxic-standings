@@ -331,7 +331,7 @@ const Payments = () => {
               const participants = Object.values(parlay.participants);
               const winners = participants.filter(p => p.result === 'win');
               const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
-              const amountPerWinner = winners.length > 0 ? (netProfit / winners.length).toFixed(2) : 0;
+              const amountPerWinner = winners.length > 0 ? netProfit / winners.length : 0;
 
               return (
                 <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
