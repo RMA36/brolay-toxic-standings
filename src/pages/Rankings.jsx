@@ -2,7 +2,7 @@ import React from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS } from '../constants/sports';
 import Card from '../components/common/Card';
-import { formatDateForDisplay } from '../utils/formatters';
+import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult } from '../utils/formatters';
 
 /**
  * Rankings - Rankings & Records page showing sole survivors, streaks, and player/team/sport combinations
@@ -16,22 +16,22 @@ const Rankings = () => {
   // Get context values
   const { parlays } = useBrolayContext();
   const players = PLAYERS;
-  // Calculate Sole Survivors
+  // Calculate Sole Survivors (supports both old and new schemas)
   const soleSurvivors = {};
   players.forEach(player => { soleSurvivors[player] = 0; });
 
   parlays.forEach(parlay => {
-    const participants = Object.values(parlay.participants);
-    const winners = participants.filter(p => p.result === 'win');
-    const losers = participants.filter(p => p.result === 'loss');
+    const picks = getPicksArray(parlay);
+    const winners = picks.filter(p => getPickResult(p) === 'win');
+    const losers = picks.filter(p => getPickResult(p) === 'loss');
 
     if (winners.length === 1 && losers.length > 0) {
-      const survivor = winners[0].player;
+      const survivor = getPickBigGuy(winners[0]);
       if (survivor) soleSurvivors[survivor]++;
     }
   });
 
-  // Calculate Hot/Cold Streaks
+  // Calculate Hot/Cold Streaks (supports both old and new schemas)
   const getStreaks = () => {
     const playerPicks = {};
     players.forEach(player => { playerPicks[player] = []; });
@@ -50,14 +50,20 @@ const Rankings = () => {
     });
 
     sortedParlays.forEach(parlay => {
-      Object.values(parlay.participants).forEach(p => {
-        if (p.player && p.result !== 'pending') {
-          playerPicks[p.player].push({
-            result: p.result,
+      const picks = getPicksArray(parlay);
+      picks.forEach(p => {
+        const bigGuy = getPickBigGuy(p);
+        const result = getPickResult(p);
+        if (bigGuy && result !== 'pending') {
+          // Support both direct fields and nested game object
+          const awayTeam = p.awayTeam || p.game?.awayTeam || '';
+          const homeTeam = p.homeTeam || p.game?.homeTeam || '';
+          playerPicks[bigGuy].push({
+            result: result,
             date: parlay.date,
             parlayId: parlay.id,
             sport: p.sport,
-            team: p.team || `${p.awayTeam} @ ${p.homeTeam}`
+            team: p.team || `${awayTeam} @ ${homeTeam}`
           });
         }
       });
@@ -164,16 +170,19 @@ const Rankings = () => {
 
   const { currentStreaks, allTimeStreaks } = getStreaks();
 
-  // Calculate Player/Sport Combinations
+  // Calculate Player/Sport Combinations (supports both old and new schemas)
   const playerSportCombos = {};
   parlays.forEach(parlay => {
-    Object.values(parlay.participants).forEach(p => {
-      if (!p.player || !p.sport || p.result === 'pending') return;
+    const picks = getPicksArray(parlay);
+    picks.forEach(p => {
+      const bigGuy = getPickBigGuy(p);
+      const result = getPickResult(p);
+      if (!bigGuy || !p.sport || result === 'pending') return;
 
-      const key = `${p.player}-${p.sport}`;
+      const key = `${bigGuy}-${p.sport}`;
       if (!playerSportCombos[key]) {
         playerSportCombos[key] = {
-          player: p.player,
+          player: bigGuy,
           sport: p.sport,
           wins: 0,
           losses: 0,
@@ -183,9 +192,9 @@ const Rankings = () => {
       }
 
       playerSportCombos[key].total++;
-      if (p.result === 'win') playerSportCombos[key].wins++;
-      else if (p.result === 'loss') playerSportCombos[key].losses++;
-      else if (p.result === 'push') playerSportCombos[key].pushes++;
+      if (result === 'win') playerSportCombos[key].wins++;
+      else if (result === 'loss') playerSportCombos[key].losses++;
+      else if (result === 'push') playerSportCombos[key].pushes++;
     });
   });
 
@@ -202,18 +211,24 @@ const Rankings = () => {
   const topCombos = [...combosWithMin10].sort((a, b) => b.winPct - a.winPct).slice(0, 5);
   const worstCombos = [...combosWithMin10].sort((a, b) => a.winPct - b.winPct).slice(0, 5);
 
-  // Most Picked Teams/Players
+  // Most Picked Teams/Players (supports both old and new schemas)
   const teamCounts = {};
   parlays.forEach(parlay => {
-    Object.values(parlay.participants).forEach(p => {
-      if (p.team) {
-        teamCounts[p.team] = (teamCounts[p.team] || 0) + 1;
+    const picks = getPicksArray(parlay);
+    picks.forEach(p => {
+      // Support both direct fields and nested game object
+      const team = p.team;
+      const awayTeam = p.awayTeam || p.game?.awayTeam;
+      const homeTeam = p.homeTeam || p.game?.homeTeam;
+
+      if (team) {
+        teamCounts[team] = (teamCounts[team] || 0) + 1;
       }
-      if (p.awayTeam) {
-        teamCounts[p.awayTeam] = (teamCounts[p.awayTeam] || 0) + 1;
+      if (awayTeam) {
+        teamCounts[awayTeam] = (teamCounts[awayTeam] || 0) + 1;
       }
-      if (p.homeTeam) {
-        teamCounts[p.homeTeam] = (teamCounts[p.homeTeam] || 0) + 1;
+      if (homeTeam) {
+        teamCounts[homeTeam] = (teamCounts[homeTeam] || 0) + 1;
       }
     });
   });
@@ -223,22 +238,28 @@ const Rankings = () => {
     .sort((a, b) => b.count - a.count)
     .slice(0, 5);
 
-  // Player/Team Combinations
+  // Player/Team Combinations (supports both old and new schemas)
   const playerTeamCombos = {};
   parlays.forEach(parlay => {
-    Object.values(parlay.participants).forEach(p => {
-      if (!p.player || p.result === 'pending') return;
+    const picks = getPicksArray(parlay);
+    picks.forEach(p => {
+      const bigGuy = getPickBigGuy(p);
+      const result = getPickResult(p);
+      if (!bigGuy || result === 'pending') return;
 
+      // Support both direct fields and nested game object
       const teams = [];
       if (p.team) teams.push(p.team);
-      if (p.awayTeam) teams.push(p.awayTeam);
-      if (p.homeTeam) teams.push(p.homeTeam);
+      const awayTeam = p.awayTeam || p.game?.awayTeam;
+      const homeTeam = p.homeTeam || p.game?.homeTeam;
+      if (awayTeam) teams.push(awayTeam);
+      if (homeTeam) teams.push(homeTeam);
 
       teams.forEach(team => {
-        const key = `${p.player}-${team}`;
+        const key = `${bigGuy}-${team}`;
         if (!playerTeamCombos[key]) {
           playerTeamCombos[key] = {
-            player: p.player,
+            player: bigGuy,
             team: team,
             wins: 0,
             losses: 0,
@@ -248,9 +269,9 @@ const Rankings = () => {
         }
 
         playerTeamCombos[key].total++;
-        if (p.result === 'win') playerTeamCombos[key].wins++;
-        else if (p.result === 'loss') playerTeamCombos[key].losses++;
-        else if (p.result === 'push') playerTeamCombos[key].pushes++;
+        if (result === 'win') playerTeamCombos[key].wins++;
+        else if (result === 'loss') playerTeamCombos[key].losses++;
+        else if (result === 'push') playerTeamCombos[key].pushes++;
       });
     });
   });

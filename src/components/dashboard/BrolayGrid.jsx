@@ -1,12 +1,12 @@
 import React from 'react';
-import { formatDateForDisplay, formatBetDescription } from '../../utils/formatters';
+import { formatDateForDisplay, formatBetDescription, getPickBigGuy, getPickResult, getPicksArray } from '../../utils/formatters';
 
 /**
  * BrolayGrid - Grid view of all brolays showing each player's picks in a matrix format
  *
  * @param {Object} props
  * @param {Array} props.parlays - Array of parlay objects
- * @param {Array} props.players - Array of player names
+ * @param {Array} props.players - Array of player names (Big Guys)
  */
 const BrolayGrid = ({ parlays, players }) => {
   // Sort parlays by date descending, then by sortOrder
@@ -20,6 +20,26 @@ const BrolayGrid = ({ parlays, players }) => {
     const bKey = b.id || b.id;
     return String(bKey).localeCompare(String(aKey));
   });
+
+  /**
+   * Get team display string from a pick (supports both schemas)
+   */
+  const getTeamDisplay = (pick) => {
+    if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(pick.betType)) {
+      // New schema: game object
+      if (pick.game) {
+        return `${pick.game.awayTeam} @ ${pick.game.homeTeam}`;
+      }
+      // Old schema: direct fields
+      return `${pick.awayTeam} @ ${pick.homeTeam}`;
+    }
+    // New schema: entities array
+    if (pick.entities && pick.entities.length > 0) {
+      const primary = pick.entities.find(e => e.role === 'primary') || pick.entities[0];
+      return primary?.name || pick.team;
+    }
+    return pick.team;
+  };
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -37,7 +57,8 @@ const BrolayGrid = ({ parlays, players }) => {
           </thead>
           <tbody>
             {sortedParlays.map((parlay) => {
-              const participants = parlay.participants || {};
+              // Support both new (picks) and old (participants) schema
+              const picks = getPicksArray(parlay);
 
               return (
                 <tr key={parlay.id} className="border-b border-gray-700 hover:bg-gray-800/50">
@@ -45,24 +66,22 @@ const BrolayGrid = ({ parlays, players }) => {
                     {formatDateForDisplay(parlay.date)}
                   </td>
                   {players.map((player) => {
-                    const playerPick = Object.values(participants).find(p => p.player === player);
+                    // Find pick by Big Guy (supports both bigGuy and player fields)
+                    const playerPick = picks.find(p => getPickBigGuy(p) === player);
 
                     if (!playerPick) {
                       return <td key={player} className="py-3 px-2 text-center" style={{ background: 'rgba(15, 23, 42, 0.3)' }}></td>;
                     }
 
+                    // Get result (supports both outcome.status and result)
+                    const result = getPickResult(playerPick);
+
                     let bgColor = 'bg-gray-700';
-                    if (playerPick.result === 'win') bgColor = 'bg-green-200';
-                    else if (playerPick.result === 'loss') bgColor = 'bg-red-200';
-                    else if (playerPick.result === 'push') bgColor = 'bg-gray-200';
+                    if (result === 'win') bgColor = 'bg-green-200';
+                    else if (result === 'loss') bgColor = 'bg-red-200';
+                    else if (result === 'push') bgColor = 'bg-gray-200';
 
-                    let teamDisplay = '';
-                    if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(playerPick.betType)) {
-                      teamDisplay = `${playerPick.awayTeam} @ ${playerPick.homeTeam}`;
-                    } else {
-                      teamDisplay = playerPick.team;
-                    }
-
+                    const teamDisplay = getTeamDisplay(playerPick);
                     const betDetails = formatBetDescription(playerPick);
 
                     return (

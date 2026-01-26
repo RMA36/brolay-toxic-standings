@@ -62,25 +62,32 @@ const Entry = () => {
       return String(bKey).localeCompare(String(aKey));
     });
 
+    // Helper to get result from pick (supports both schemas)
+    const getPickResult = (pick) => pick.outcome?.status || pick.result;
+    // Helper to get Big Guy from pick (supports both schemas)
+    const getPickBigGuy = (pick) => pick.bigGuy || pick.player;
+
     // Look for the most recent 4-person brolay that either:
     // 1. Was an And-1 (1 loss, rest wins)
     // 2. Was a winning 4-person brolay
     for (const parlay of sortedParlays) {
-      const participants = Object.values(parlay.participants || {});
+      // Support both new schema (picks) and old schema (participants)
+      const picksObj = parlay.picks || parlay.participants;
+      const picks = Object.values(picksObj || {});
 
       // Skip if not 4 people
-      if (participants.length !== 4) continue;
+      if (picks.length !== 4) continue;
 
-      const losers = participants.filter(p => p.result === 'loss');
-      const winners = participants.filter(p => p.result === 'win');
-      const pushes = participants.filter(p => p.result === 'push');
+      const losers = picks.filter(p => getPickResult(p) === 'loss');
+      const winners = picks.filter(p => getPickResult(p) === 'win');
+      const pushes = picks.filter(p => getPickResult(p) === 'push');
 
       // Check for And-1 (1 loss, rest wins/pushes)
-      const isAnd1 = losers.length === 1 && winners.length === participants.length - 1;
+      const isAnd1 = losers.length === 1 && winners.length === picks.length - 1;
       if (isAnd1) {
-        const loserPlayer = losers[0].player;
+        const loserBigGuy = getPickBigGuy(losers[0]);
         return {
-          player: loserPlayer,
+          player: loserBigGuy,
           reason: 'And-1',
           date: parlay.date,
           parlayId: parlay.id
@@ -88,11 +95,11 @@ const Entry = () => {
       }
 
       // Check for winning 4-person brolay (no losses, at least one win)
-      const isWinning = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
+      const isWinning = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
       if (isWinning) {
         // Find who was NOT in this brolay
-        const participantPlayers = participants.map(p => p.player);
-        const playerOut = players.find(p => !participantPlayers.includes(p));
+        const bigGuysInParlay = picks.map(p => getPickBigGuy(p));
+        const playerOut = players.find(p => !bigGuysInParlay.includes(p));
         return {
           player: playerOut,
           reason: '4-person win',
@@ -254,9 +261,10 @@ const Entry = () => {
       return;
     }
 
-    const hasEmptyPlayer = Object.values(newParlay.participants).some(p => !p.player);
-    if (hasEmptyPlayer) {
-      alert('Please select a player for all picks');
+    // Check for empty Big Guy selection (supports both old 'player' and new 'bigGuy' fields)
+    const hasEmptyBigGuy = Object.values(newParlay.participants).some(p => !p.bigGuy && !p.player);
+    if (hasEmptyBigGuy) {
+      alert('Please select a Big Guy for all picks');
       return;
     }
 
@@ -376,7 +384,9 @@ const Entry = () => {
       betAmount: 10,
       totalPayout: 0,
       participants: {},
+      // Support both old and new schema field names during transition
       placedBy: '',
+      submittedBy: '',
       settled: false
     });
   };
@@ -465,10 +475,14 @@ const Entry = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1 text-white">Placed By</label>
+            <label className="block text-sm font-medium mb-1 text-white">Submitted By</label>
             <select
-              value={newParlay.placedBy}
-              onChange={(e) => setNewParlay({...newParlay, placedBy: e.target.value})}
+              value={newParlay.submittedBy || newParlay.placedBy || ''}
+              onChange={(e) => setNewParlay({
+                ...newParlay,
+                submittedBy: e.target.value,
+                placedBy: e.target.value // Keep both for compatibility
+              })}
               className="w-full px-3 py-2 border rounded text-base"
               style={{ fontSize: isMobile ? '16px' : '14px' }}
             >

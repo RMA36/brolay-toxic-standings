@@ -46,7 +46,76 @@ export const saveLearnedData = (teams, propTypes, players = []) => {
 };
 
 /**
+ * Helper to get picks from parlay (supports both schemas)
+ */
+const getPicksArray = (parlay) => {
+  const picksObj = parlay.picks || parlay.participants;
+  if (!picksObj) return [];
+  return Object.values(picksObj);
+};
+
+/**
+ * Helper to get Big Guy from pick (supports both schemas)
+ */
+const getPickBigGuy = (pick) => pick.bigGuy || pick.player;
+
+/**
+ * Helper to get result from pick (supports both schemas)
+ */
+const getPickResult = (pick) => pick.outcome?.status || pick.result;
+
+/**
+ * Extract team/player info from a pick (supports both schemas)
+ */
+const extractPickInfo = (pick) => {
+  const info = {
+    team: pick.team,
+    awayTeam: pick.awayTeam,
+    homeTeam: pick.homeTeam,
+    propType: pick.propType,
+    player1: pick.player1,
+    player2: pick.player2,
+    selectedPlayer: pick.selectedPlayer
+  };
+
+  // New schema: extract from entities
+  if (pick.entities && pick.entities.length > 0) {
+    pick.entities.forEach(entity => {
+      if (entity.entityType === 'player') {
+        if (!info.player1) {
+          info.player1 = entity.name;
+        } else if (!info.player2) {
+          info.player2 = entity.name;
+        }
+      } else if (entity.entityType === 'team') {
+        if (entity.role === 'home') {
+          info.homeTeam = info.homeTeam || entity.name;
+        } else if (entity.role === 'away') {
+          info.awayTeam = info.awayTeam || entity.name;
+        } else {
+          info.team = info.team || entity.name;
+        }
+      }
+    });
+  }
+
+  // New schema: extract from game object
+  if (pick.game) {
+    info.awayTeam = info.awayTeam || pick.game.awayTeam;
+    info.homeTeam = info.homeTeam || pick.game.homeTeam;
+  }
+
+  // New schema: extract propType from line.statType
+  if (pick.line?.statType) {
+    info.propType = info.propType || pick.line.statType;
+  }
+
+  return info;
+};
+
+/**
  * Extracts teams, prop types, and players from existing parlays
+ * Supports both old and new schema formats
  * @param {Object[]} parlays - Array of parlay objects
  * @param {string[]} currentLearnedTeams - Current learned teams
  * @param {string[]} currentLearnedPropTypes - Current learned prop types
@@ -59,28 +128,31 @@ export const extractTeamsFromParlays = (parlays, currentLearnedTeams = [], curre
   const newPlayers = [...currentLearnedPlayers];
 
   parlays.forEach(parlay => {
-    Object.values(parlay.participants || {}).forEach(p => {
-      if (p.team && !newTeams.includes(p.team)) {
-        newTeams.push(p.team);
+    const picks = getPicksArray(parlay);
+    picks.forEach(pick => {
+      const info = extractPickInfo(pick);
+
+      if (info.team && !newTeams.includes(info.team)) {
+        newTeams.push(info.team);
       }
-      if (p.awayTeam && !newTeams.includes(p.awayTeam)) {
-        newTeams.push(p.awayTeam);
+      if (info.awayTeam && !newTeams.includes(info.awayTeam)) {
+        newTeams.push(info.awayTeam);
       }
-      if (p.homeTeam && !newTeams.includes(p.homeTeam)) {
-        newTeams.push(p.homeTeam);
+      if (info.homeTeam && !newTeams.includes(info.homeTeam)) {
+        newTeams.push(info.homeTeam);
       }
-      if (p.propType && !newPropTypes.includes(p.propType)) {
-        newPropTypes.push(p.propType);
+      if (info.propType && !newPropTypes.includes(info.propType)) {
+        newPropTypes.push(info.propType);
       }
       // Extract player names from multi-entity props
-      if (p.player1 && !newPlayers.includes(p.player1)) {
-        newPlayers.push(p.player1);
+      if (info.player1 && !newPlayers.includes(info.player1)) {
+        newPlayers.push(info.player1);
       }
-      if (p.player2 && !newPlayers.includes(p.player2)) {
-        newPlayers.push(p.player2);
+      if (info.player2 && !newPlayers.includes(info.player2)) {
+        newPlayers.push(info.player2);
       }
-      if (p.selectedPlayer && !newPlayers.includes(p.selectedPlayer)) {
-        newPlayers.push(p.selectedPlayer);
+      if (info.selectedPlayer && !newPlayers.includes(info.selectedPlayer)) {
+        newPlayers.push(info.selectedPlayer);
       }
     });
   });
@@ -96,7 +168,7 @@ export const extractTeamsFromParlays = (parlays, currentLearnedTeams = [], curre
 };
 
 /**
- * Applies filters to a list of parlays
+ * Applies filters to a list of parlays (supports both old and new schema)
  * @param {Object[]} parlaysList - Array of parlay objects
  * @param {Object} filters - Filter criteria
  * @param {string} editingParlayId - ID of parlay being edited (to exclude)
@@ -111,51 +183,66 @@ export const applyFilters = (parlaysList, filters, editingParlayId = null) => {
     if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
     if (filters.dateTo && parlay.date > filters.dateTo) return false;
 
-    // Placed By filter
-    if (filters.placedBy && parlay.placedBy !== filters.placedBy) return false;
+    // Submitted By filter (supports both submittedBy and placedBy)
+    const filterSubmittedBy = filters.submittedBy || filters.placedBy;
+    if (filterSubmittedBy) {
+      const parlaySubmittedBy = parlay.submittedBy || parlay.placedBy;
+      if (parlaySubmittedBy !== filterSubmittedBy) return false;
+    }
 
     // Total Payout range filter
     const payout = parlay.totalPayout || 0;
     if (filters.minPayout && payout < Number(filters.minPayout)) return false;
     if (filters.maxPayout && payout > Number(filters.maxPayout)) return false;
 
-    // Player filter (check if any participant matches)
+    // Get picks array (supports both schemas)
+    const picks = getPicksArray(parlay);
+
+    // Big Guy filter (check if any pick matches)
     if (filters.player) {
-      const hasPlayer = Object.values(parlay.participants || {}).some(p => p.player === filters.player);
+      const hasPlayer = picks.some(p => getPickBigGuy(p) === filters.player);
       if (!hasPlayer) return false;
     }
 
-    // Sport filter (check if any participant matches)
+    // Sport filter (check if any pick matches)
     if (filters.sport) {
-      const hasSport = Object.values(parlay.participants || {}).some(p => p.sport === filters.sport);
+      const hasSport = picks.some(p => p.sport === filters.sport);
       if (!hasSport) return false;
     }
 
-    // Result filter (check if any participant matches)
+    // Result filter (check if any pick matches)
     if (filters.result) {
-      const hasResult = Object.values(parlay.participants || {}).some(p => p.result === filters.result);
+      const hasResult = picks.some(p => getPickResult(p) === filters.result);
       if (!hasResult) return false;
     }
 
+    // Team/Player search filter
     if (filters.teamPlayer) {
-      const hasTeamPlayer = Object.values(parlay.participants || {}).some(p => {
-        const normalizedFilter = filters.teamPlayer.toLowerCase();
-        return (p.team && p.team.toLowerCase().includes(normalizedFilter)) ||
-               (p.awayTeam && p.awayTeam.toLowerCase().includes(normalizedFilter)) ||
-               (p.homeTeam && p.homeTeam.toLowerCase().includes(normalizedFilter));
+      const normalizedFilter = filters.teamPlayer.toLowerCase();
+      const hasTeamPlayer = picks.some(pick => {
+        const info = extractPickInfo(pick);
+        return (info.team && info.team.toLowerCase().includes(normalizedFilter)) ||
+               (info.awayTeam && info.awayTeam.toLowerCase().includes(normalizedFilter)) ||
+               (info.homeTeam && info.homeTeam.toLowerCase().includes(normalizedFilter)) ||
+               (info.player1 && info.player1.toLowerCase().includes(normalizedFilter)) ||
+               (info.player2 && info.player2.toLowerCase().includes(normalizedFilter));
       });
       if (!hasTeamPlayer) return false;
     }
+
     return true;
   });
 };
 
 /**
- * Creates a default participant object with all fields
- * @returns {Object} Default participant structure
+ * Creates a default participant/pick object with all fields
+ * Includes both old and new schema field names for compatibility during transition
+ * @returns {Object} Default participant/pick structure
  */
 export const createDefaultParticipant = () => ({
+  // Big Guy - both old (player) and new (bigGuy) field names
   player: '',
+  bigGuy: '',
   sport: 'NFL',
   team: '',
   playerTeam: '',           // Auto-filled from ESPN for Player Props

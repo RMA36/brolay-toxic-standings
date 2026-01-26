@@ -69,14 +69,15 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   const currentSports = useMemo(() => getCurrentSportsInSeason(), []);
   const seasonalTip = useMemo(() => getSeasonalTip(), []);
 
-  // Filter state
+  // Filter state - supports both old (placedBy) and new (submittedBy) schema
   const [filters, setFilters] = useState({
     dateFrom: '',
     dateTo: '',
     player: '',
     sport: '',
     teamPlayer: '',
-    placedBy: '',
+    submittedBy: '',
+    placedBy: '', // Legacy support
     minPayout: '',
     maxPayout: '',
     result: '',
@@ -104,13 +105,14 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   const [currentInsightIndex, setCurrentInsightIndex] = useState(0);
   const [expandedPlayers, setExpandedPlayers] = useState(new Set());
 
-  // Entry form state
+  // Entry form state - supports both old and new schema field names
   const [newParlay, setNewParlay] = useState({
     date: getCurrentETDate(),
     betAmount: 10,
     totalPayout: 0,
     participants: {},
-    placedBy: '',
+    submittedBy: '',
+    placedBy: '', // Legacy support
     settled: false
   });
   const [editingPick, setEditingPick] = useState(null);
@@ -263,9 +265,17 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     try {
       setSaving(true);
 
-      // Identify which participants need actualStats deleted
-      const participantsToClean = Object.entries(editedParlay.participants)
-        .filter(([id, participant]) => participant.result === 'pending')
+      // Detect schema: new schema uses 'picks', old uses 'participants'
+      const isNewSchema = !!editedParlay.picks;
+      const picksObj = editedParlay.picks || editedParlay.participants || {};
+      const picksFieldName = isNewSchema ? 'picks' : 'participants';
+
+      // Helper to get result from pick (supports both schemas)
+      const getPickResult = (pick) => pick.outcome?.status || pick.result;
+
+      // Identify which picks need actualStats deleted (those reset to pending)
+      const picksToClean = Object.entries(picksObj)
+        .filter(([id, pick]) => getPickResult(pick) === 'pending')
         .map(([id]) => id);
 
       if (editedParlay.id) {
@@ -274,21 +284,28 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
         // Build update object that explicitly deletes actualStats fields
         const updateObject = {};
 
-        // Update all participants
-        Object.entries(editedParlay.participants).forEach(([id, participant]) => {
-          // For participants with pending status, we need to delete actualStats
+        // Update all picks
+        Object.entries(picksObj).forEach(([id, pick]) => {
+          // For picks with pending status, we need to delete actualStats
           // but still update all other fields
-          if (participantsToClean.includes(id)) {
-            // Update the full participant object first
-            updateObject[`participants.${id}`] = participant;
-            // Then explicitly delete actualStats field
-            updateObject[`participants.${id}.actualStats`] = deleteField();
-            // Ensure result and autoUpdated are set correctly
-            updateObject[`participants.${id}.result`] = 'pending';
-            updateObject[`participants.${id}.autoUpdated`] = false;
+          if (picksToClean.includes(id)) {
+            // Update the full pick object first
+            updateObject[`${picksFieldName}.${id}`] = pick;
+
+            if (isNewSchema) {
+              // New schema: clear outcome.actualStats
+              updateObject[`${picksFieldName}.${id}.outcome.actualStats`] = deleteField();
+              updateObject[`${picksFieldName}.${id}.outcome.status`] = 'pending';
+              updateObject[`${picksFieldName}.${id}.outcome.autoUpdated`] = false;
+            } else {
+              // Old schema: clear actualStats directly
+              updateObject[`${picksFieldName}.${id}.actualStats`] = deleteField();
+              updateObject[`${picksFieldName}.${id}.result`] = 'pending';
+              updateObject[`${picksFieldName}.${id}.autoUpdated`] = false;
+            }
           } else {
-            // For non-pending participants, just update normally
-            updateObject[`participants.${id}`] = participant;
+            // For non-pending picks, just update normally
+            updateObject[`${picksFieldName}.${id}`] = pick;
           }
         });
 
@@ -296,7 +313,9 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
         updateObject.date = editedParlay.date;
         updateObject.betAmount = editedParlay.betAmount;
         updateObject.totalPayout = editedParlay.totalPayout;
-        updateObject.placedBy = editedParlay.placedBy;
+        // Support both old and new schema field names
+        updateObject.submittedBy = editedParlay.submittedBy || editedParlay.placedBy;
+        updateObject.placedBy = editedParlay.placedBy || editedParlay.submittedBy; // Keep for compatibility
 
         const result = await updateBrolay(editedParlay.id, updateObject);
 

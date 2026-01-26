@@ -23,15 +23,64 @@ export const useOdds = (apiKey, matchTeamName) => {
   };
 
   /**
+   * Helper to extract team/player info from pick (supports both schemas)
+   */
+  const extractPickInfo = (pick) => {
+    const info = {
+      sport: pick.sport,
+      betType: pick.betType,
+      team: pick.team,
+      awayTeam: pick.awayTeam,
+      homeTeam: pick.homeTeam,
+      propType: pick.propType,
+      overUnder: pick.overUnder,
+      line: pick.line,
+      favorite: pick.favorite,
+      playerTeam: pick.playerTeam
+    };
+
+    // New schema: extract from entities and line objects
+    if (pick.entities && pick.entities.length > 0) {
+      const primary = pick.entities.find(e => e.role === 'primary') || pick.entities[0];
+      if (primary) {
+        if (primary.entityType === 'player') {
+          info.team = primary.name; // Player name goes in team for prop matching
+          info.playerTeam = primary.team;
+        } else {
+          info.team = primary.name;
+        }
+      }
+    }
+
+    // New schema: extract from game object
+    if (pick.game) {
+      info.awayTeam = info.awayTeam || pick.game.awayTeam;
+      info.homeTeam = info.homeTeam || pick.game.homeTeam;
+    }
+
+    // New schema: extract from line object
+    if (pick.line && typeof pick.line === 'object') {
+      info.propType = info.propType || pick.line.statType;
+      info.overUnder = info.overUnder || (pick.line.direction === 'over' ? 'Over' : pick.line.direction === 'under' ? 'Under' : info.overUnder);
+      info.line = pick.line.value !== undefined ? pick.line.value : info.line;
+      info.favorite = info.favorite || (pick.line.direction === 'underdog' ? 'Dog' : pick.line.direction === 'favorite' ? 'Favorite' : info.favorite);
+    }
+
+    return info;
+  };
+
+  /**
    * Fetch odds from The Odds API for a specific participant/pick
    *
-   * @param {Object} participant - Pick data (sport, betType, team, etc.)
+   * @param {Object} participant - Pick data (sport, betType, team, etc.) - supports both old and new schema
    * @param {string} gameDate - Date of the game
    * @param {Array} eventsData - Pre-fetched events data (optional)
    * @returns {Object|null} Odds data with price and bookmaker, or null if not found
    */
   const fetchOddsFromTheOddsAPI = async (participant, gameDate, eventsData = null) => {
-    const { sport, betType, team, awayTeam, homeTeam, propType, overUnder, line, favorite, playerTeam } = participant;
+    // Extract info supporting both old and new schema
+    const pickInfo = extractPickInfo(participant);
+    const { sport, betType, team, awayTeam, homeTeam, propType, overUnder, line, favorite, playerTeam } = pickInfo;
 
     if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
       console.warn('The Odds API key not configured');

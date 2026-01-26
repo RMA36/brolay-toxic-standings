@@ -94,10 +94,10 @@ const FilterBar = ({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
+              <label className="block text-sm font-medium mb-1 text-gray-300">Submitted By</label>
               <select
-                value={filters.placedBy}
-                onChange={(e) => handleFilterChange('placedBy', e.target.value)}
+                value={filters.submittedBy || filters.placedBy || ''}
+                onChange={(e) => handleFilterChange('submittedBy', e.target.value)}
                 className={inputClassName}
                 style={inputStyle}
               >

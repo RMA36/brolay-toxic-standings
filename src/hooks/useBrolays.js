@@ -50,7 +50,7 @@ export const useBrolays = (db) => {
         console.log('📅 Most recent 5 brolays:', sortedByDate.slice(0, 5).map(b => ({
           id: b.id,
           date: b.date,
-          placedBy: b.placedBy,
+          submittedBy: b.submittedBy || b.placedBy, // Support both new and old schema
           settled: b.settled
         })));
 

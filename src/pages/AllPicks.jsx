@@ -2,7 +2,7 @@ import React from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS, SPORTS, PICK_TYPES, COMMON_PROP_TYPES } from '../constants/sports';
 import Button from '../components/common/Button';
-import { formatDateForDisplay, formatBetDescription, normalizePropType } from '../utils/formatters';
+import { formatDateForDisplay, formatBetDescription, normalizePropType, getPicksArray, getPickBigGuy, getPickResult, getPickActualStats, getSubmittedBy } from '../utils/formatters';
 
 /**
  * AllPicks Page Component
@@ -34,30 +34,37 @@ const AllPicks = () => {
   const sports = SPORTS;
   const betTypes = PICK_TYPES;
   const commonPropTypes = COMMON_PROP_TYPES;
-  // Flatten all picks with parlay context
+  // Flatten all picks with parlay context (supports both old and new schemas)
   const allPicks = [];
   parlays.forEach(parlay => {
-    Object.entries(parlay.participants || {}).forEach(([participantId, pick]) => {
+    // Get picks object (supports both picks and participants field names)
+    const picksObj = parlay.picks || parlay.participants || {};
+    Object.entries(picksObj).forEach(([pickId, pick]) => {
       allPicks.push({
         ...pick,
-        participantId,
+        participantId: pickId,
         parlayId: parlay.id,
         parlayDate: parlay.date,
         parlayBetAmount: parlay.betAmount,
         parlayTotalPayout: parlay.totalPayout,
-        parlayPlacedBy: parlay.placedBy
+        parlayPlacedBy: getSubmittedBy(parlay)
       });
     });
   });
 
-  // Apply filters
+  // Apply filters (using helper functions for dual-schema support)
   const filteredPicks = allPicks.filter(pick => {
     if (filters.dateFrom && pick.parlayDate < filters.dateFrom) return false;
     if (filters.dateTo && pick.parlayDate > filters.dateTo) return false;
-    if (filters.player && pick.player !== filters.player) return false;
+    const bigGuy = getPickBigGuy(pick);
+    if (filters.player && bigGuy !== filters.player) return false;
     if (filters.sport && pick.sport !== filters.sport) return false;
     if (filters.placedBy && pick.parlayPlacedBy !== filters.placedBy) return false;
-    if (filters.result && pick.result !== filters.result) return false;
+    // Support both submittedBy filter and placedBy filter
+    const submittedByFilter = filters.submittedBy || filters.placedBy;
+    if (submittedByFilter && pick.parlayPlacedBy !== submittedByFilter) return false;
+    const pickResult = getPickResult(pick);
+    if (filters.result && pickResult !== filters.result) return false;
     if (filters.autoUpdated === 'true' && !pick.autoUpdated) return false;
     if (filters.autoUpdated === 'false' && pick.autoUpdated) return false;
 
@@ -114,18 +121,29 @@ const AllPicks = () => {
         return;
       }
 
+      // Determine which schema the parlay uses
+      const isNewSchema = !!parlay.picks;
+      const picksFieldName = isNewSchema ? 'picks' : 'participants';
+      const picksObj = parlay[picksFieldName] || {};
+
       console.log('Found parlay:', parlay);
-      console.log('Editing participant:', editingPick.participantId);
-      console.log('Current participant data:', parlay.participants[editingPick.participantId]);
+      console.log('Schema type:', isNewSchema ? 'new (picks)' : 'old (participants)');
+      console.log('Editing pick:', editingPick.participantId);
+      console.log('Current pick data:', picksObj[editingPick.participantId]);
 
-      // Get the original participant to preserve any fields we're not editing
-      const originalParticipant = parlay.participants[editingPick.participantId];
+      // Get the original pick to preserve any fields we're not editing
+      const originalParticipant = picksObj[editingPick.participantId];
 
-      // Update the specific participant, preserving all original fields
-      const updatedParticipants = { ...parlay.participants };
-      updatedParticipants[editingPick.participantId] = {
+      // Update the specific pick, preserving all original fields
+      // Support both old schema (player/result) and new schema (bigGuy/outcome.status)
+      const updatedPicks = { ...picksObj };
+      const bigGuyValue = editingPick.bigGuy || editingPick.player;
+
+      updatedPicks[editingPick.participantId] = {
         ...originalParticipant, // Start with original to preserve any extra fields
-        player: editingPick.player,
+        // Write to both old and new field names for compatibility
+        player: bigGuyValue,
+        bigGuy: bigGuyValue,
         sport: editingPick.sport,
         team: editingPick.team || '',
         awayTeam: editingPick.awayTeam || '',
@@ -140,23 +158,30 @@ const AllPicks = () => {
         odds: editingPick.odds || '',
         yesNoRuns: editingPick.yesNoRuns || '',
         quarter: editingPick.quarter || '',
+        // Write to both old (result) and new (outcome.status) field names
         result: editingPick.result,
+        outcome: {
+          ...(originalParticipant.outcome || {}),
+          status: editingPick.result,
+          actualStats: editingPick.actualStats || originalParticipant.outcome?.actualStats || null
+        },
         actualStats: editingPick.actualStats || null,
         autoUpdated: editingPick.autoUpdated || false,
         manuallyOverridden: true // Mark as manually edited
       };
 
-      console.log('Updated participant data:', updatedParticipants[editingPick.participantId]);
+      console.log('Updated pick data:', updatedPicks[editingPick.participantId]);
 
-      // Update in Firebase
+      // Update in Firebase using the correct field name for this schema
       if (parlay.id) {
         console.log('🔄 Updating Firebase document:', parlay.id);
         console.log('📝 Parlay object:', parlay);
-        console.log('📝 Updated participants:', updatedParticipants);
+        console.log('📝 Updated picks:', updatedPicks);
+        console.log('📝 Using field name:', picksFieldName);
 
         try {
           const result = await updateBrolay(parlay.id, {
-            participants: updatedParticipants
+            [picksFieldName]: updatedPicks
           });
 
           console.log('✅ Update result:', result);
@@ -260,10 +285,10 @@ const AllPicks = () => {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
+                <label className="block text-sm font-medium mb-1 text-gray-300">Submitted By</label>
                 <select
-                  value={filters.placedBy}
-                  onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+                  value={filters.submittedBy || filters.placedBy || ''}
+                  onChange={(e) => setFilters({...filters, submittedBy: e.target.value, placedBy: e.target.value})}
                   className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
@@ -343,7 +368,7 @@ const AllPicks = () => {
             <Button
               onClick={() => setFilters({
                 dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
-                placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
+                submittedBy: '', placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
                 betType: '', propType: ''
               })}
               variant="secondary"
@@ -368,9 +393,17 @@ const AllPicks = () => {
             <p className="text-gray-500 text-center py-8">No picks match your filters</p>
           ) : (
             sortedPicks.slice(0, picksToShow).map((pick, idx) => {
+              // Use helper functions for dual-schema support
+              const bigGuy = getPickBigGuy(pick);
+              const pickResult = getPickResult(pick);
+              const actualStats = getPickActualStats(pick);
+
               let teamDisplay = '';
               if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(pick.betType)) {
-                teamDisplay = `${pick.awayTeam} @ ${pick.homeTeam}`;
+                // Support both direct fields and nested game object
+                const awayTeam = pick.awayTeam || pick.game?.awayTeam || '';
+                const homeTeam = pick.homeTeam || pick.game?.homeTeam || '';
+                teamDisplay = `${awayTeam} @ ${homeTeam}`;
               } else {
                 teamDisplay = pick.team;
               }
@@ -382,18 +415,18 @@ const AllPicks = () => {
                   <div className="flex justify-between items-start mb-2">
                     <div className="flex-1">
                       <div className="text-sm text-gray-400 mb-1">
-                        {formatDateForDisplay(pick.parlayDate)} • Placed by {pick.parlayPlacedBy || 'Unknown'}
+                        {formatDateForDisplay(pick.parlayDate)} • Submitted by {pick.parlayPlacedBy || 'Unknown'}
                       </div>
                       <div className="font-semibold text-white">
-                        <strong className="text-yellow-400">{pick.player}</strong> - {pick.sport} - {teamDisplay} {betDetails}
+                        <strong className="text-yellow-400">{bigGuy}</strong> - {pick.sport} - {teamDisplay} {betDetails}
                       </div>
                       <div className="text-sm text-gray-400">
                         {pick.betType}
                         {pick.odds && ` • ${pick.odds}`}
                       </div>
-                      {pick.actualStats && (
+                      {actualStats && (
                         <div className="text-sm text-blue-400 font-semibold mt-1">
-                          [{pick.actualStats}]
+                          [{actualStats}]
                         </div>
                       )}
                     </div>
@@ -407,12 +440,12 @@ const AllPicks = () => {
                         </span>
                       )}
                       <span className={`font-semibold text-sm ${
-                        pick.result === 'win' ? 'text-green-400' :
-                        pick.result === 'loss' ? 'text-red-400' :
-                        pick.result === 'push' ? 'text-yellow-400' :
+                        pickResult === 'win' ? 'text-green-400' :
+                        pickResult === 'loss' ? 'text-red-400' :
+                        pickResult === 'push' ? 'text-yellow-400' :
                         'text-gray-400'
                       }`}>
-                        {pick.result.toUpperCase()}
+                        {pickResult.toUpperCase()}
                       </span>
                       <Button
                         onClick={() => setEditingPick(pick)}
@@ -480,7 +513,7 @@ const AllPicks = () => {
               <div className="mb-4 p-3 bg-gray-900/50 border border-gray-700 rounded text-sm">
                 <div className="font-semibold text-gray-300">From Brolay:</div>
                 <div className="text-gray-400">
-                  {formatDateForDisplay(editingPick.parlayDate)} • Placed by {editingPick.parlayPlacedBy || 'Unknown'}
+                  {formatDateForDisplay(editingPick.parlayDate)} • Submitted by {editingPick.parlayPlacedBy || 'Unknown'}
                 </div>
               </div>
 
@@ -494,8 +527,8 @@ const AllPicks = () => {
                 <div>
                   <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
                   <select
-                    value={editingPick.player}
-                    onChange={(e) => setEditingPick({...editingPick, player: e.target.value})}
+                    value={editingPick.bigGuy || editingPick.player || ''}
+                    onChange={(e) => setEditingPick({...editingPick, bigGuy: e.target.value, player: e.target.value})}
                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                     style={{ fontSize: isMobile ? '16px' : '14px' }}
                   >
@@ -616,8 +649,12 @@ const AllPicks = () => {
                 <div>
                   <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
                   <select
-                    value={editingPick.result}
-                    onChange={(e) => setEditingPick({...editingPick, result: e.target.value})}
+                    value={editingPick.outcome?.status || editingPick.result || 'pending'}
+                    onChange={(e) => setEditingPick({
+                      ...editingPick,
+                      result: e.target.value,
+                      outcome: { ...(editingPick.outcome || {}), status: e.target.value }
+                    })}
                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                     style={{ fontSize: isMobile ? '16px' : '14px' }}
                   >
@@ -631,8 +668,12 @@ const AllPicks = () => {
                   <label className="block text-sm font-medium mb-1 text-gray-300">Actual Stats (Optional)</label>
                   <input
                     type="text"
-                    value={editingPick.actualStats || ''}
-                    onChange={(e) => setEditingPick({...editingPick, actualStats: e.target.value})}
+                    value={editingPick.outcome?.actualStats || editingPick.actualStats || ''}
+                    onChange={(e) => setEditingPick({
+                      ...editingPick,
+                      actualStats: e.target.value,
+                      outcome: { ...(editingPick.outcome || {}), actualStats: e.target.value }
+                    })}
                     className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                     style={{ fontSize: isMobile ? '16px' : '14px' }}
                   />

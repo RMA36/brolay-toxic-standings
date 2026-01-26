@@ -6,7 +6,7 @@ import Card from '../components/common/Card';
 import StatCard from '../components/dashboard/StatCard';
 import FilterBar from '../components/filters/FilterBar';
 import { Users, TrendingUp, Award, AlertCircle, RefreshCw } from 'lucide-react';
-import { formatDateForDisplay } from '../utils/formatters';
+import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult, getSubmittedBy } from '../utils/formatters';
 import { getCurrentSportsInSeason, getCurrentDayOfWeek, findMoneyMaker, findDangerZone, getSeasonalTip, formatComboDescription } from '../insightsHelper';
 
 /**
@@ -30,15 +30,17 @@ const GroupDashboard = () => {
   const sports = SPORTS;
   const preloadedTeams = PRELOADED_TEAMS;
 
-  // Apply filters to parlays
+  // Apply filters to parlays (supports both old and new schemas)
   const applyFilters = (parlayList) => {
     return parlayList.filter(parlay => {
       // Date filters
       if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
       if (filters.dateTo && parlay.date > filters.dateTo) return false;
 
-      // PlacedBy filter
-      if (filters.placedBy && parlay.placedBy !== filters.placedBy) return false;
+      // PlacedBy/SubmittedBy filter (supports both field names)
+      const submittedByFilter = filters.submittedBy || filters.placedBy;
+      const parlaySubmittedBy = getSubmittedBy(parlay);
+      if (submittedByFilter && parlaySubmittedBy !== submittedByFilter) return false;
 
       // Payout filters
       if (filters.minPayout && parlay.totalPayout < parseFloat(filters.minPayout)) return false;
@@ -48,30 +50,34 @@ const GroupDashboard = () => {
       if (filters.result === 'settled' && !parlay.settled) return false;
       if (filters.result === 'pending' && parlay.settled) return false;
 
-      // Participant-level filters
-      const participants = Object.values(parlay.participants || {});
+      // Participant-level filters (use helper function for dual-schema support)
+      const picks = getPicksArray(parlay);
 
-      // Player filter
-      if (filters.player && !participants.some(p => p.player === filters.player)) return false;
+      // Player filter (supports both bigGuy and player field names)
+      if (filters.player && !picks.some(p => getPickBigGuy(p) === filters.player)) return false;
 
       // Sport filter
-      if (filters.sport && !participants.some(p => p.sport === filters.sport)) return false;
+      if (filters.sport && !picks.some(p => p.sport === filters.sport)) return false;
 
-      // Team/Player filter
-      if (filters.teamPlayer && !participants.some(p =>
-        p.teamPlayer?.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
-        p.teamPlayer2?.toLowerCase().includes(filters.teamPlayer.toLowerCase())
-      )) return false;
+      // Team/Player filter (supports both direct fields and nested game object)
+      if (filters.teamPlayer && !picks.some(p => {
+        const team = p.team || '';
+        const awayTeam = p.awayTeam || p.game?.awayTeam || '';
+        const homeTeam = p.homeTeam || p.game?.homeTeam || '';
+        return team.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
+               awayTeam.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
+               homeTeam.toLowerCase().includes(filters.teamPlayer.toLowerCase());
+      })) return false;
 
       // Auto-updated filter
-      if (filters.autoUpdated === 'yes' && !participants.some(p => p.autoUpdated === true)) return false;
-      if (filters.autoUpdated === 'no' && !participants.some(p => p.autoUpdated === false)) return false;
+      if (filters.autoUpdated === 'yes' && !picks.some(p => p.autoUpdated === true)) return false;
+      if (filters.autoUpdated === 'no' && !picks.some(p => p.autoUpdated === false)) return false;
 
       // Bet type filter
-      if (filters.betType && !participants.some(p => p.pickType === filters.betType)) return false;
+      if (filters.betType && !picks.some(p => p.betType === filters.betType || p.pickType === filters.betType)) return false;
 
-      // Prop type filter
-      if (filters.propType && !participants.some(p => p.propType === filters.propType)) return false;
+      // Prop type filter (supports both propType and line.statType)
+      if (filters.propType && !picks.some(p => p.propType === filters.propType || p.line?.statType === filters.propType)) return false;
 
       return true;
     });
@@ -79,38 +85,40 @@ const GroupDashboard = () => {
 
   const filteredParlays = applyFilters([...parlays]);
 
+  // Count pending picks (supports both old and new schemas)
   const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
-    const participants = Object.values(parlay.participants || {});
-    return count + participants.filter(p => p.result === 'pending').length;
+    const picks = getPicksArray(parlay);
+    return count + picks.filter(p => getPickResult(p) === 'pending').length;
   }, 0);
 
   const totalParlays = filteredParlays.length;
-  const wonParlays = filteredParlays.filter(p => {
-    const participants = Object.values(p.participants);
-    const losers = participants.filter(part => part.result === 'loss');
-    return losers.length === 0 && participants.some(part => part.result === 'win');
+  const wonParlays = filteredParlays.filter(parlay => {
+    const picks = getPicksArray(parlay);
+    const losers = picks.filter(p => getPickResult(p) === 'loss');
+    return losers.length === 0 && picks.some(p => getPickResult(p) === 'win');
   }).length;
-  const lostParlays = filteredParlays.filter(p => {
-    const participants = Object.values(p.participants);
-    return participants.some(part => part.result === 'loss');
+  const lostParlays = filteredParlays.filter(parlay => {
+    const picks = getPicksArray(parlay);
+    return picks.some(p => getPickResult(p) === 'loss');
   }).length;
   const pendingParlays = totalParlays - wonParlays - lostParlays;
   const groupWinPct = totalParlays > 0 ? ((wonParlays / totalParlays) * 100).toFixed(1) : '0.0';
 
-  // Calculate by sport
+  // Calculate by sport (supports both old and new schemas)
   const bySport = {};
-  filteredParlays.forEach(p => {
-    const participants = Object.values(p.participants);
+  filteredParlays.forEach(parlay => {
+    const picks = getPicksArray(parlay);
 
-    participants.forEach(part => {
-      if (part.sport) {
-        if (!bySport[part.sport]) {
-          bySport[part.sport] = { total: 0, won: 0, lost: 0, pending: 0 };
+    picks.forEach(pick => {
+      if (pick.sport) {
+        const result = getPickResult(pick);
+        if (!bySport[pick.sport]) {
+          bySport[pick.sport] = { total: 0, won: 0, lost: 0, pending: 0 };
         }
-        bySport[part.sport].total++;
-        if (part.result === 'win') bySport[part.sport].won++;
-        else if (part.result === 'loss') bySport[part.sport].lost++;
-        else if (part.result === 'pending') bySport[part.sport].pending++;
+        bySport[pick.sport].total++;
+        if (result === 'win') bySport[pick.sport].won++;
+        else if (result === 'loss') bySport[pick.sport].lost++;
+        else if (result === 'pending') bySport[pick.sport].pending++;
       }
     });
   });
@@ -126,15 +134,15 @@ const GroupDashboard = () => {
     })
     .slice(0, 10);
 
-  const last10Won = last10Brolays.filter(p => {
-    const participants = Object.values(p.participants);
-    const losers = participants.filter(part => part.result === 'loss');
-    return losers.length === 0 && participants.some(part => part.result === 'win');
+  const last10Won = last10Brolays.filter(parlay => {
+    const picks = getPicksArray(parlay);
+    const losers = picks.filter(p => getPickResult(p) === 'loss');
+    return losers.length === 0 && picks.some(p => getPickResult(p) === 'win');
   }).length;
 
-  const last10Lost = last10Brolays.filter(p => {
-    const participants = Object.values(p.participants);
-    return participants.some(part => part.result === 'loss');
+  const last10Lost = last10Brolays.filter(parlay => {
+    const picks = getPicksArray(parlay);
+    return picks.some(p => getPickResult(p) === 'loss');
   }).length;
 
   // Current month stats
@@ -145,38 +153,38 @@ const GroupDashboard = () => {
     return parlayDate >= currentMonthStart;
   });
 
-  const currentMonthWon = currentMonthBrolays.filter(p => {
-    const participants = Object.values(p.participants);
-    const losers = participants.filter(part => part.result === 'loss');
-    return losers.length === 0 && participants.some(part => part.result === 'win');
+  const currentMonthWon = currentMonthBrolays.filter(parlay => {
+    const picks = getPicksArray(parlay);
+    const losers = picks.filter(p => getPickResult(p) === 'loss');
+    return losers.length === 0 && picks.some(p => getPickResult(p) === 'win');
   }).length;
 
-  const currentMonthLost = currentMonthBrolays.filter(p => {
-    const participants = Object.values(p.participants);
-    return participants.some(part => part.result === 'loss');
+  const currentMonthLost = currentMonthBrolays.filter(parlay => {
+    const picks = getPicksArray(parlay);
+    return picks.some(p => getPickResult(p) === 'loss');
   }).length;
 
-  // Calculate total money metrics
+  // Calculate total money metrics (supports both old and new schemas)
   const totalMoneyWon = filteredParlays
-    .filter(p => {
-      const participants = Object.values(p.participants);
-      const losers = participants.filter(part => part.result === 'loss');
-      return losers.length === 0 && participants.some(part => part.result === 'win');
+    .filter(parlay => {
+      const picks = getPicksArray(parlay);
+      const losers = picks.filter(p => getPickResult(p) === 'loss');
+      return losers.length === 0 && picks.some(p => getPickResult(p) === 'win');
     })
-    .reduce((sum, p) => {
-      const participants = Object.values(p.participants);
-      const netProfit = Math.max(0, (p.totalPayout || 0) - (p.betAmount * participants.length));
+    .reduce((sum, parlay) => {
+      const picks = getPicksArray(parlay);
+      const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * picks.length));
       return sum + netProfit;
     }, 0);
 
   const totalMoneyLost = filteredParlays
-    .filter(p => {
-      const participants = Object.values(p.participants);
-      return participants.some(part => part.result === 'loss');
+    .filter(parlay => {
+      const picks = getPicksArray(parlay);
+      return picks.some(p => getPickResult(p) === 'loss');
     })
-    .reduce((sum, p) => {
-      const participants = Object.values(p.participants);
-      return sum + (p.betAmount * participants.length);
+    .reduce((sum, parlay) => {
+      const picks = getPicksArray(parlay);
+      return sum + (parlay.betAmount * picks.length);
     }, 0);
 
   return (
@@ -302,15 +310,15 @@ const GroupDashboard = () => {
               <span className={`font-bold text-lg ${
                 (() => {
                   const last10NetProfit = last10Brolays.reduce((sum, parlay) => {
-                    const participants = Object.values(parlay.participants);
-                    const losers = participants.filter(p => p.result === 'loss');
-                    const winners = participants.filter(p => p.result === 'win');
+                    const picks = getPicksArray(parlay);
+                    const losers = picks.filter(p => getPickResult(p) === 'loss');
+                    const winners = picks.filter(p => getPickResult(p) === 'win');
                     const won = losers.length === 0 && winners.length > 0;
 
                     if (won) {
-                      return sum + ((parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
+                      return sum + ((parlay.totalPayout || 0) - (parlay.betAmount * picks.length));
                     } else if (losers.length > 0) {
-                      return sum - (parlay.betAmount * participants.length);
+                      return sum - (parlay.betAmount * picks.length);
                     }
                     return sum;
                   }, 0);
@@ -319,15 +327,15 @@ const GroupDashboard = () => {
               }`}>
                 ${(() => {
                   const last10NetProfit = last10Brolays.reduce((sum, parlay) => {
-                    const participants = Object.values(parlay.participants);
-                    const losers = participants.filter(p => p.result === 'loss');
-                    const winners = participants.filter(p => p.result === 'win');
+                    const picks = getPicksArray(parlay);
+                    const losers = picks.filter(p => getPickResult(p) === 'loss');
+                    const winners = picks.filter(p => getPickResult(p) === 'win');
                     const won = losers.length === 0 && winners.length > 0;
 
                     if (won) {
-                      return sum + ((parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
+                      return sum + ((parlay.totalPayout || 0) - (parlay.betAmount * picks.length));
                     } else if (losers.length > 0) {
-                      return sum - (parlay.betAmount * participants.length);
+                      return sum - (parlay.betAmount * picks.length);
                     }
                     return sum;
                   }, 0);
@@ -337,9 +345,9 @@ const GroupDashboard = () => {
             </div>
             <div className="flex gap-1 mt-2">
               {last10Brolays.map((parlay, idx) => {
-                const participants = Object.values(parlay.participants);
-                const losers = participants.filter(p => p.result === 'loss');
-                const winners = participants.filter(p => p.result === 'win');
+                const picks = getPicksArray(parlay);
+                const losers = picks.filter(p => getPickResult(p) === 'loss');
+                const winners = picks.filter(p => getPickResult(p) === 'win');
                 const won = losers.length === 0 && winners.length > 0;
                 const lost = losers.length > 0;
 

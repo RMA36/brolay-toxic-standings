@@ -1272,57 +1272,168 @@ export const useESPN = () => {
     }
   };
 
+  /**
+   * Helper to get the result/status from a pick (supports both schemas)
+   */
+  const getPickResult = (pick) => {
+    if (pick.outcome?.status) return pick.outcome.status;
+    return pick.result;
+  };
+
+  /**
+   * Helper to convert pick to format expected by checkGameResult (old schema format)
+   * The checkGameResult functions expect the old schema format with team, playerTeam, etc.
+   */
+  const pickToParticipant = (pick) => {
+    // If it's already old schema, return as-is
+    if (pick.player && !pick.bigGuy) return pick;
+
+    // Convert new schema to old schema format for checkGameResult
+    const participant = { ...pick };
+
+    // For player props, entities[0] contains the player info
+    if (pick.entities && pick.entities.length > 0) {
+      const primary = pick.entities.find(e => e.role === 'primary') || pick.entities[0];
+      if (primary) {
+        if (primary.entityType === 'player') {
+          // Player prop - set team field to player name (old schema confusion)
+          participant.team = primary.name;
+          participant.playerTeam = primary.team;
+          participant.playerPosition = primary.position;
+        } else {
+          // Team bet
+          participant.team = primary.name;
+        }
+      }
+
+      // For H2H props, etc. with two players
+      if (pick.entities.length > 1) {
+        const opponent = pick.entities.find(e => e.role === 'opponent' || e.role === 'secondary');
+        if (opponent) {
+          participant.player2 = opponent.name;
+          participant.player2Team = opponent.team;
+          participant.player2Position = opponent.position;
+        }
+        // Also set player1 from primary
+        if (primary) {
+          participant.player1 = primary.name;
+          participant.player1Team = primary.team;
+          participant.player1Position = primary.position;
+        }
+      }
+
+      // Game info for home/away teams
+      if (pick.game) {
+        participant.awayTeam = pick.game.awayTeam;
+        participant.homeTeam = pick.game.homeTeam;
+      }
+    }
+
+    // Line info
+    if (pick.line) {
+      if (pick.line.value !== undefined) {
+        // Map line value to appropriate old field
+        if (pick.betType?.includes('Spread')) {
+          participant.spread = pick.line.value;
+          participant.favorite = pick.line.direction === 'underdog' ? 'Dog' : 'Favorite';
+        } else if (pick.betType?.includes('Total')) {
+          participant.total = pick.line.value;
+          participant.overUnder = pick.line.direction === 'over' ? 'Over' : 'Under';
+        } else {
+          participant.line = pick.line.value;
+          participant.overUnder = pick.line.direction === 'over' ? 'Over' : 'Under';
+        }
+      }
+      if (pick.line.statType) {
+        participant.propType = pick.line.statType;
+        participant.player1PropType = pick.line.statType;
+        participant.player2PropType = pick.line.statType;
+      }
+      if (pick.line.odds) {
+        participant.odds = pick.line.odds;
+      }
+    }
+
+    return participant;
+  };
+
   // Auto-update pending picks
   const autoUpdatePendingPicks = async (parlays, updateBrolay) => {
     try {
       setAutoUpdating(true);
       let updatedCount = 0;
-      
+
+      // Detect schema: new schema uses 'picks', old uses 'participants'
       const parlaysToUpdate = parlays.filter(parlay => {
-        const participants = Object.values(parlay.participants || {});
-        return participants.some(p => p.result === 'pending');
+        const picksObj = parlay.picks || parlay.participants;
+        if (!picksObj) return false;
+        const picks = Object.values(picksObj);
+        return picks.some(p => getPickResult(p) === 'pending');
       });
-      
+
       for (const parlay of parlaysToUpdate) {
         let parlayUpdated = false;
-        const updatedParticipants = { ...parlay.participants };
-        
-        for (const [participantId, participant] of Object.entries(parlay.participants)) {
-          if (participant.result !== 'pending') continue;
-          
+
+        // Detect which schema this parlay uses
+        const isNewSchema = !!parlay.picks;
+        const picksObj = parlay.picks || parlay.participants;
+        const updatedPicks = { ...picksObj };
+
+        for (const [pickId, pick] of Object.entries(picksObj)) {
+          if (getPickResult(pick) !== 'pending') continue;
+
           try {
+            // Convert to old schema format for checkGameResult
+            const participant = pickToParticipant(pick);
             const resultData = await checkGameResult(participant, parlay.date);
-            
+
             if (resultData && resultData.result && resultData.result !== 'pending') {
-              // Create a clean participant object without old actualStats
-              const { actualStats: oldStats, ...cleanParticipant } = participant;
-              
-              updatedParticipants[participantId] = {
-                ...cleanParticipant,
-                result: resultData.result,
-                actualStats: resultData.stats,
-                autoUpdated: true,
-                autoUpdatedAt: new Date().toISOString()
-              };
+              if (isNewSchema) {
+                // New schema: update outcome object
+                const { outcome: oldOutcome, ...cleanPick } = pick;
+                updatedPicks[pickId] = {
+                  ...cleanPick,
+                  outcome: {
+                    ...(oldOutcome || {}),
+                    status: resultData.result,
+                    actualStats: resultData.stats,
+                    autoUpdated: true,
+                    settledAt: new Date().toISOString()
+                  }
+                };
+              } else {
+                // Old schema: update result field directly
+                const { actualStats: oldStats, ...cleanParticipant } = pick;
+                updatedPicks[pickId] = {
+                  ...cleanParticipant,
+                  result: resultData.result,
+                  actualStats: resultData.stats,
+                  autoUpdated: true,
+                  autoUpdatedAt: new Date().toISOString()
+                };
+              }
               parlayUpdated = true;
               updatedCount++;
             }
           } catch (error) {
-            console.error(`Error checking result for pick ${participantId}:`, error);
+            console.error(`Error checking result for pick ${pickId}:`, error);
           }
         }
-        
+
         if (parlayUpdated && parlay.id) {
           try {
             console.log('🔄 Attempting to update parlay:', parlay.id);
-            console.log('📝 Update data:', { participants: updatedParticipants });
-            
+
+            // Use the appropriate field name based on schema
+            const updateField = isNewSchema ? 'picks' : 'participants';
+            console.log('📝 Update data:', { [updateField]: updatedPicks });
+
             const result = await updateBrolay(parlay.id, {
-              participants: updatedParticipants
+              [updateField]: updatedPicks
             });
-            
+
             console.log('✅ Update result:', result);
-            
+
             if (!result.success) {
               console.error('❌ Update failed:', result.error);
             }
@@ -1335,14 +1446,14 @@ export const useESPN = () => {
           console.warn('⚠️ Parlay not updated - parlayUpdated:', parlayUpdated, 'id:', parlay.id);
         }
       }
-      
+
       setAutoUpdating(false);
-      
+
       return {
         success: true,
         updatedCount
       };
-      
+
     } catch (error) {
       console.error('Error in auto-update:', error);
       setAutoUpdating(false);

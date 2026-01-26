@@ -6,7 +6,7 @@ import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import FilterBar from '../components/filters/FilterBar';
 import ComparisonTable from '../components/dashboard/ComparisonTable';
-import { formatDateForDisplay } from '../utils/formatters';
+import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult, getSubmittedBy } from '../utils/formatters';
 
 /**
  * IndividualDashboard - Individual player statistics and leaderboard
@@ -42,15 +42,17 @@ const IndividualDashboard = () => {
     setExpandedPlayers
   } = useBrolayContext();
 
-  // Apply filters to parlays
+  // Apply filters to parlays (supports both old and new schemas)
   const applyFilters = (parlayList) => {
     return parlayList.filter(parlay => {
       // Date filters
       if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
       if (filters.dateTo && parlay.date > filters.dateTo) return false;
 
-      // PlacedBy filter
-      if (filters.placedBy && parlay.placedBy !== filters.placedBy) return false;
+      // PlacedBy/SubmittedBy filter (supports both field names)
+      const submittedByFilter = filters.submittedBy || filters.placedBy;
+      const parlaySubmittedBy = getSubmittedBy(parlay);
+      if (submittedByFilter && parlaySubmittedBy !== submittedByFilter) return false;
 
       // Payout filters
       if (filters.minPayout && parlay.totalPayout < parseFloat(filters.minPayout)) return false;
@@ -60,30 +62,34 @@ const IndividualDashboard = () => {
       if (filters.result === 'settled' && !parlay.settled) return false;
       if (filters.result === 'pending' && parlay.settled) return false;
 
-      // Participant-level filters
-      const participants = Object.values(parlay.participants || {});
+      // Participant-level filters (use helper function for dual-schema support)
+      const picks = getPicksArray(parlay);
 
-      // Player filter
-      if (filters.player && !participants.some(p => p.player === filters.player)) return false;
+      // Player filter (supports both bigGuy and player field names)
+      if (filters.player && !picks.some(p => getPickBigGuy(p) === filters.player)) return false;
 
       // Sport filter
-      if (filters.sport && !participants.some(p => p.sport === filters.sport)) return false;
+      if (filters.sport && !picks.some(p => p.sport === filters.sport)) return false;
 
-      // Team/Player filter
-      if (filters.teamPlayer && !participants.some(p =>
-        p.teamPlayer?.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
-        p.teamPlayer2?.toLowerCase().includes(filters.teamPlayer.toLowerCase())
-      )) return false;
+      // Team/Player filter (supports both direct fields and nested game object)
+      if (filters.teamPlayer && !picks.some(p => {
+        const team = p.team || '';
+        const awayTeam = p.awayTeam || p.game?.awayTeam || '';
+        const homeTeam = p.homeTeam || p.game?.homeTeam || '';
+        return team.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
+               awayTeam.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
+               homeTeam.toLowerCase().includes(filters.teamPlayer.toLowerCase());
+      })) return false;
 
       // Auto-updated filter
-      if (filters.autoUpdated === 'yes' && !participants.some(p => p.autoUpdated === true)) return false;
-      if (filters.autoUpdated === 'no' && !participants.some(p => p.autoUpdated === false)) return false;
+      if (filters.autoUpdated === 'yes' && !picks.some(p => p.autoUpdated === true)) return false;
+      if (filters.autoUpdated === 'no' && !picks.some(p => p.autoUpdated === false)) return false;
 
       // Bet type filter
-      if (filters.betType && !participants.some(p => p.pickType === filters.betType)) return false;
+      if (filters.betType && !picks.some(p => p.betType === filters.betType || p.pickType === filters.betType)) return false;
 
-      // Prop type filter
-      if (filters.propType && !participants.some(p => p.propType === filters.propType)) return false;
+      // Prop type filter (supports both propType and line.statType)
+      if (filters.propType && !picks.some(p => p.propType === filters.propType || p.line?.statType === filters.propType)) return false;
 
       return true;
     });
@@ -91,9 +97,10 @@ const IndividualDashboard = () => {
 
   const filteredParlays = applyFilters([...parlays]);
 
+    // Count pending picks (supports both old and new schemas)
     const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
-        const participants = Object.values(parlay.participants || {});
-        return count + participants.filter(p => p.result === 'pending').length;
+        const picks = getPicksArray(parlay);
+        return count + picks.filter(p => getPickResult(p) === 'pending').length;
       }, 0);
     
     // Calculate insights

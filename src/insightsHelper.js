@@ -1,6 +1,22 @@
 // insightsHelper.js - Dynamic insights based on current date and season
 
 /**
+ * Helper functions for dual-schema support
+ */
+const getPicksArray = (parlay) => {
+  const picksObj = parlay.picks || parlay.participants;
+  if (!picksObj) return [];
+  return Object.values(picksObj);
+};
+
+const getPickBigGuy = (pick) => pick.bigGuy || pick.player;
+
+const getPickResult = (pick) => {
+  if (pick.outcome?.status) return pick.outcome.status;
+  return pick.result;
+};
+
+/**
  * Determines which sports are currently in season
  */
 export const getCurrentSportsInSeason = () => {
@@ -82,6 +98,7 @@ export const getCurrentDayOfWeek = () => {
 
 /**
  * Analyzes player performance for a specific combo (sport + day + bet type)
+ * Supports both old and new schemas
  */
 export const analyzeCombo = (parlays, player, sport, dayOfWeek = null, betType = null) => {
   let totalPicks = 0;
@@ -96,21 +113,26 @@ export const analyzeCombo = (parlays, player, sport, dayOfWeek = null, betType =
       if (parlayDay !== dayOfWeek) return;
     }
 
-    Object.values(parlay.participants || {}).forEach(pick => {
-      if (!pick.player || !pick.sport || !pick.betType) return; // Skip incomplete picks
-      if (pick.player !== player) return;
+    // Use helper function for dual-schema support
+    const picks = getPicksArray(parlay);
+    picks.forEach(pick => {
+      const bigGuy = getPickBigGuy(pick);
+      const result = getPickResult(pick);
+
+      if (!bigGuy || !pick.sport || !pick.betType) return; // Skip incomplete picks
+      if (bigGuy !== player) return;
       if (pick.sport !== sport) return;
       if (betType && pick.betType !== betType) return;
-      if (pick.result === 'pending') return;
+      if (result === 'pending') return;
 
       // Skip multi-entity props without required fields
       if (pick.betType === 'H2H Prop' && (!pick.player1PropType || !pick.player2PropType)) return;
       if ((pick.betType === 'Either Prop' || pick.betType === 'Combined Prop') && (!pick.propType || !pick.player1 || !pick.player2)) return;
 
       totalPicks++;
-      if (pick.result === 'win') wins++;
-      else if (pick.result === 'loss') losses++;
-      else if (pick.result === 'push') pushes++;
+      if (result === 'win') wins++;
+      else if (result === 'loss') losses++;
+      else if (result === 'push') pushes++;
     });
   });
 

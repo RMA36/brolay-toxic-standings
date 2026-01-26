@@ -59,24 +59,32 @@ const EditParlayModal = ({
 
   if (!isOpen || !editedParlay) return null;
 
-  const participants = editedParlay.participants || {};
+  // Support both new (picks) and old (participants) schema
+  const picksObj = editedParlay.picks || editedParlay.participants || {};
+  const isNewSchema = !!editedParlay.picks;
+
+  // Get the field name for picks (new schema: 'picks', old: 'participants')
+  const picksFieldName = isNewSchema ? 'picks' : 'participants';
 
   const handleUpdateParticipant = (partId, field, value) => {
     const updated = { ...editedParlay };
-    updated.participants[partId][field] = value;
+    if (!updated[picksFieldName]) updated[picksFieldName] = {};
+    if (!updated[picksFieldName][partId]) updated[picksFieldName][partId] = {};
+    updated[picksFieldName][partId][field] = value;
     setEditedParlay(updated);
   };
 
   const handleRemoveParticipant = (partId) => {
     const updated = { ...editedParlay };
-    delete updated.participants[partId];
+    delete updated[picksFieldName][partId];
     setEditedParlay(updated);
   };
 
   const handleAddParticipant = () => {
-    const participantId = Object.keys(editedParlay.participants).length;
+    const pickId = Object.keys(picksObj).length;
     const updated = { ...editedParlay };
-    updated.participants[participantId] = createDefaultParticipant();
+    if (!updated[picksFieldName]) updated[picksFieldName] = {};
+    updated[picksFieldName][pickId] = createDefaultParticipant();
     setEditedParlay(updated);
   };
 
@@ -87,7 +95,7 @@ const EditParlayModal = ({
 
     // Don't update team field for multi-entity props
     if (!partId.includes('-player')) {
-      updated.participants[baseId].team = value;
+      updated[picksFieldName][baseId].team = value;
     }
 
     setEditedParlay(updated);
@@ -103,7 +111,7 @@ const EditParlayModal = ({
 
     // Don't update propType field for multi-entity props with separate prop types
     if (!partId.includes('-prop')) {
-      updated.participants[baseId].propType = value;
+      updated[picksFieldName][baseId].propType = value;
     }
 
     setEditedParlay(updated);
@@ -114,7 +122,7 @@ const EditParlayModal = ({
 
   const handleAwayTeamInputWrapper = (partId, value, sport) => {
     const updated = { ...editedParlay };
-    updated.participants[partId].awayTeam = value;
+    updated[picksFieldName][partId].awayTeam = value;
     setEditedParlay(updated);
     if (onAwayTeamInput) {
       onAwayTeamInput(partId, value, sport);
@@ -123,7 +131,7 @@ const EditParlayModal = ({
 
   const handleHomeTeamInputWrapper = (partId, value, sport) => {
     const updated = { ...editedParlay };
-    updated.participants[partId].homeTeam = value;
+    updated[picksFieldName][partId].homeTeam = value;
     setEditedParlay(updated);
     if (onHomeTeamInput) {
       onHomeTeamInput(partId, value, sport);
@@ -137,7 +145,7 @@ const EditParlayModal = ({
 
     // Update the specific player field
     if (field === 'player1' || field === 'player2') {
-      updated.participants[baseId][field] = value;
+      updated[picksFieldName][baseId][field] = value;
     }
 
     setEditedParlay(updated);
@@ -195,10 +203,14 @@ const EditParlayModal = ({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1 text-white">Placed By</label>
+              <label className="block text-sm font-medium mb-1 text-white">Submitted By</label>
               <select
-                value={editedParlay.placedBy || ''}
-                onChange={(e) => setEditedParlay({ ...editedParlay, placedBy: e.target.value })}
+                value={editedParlay.submittedBy || editedParlay.placedBy || ''}
+                onChange={(e) => setEditedParlay({
+                  ...editedParlay,
+                  submittedBy: e.target.value,
+                  placedBy: e.target.value // Keep both for compatibility
+                })}
                 className="w-full px-3 py-2 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none"
                 style={{ fontSize: isMobile ? '16px' : '14px' }}
               >
@@ -236,10 +248,10 @@ const EditParlayModal = ({
               <label className="block text-sm font-medium mb-1 text-white">Net Profit</label>
               <input
                 type="number"
-                value={Math.max(0, (editedParlay.totalPayout || 0) - (editedParlay.betAmount * Object.keys(participants).length))}
+                value={Math.max(0, (editedParlay.totalPayout || 0) - (editedParlay.betAmount * Object.keys(picksObj).length))}
                 onChange={(e) => {
                   const netProfit = Number(e.target.value) || 0;
-                  const totalRisk = editedParlay.betAmount * Object.keys(participants).length;
+                  const totalRisk = editedParlay.betAmount * Object.keys(picksObj).length;
                   const calculatedPayout = netProfit + totalRisk;
                   setEditedParlay({ ...editedParlay, totalPayout: calculatedPayout });
                 }}
@@ -252,7 +264,7 @@ const EditParlayModal = ({
           {/* Picks */}
           <h3 className="text-base md:text-lg font-semibold mb-3 text-yellow-400">Picks</h3>
           <div className="space-y-4 mb-6">
-            {Object.entries(editedParlay.participants).map(([id, participant]) => (
+            {Object.entries(picksObj).map(([id, participant]) => (
               <PickEntry
                 key={id}
                 participant={participant}

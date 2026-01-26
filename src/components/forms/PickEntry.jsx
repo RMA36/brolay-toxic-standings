@@ -1138,12 +1138,16 @@ const PickEntry = ({
   return (
     <div className="bg-gray-800/50 rounded-lg p-3 md:p-4 border border-gray-700">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3 mb-3">
-        {/* Player Selection */}
+        {/* Big Guy Selection - supports both old (player) and new (bigGuy) schema */}
         <div>
           <label className="block text-xs font-medium mb-1 text-white">Big Guy</label>
           <select
-            value={participant.player}
-            onChange={(e) => updateField('player', e.target.value)}
+            value={participant.bigGuy || participant.player || ''}
+            onChange={(e) => {
+              // Update both fields for compatibility during transition
+              updateField('bigGuy', e.target.value);
+              updateField('player', e.target.value);
+            }}
             className={inputClassName}
             style={inputStyle}
           >

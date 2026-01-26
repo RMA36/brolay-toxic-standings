@@ -1,7 +1,7 @@
 import React from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS, SPORTS, PRELOADED_TEAMS } from '../constants/sports';
-import { formatBetDescription, formatCalendarDate, formatDateForDisplay } from '../utils/formatters';
+import { formatBetDescription, formatCalendarDate, formatDateForDisplay, getPickBigGuy, getPickResult, getPicksArray, getSubmittedBy, getPickActualStats } from '../utils/formatters';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import FilterBar from '../components/filters/FilterBar';
@@ -83,15 +83,19 @@ const AllBrolays = () => {
     return parlays.filter(p => p.date === dateStr);
   };
 
-  // Apply filters to parlays
+  // Apply filters to parlays (supports both old and new schema)
   const applyFilters = (parlayList) => {
     return parlayList.filter(parlay => {
       // Date filters
       if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
       if (filters.dateTo && parlay.date > filters.dateTo) return false;
 
-      // PlacedBy filter
-      if (filters.placedBy && parlay.placedBy !== filters.placedBy) return false;
+      // Submitted By filter (supports both submittedBy and placedBy)
+      const filterSubmittedBy = filters.submittedBy || filters.placedBy;
+      if (filterSubmittedBy) {
+        const parlaySubmittedBy = getSubmittedBy(parlay);
+        if (parlaySubmittedBy !== filterSubmittedBy) return false;
+      }
 
       // Payout filters
       if (filters.minPayout && parlay.totalPayout < parseFloat(filters.minPayout)) return false;
@@ -101,19 +105,20 @@ const AllBrolays = () => {
       if (filters.result === 'settled' && !parlay.settled) return false;
       if (filters.result === 'pending' && parlay.settled) return false;
 
-      // Participant-level filters
-      const participants = Object.values(parlay.participants || {});
+      // Pick-level filters (supports both schemas)
+      const picks = getPicksArray(parlay);
 
-      // Player filter
-      if (filters.player && !participants.some(p => p.player === filters.player)) return false;
+      // Big Guy filter
+      if (filters.player && !picks.some(p => getPickBigGuy(p) === filters.player)) return false;
 
       // Sport filter
-      if (filters.sport && !participants.some(p => p.sport === filters.sport)) return false;
+      if (filters.sport && !picks.some(p => p.sport === filters.sport)) return false;
 
       // Team/Player filter
-      if (filters.teamPlayer && !participants.some(p =>
-        p.teamPlayer?.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
-        p.teamPlayer2?.toLowerCase().includes(filters.teamPlayer.toLowerCase())
+      if (filters.teamPlayer && !picks.some(p =>
+        p.team?.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
+        p.awayTeam?.toLowerCase().includes(filters.teamPlayer.toLowerCase()) ||
+        p.homeTeam?.toLowerCase().includes(filters.teamPlayer.toLowerCase())
       )) return false;
 
       return true;
@@ -133,8 +138,8 @@ const AllBrolays = () => {
   });
 
   const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
-    const participants = Object.values(parlay.participants || {});
-    return count + participants.filter(p => p.result === 'pending').length;
+    const picks = getPicksArray(parlay);
+    return count + picks.filter(p => getPickResult(p) === 'pending').length;
   }, 0);
 
   // Calculate dynamic color scale thresholds based on all settled brolays
@@ -143,17 +148,17 @@ const AllBrolays = () => {
     const allLosses = [];
 
     parlays.forEach(parlay => {
-      const participants = Object.values(parlay.participants);
-      const losers = participants.filter(p => p.result === 'loss');
-      const winners = participants.filter(p => p.result === 'win');
-      const pushes = participants.filter(p => p.result === 'push');
-      const won = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
+      const picks = getPicksArray(parlay);
+      const losers = picks.filter(p => getPickResult(p) === 'loss');
+      const winners = picks.filter(p => getPickResult(p) === 'win');
+      const pushes = picks.filter(p => getPickResult(p) === 'push');
+      const won = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
 
       if (won) {
-        const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+        const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
         if (netProfit > 0) allProfits.push(netProfit);
       } else if (losers.length > 0) {
-        const totalRisk = parlay.betAmount * participants.length;
+        const totalRisk = parlay.betAmount * picks.length;
         allLosses.push(-totalRisk);
       }
     });
@@ -288,19 +293,19 @@ const AllBrolays = () => {
               let dayAnd1s = 0;
 
               dayBrolays.forEach(parlay => {
-                const participants = Object.values(parlay.participants);
-                const losers = participants.filter(p => p.result === 'loss');
-                const winners = participants.filter(p => p.result === 'win');
-                const pushes = participants.filter(p => p.result === 'push');
-                const won = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
-                const and1 = losers.length === 1 && winners.length === participants.length - 1;
+                const picks = getPicksArray(parlay);
+                const losers = picks.filter(p => getPickResult(p) === 'loss');
+                const winners = picks.filter(p => getPickResult(p) === 'win');
+                const pushes = picks.filter(p => getPickResult(p) === 'push');
+                const won = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
+                const and1 = losers.length === 1 && winners.length === picks.length - 1;
 
                 if (won) {
-                  const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+                  const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
                   dayNetProfit += netProfit;
                   dayWins++;
                 } else if (losers.length > 0) {
-                  const totalRisk = parlay.betAmount * participants.length;
+                  const totalRisk = parlay.betAmount * picks.length;
                   dayNetProfit -= totalRisk;
                   dayLosses++;
                   if (and1) dayAnd1s++;
@@ -432,15 +437,16 @@ const AllBrolays = () => {
             <div className="mt-6">
               <div className="space-y-4">
                 {getBrolaysForDate(selectedCalendarDate).map(parlay => {
-                  const participants = Object.values(parlay.participants);
-                  const losers = participants.filter(p => p.result === 'loss');
-                  const winners = participants.filter(p => p.result === 'win');
-                  const pushes = participants.filter(p => p.result === 'push');
-                  const won = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
-                  const and1 = losers.length === 1 && winners.length === participants.length - 1;
+                  const picks = getPicksArray(parlay);
+                  const losers = picks.filter(p => getPickResult(p) === 'loss');
+                  const winners = picks.filter(p => getPickResult(p) === 'win');
+                  const pushes = picks.filter(p => getPickResult(p) === 'push');
+                  const won = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
+                  const and1 = losers.length === 1 && winners.length === picks.length - 1;
 
-                  const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
-                  const parlayType = sports.length > 1 ? 'Multi-Sport' : sports[0] || 'Brolay';
+                  const sportsSet = [...new Set(picks.map(p => p.sport).filter(Boolean))];
+                  const parlayType = sportsSet.length > 1 ? 'Multi-Sport' : sportsSet[0] || 'Brolay';
+                  const submittedBy = getSubmittedBy(parlay);
 
                   return (
                     <div
@@ -453,12 +459,12 @@ const AllBrolays = () => {
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <div className="text-white font-semibold">{parlayType} • {participants.length} picks</div>
+                          <div className="text-white font-semibold">{parlayType} • {picks.length} picks</div>
                           <div className="text-gray-400 text-sm">
-                            ${parlay.betAmount * participants.length} Risked •
+                            ${parlay.betAmount * picks.length} Risked •
                             ${parlay.totalPayout || 0} Total Payout •
-                            ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
-                            {parlay.placedBy && ` • Placed by ${parlay.placedBy}`}
+                            ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * picks.length))} Net Profit
+                            {submittedBy && ` • Submitted by ${submittedBy}`}
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -487,50 +493,64 @@ const AllBrolays = () => {
 
                       {/* Individual Picks */}
                       <div className="space-y-2">
-                        {Object.entries(parlay.participants).map(([pid, participant]) => {
+                        {picks.map((pick, pickIndex) => {
+                          const bigGuy = getPickBigGuy(pick);
+                          const result = getPickResult(pick);
+                          const actualStats = getPickActualStats(pick);
+                          const autoUpdated = pick.outcome?.autoUpdated || pick.autoUpdated;
+                          const autoUpdatedAt = pick.outcome?.settledAt || pick.autoUpdatedAt;
+
                           let teamDisplay = '';
-                          if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType)) {
-                            teamDisplay = `${participant.awayTeam} @ ${participant.homeTeam}`;
+                          if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(pick.betType)) {
+                            const awayTeam = pick.game?.awayTeam || pick.awayTeam;
+                            const homeTeam = pick.game?.homeTeam || pick.homeTeam;
+                            teamDisplay = `${awayTeam} @ ${homeTeam}`;
                           } else {
-                            teamDisplay = participant.team;
+                            // For new schema, get team from entities
+                            if (pick.entities && pick.entities.length > 0) {
+                              const primary = pick.entities.find(e => e.role === 'primary') || pick.entities[0];
+                              teamDisplay = primary?.name || pick.team;
+                            } else {
+                              teamDisplay = pick.team;
+                            }
                           }
 
-                          const betDetails = formatBetDescription(participant);
+                          const betDetails = formatBetDescription(pick);
 
                           return (
-                            <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-900/50 p-2 rounded gap-1 border border-gray-800">
+                            <div key={pickIndex} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-900/50 p-2 rounded gap-1 border border-gray-800">
                               <span className="flex-1 text-gray-300">
-                                <strong className="text-white">{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails}
-                                {participant.odds && (
+                                <strong className="text-white">{bigGuy}</strong> - {pick.sport} - {teamDisplay} {betDetails}
+                                {pick.odds && (
                                   <span className="ml-2 text-purple-400 font-semibold">
-                                    {participant.odds}
-                                    {participant.oddsSource && <span className="text-xs text-gray-500"> ({participant.oddsSource})</span>}
+                                    {pick.odds}
+                                    {pick.oddsSource && <span className="text-xs text-gray-500"> ({pick.oddsSource})</span>}
                                   </span>
                                 )}
-                                {participant.actualStats && (
+                                {actualStats && (
                                   <span className="ml-2 text-blue-400 font-semibold">
-                                    [{participant.actualStats}]
+                                    [{actualStats}]
                                   </span>
                                 )}
                               </span>
 
                               <div className="flex items-center gap-2">
-                                {participant.autoUpdated && (
+                                {autoUpdated && (
                                   <span
                                     className="text-blue-400 cursor-help text-base"
-                                    title={`Auto-updated on ${new Date(participant.autoUpdatedAt).toLocaleString()}`}
+                                    title={`Auto-updated on ${new Date(autoUpdatedAt).toLocaleString()}`}
                                   >
                                     🤖
                                   </span>
                                 )}
 
                                 <span className={`font-semibold ${
-                                  participant.result === 'win' ? 'text-green-400' :
-                                  participant.result === 'loss' ? 'text-red-400' :
-                                  participant.result === 'push' ? 'text-yellow-400' :
+                                  result === 'win' ? 'text-green-400' :
+                                  result === 'loss' ? 'text-red-400' :
+                                  result === 'push' ? 'text-yellow-400' :
                                   'text-gray-500'
                                 }`}>
-                                  {participant.result.toUpperCase()}
+                                  {result?.toUpperCase() || 'PENDING'}
                                 </span>
                               </div>
                             </div>
@@ -608,10 +628,10 @@ const AllBrolays = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Placed By</label>
+                    <label className="block text-sm font-medium mb-1 text-gray-300">Submitted By</label>
                     <select
-                      value={filters.placedBy}
-                      onChange={(e) => setFilters({...filters, placedBy: e.target.value})}
+                      value={filters.submittedBy || filters.placedBy || ''}
+                      onChange={(e) => setFilters({...filters, submittedBy: e.target.value})}
                       className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                       style={{ fontSize: isMobile ? '16px' : '14px' }}
                     >
@@ -690,7 +710,7 @@ const AllBrolays = () => {
                 <Button
                   onClick={() => setFilters({
                     dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
-                    placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
+                    submittedBy: '', placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
                     betType: '', propType: ''
                   })}
                   variant="secondary"
@@ -712,15 +732,16 @@ const AllBrolays = () => {
 
             <div className="space-y-3">
               {filteredParlays.slice(0, brolaysToShow).map(parlay => {
-                const participants = Object.values(parlay.participants);
-                const losers = participants.filter(p => p.result === 'loss');
-                const winners = participants.filter(p => p.result === 'win');
-                const pushes = participants.filter(p => p.result === 'push');
-                const won = losers.length === 0 && winners.length > 0 && pushes.length < participants.length;
-                const and1 = losers.length === 1 && winners.length === participants.length - 1;
+                const picks = getPicksArray(parlay);
+                const losers = picks.filter(p => getPickResult(p) === 'loss');
+                const winners = picks.filter(p => getPickResult(p) === 'win');
+                const pushes = picks.filter(p => getPickResult(p) === 'push');
+                const won = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
+                const and1 = losers.length === 1 && winners.length === picks.length - 1;
 
-                const sports = [...new Set(participants.map(p => p.sport).filter(Boolean))];
-                const parlayType = sports.length > 1 ? 'Multi-Sport' : sports[0] || 'Brolay';
+                const sportsSet = [...new Set(picks.map(p => p.sport).filter(Boolean))];
+                const parlayType = sportsSet.length > 1 ? 'Multi-Sport' : sportsSet[0] || 'Brolay';
+                const submittedBy = getSubmittedBy(parlay);
 
                 return (
                   <div
@@ -744,13 +765,13 @@ const AllBrolays = () => {
                               day: 'numeric',
                               year: 'numeric'
                             });
-                          })()} • {parlayType} • {participants.length} picks
+                          })()} • {parlayType} • {picks.length} picks
                         </div>
                         <div className="text-gray-400 text-xs md:text-sm mt-1">
-                          ${parlay.betAmount * participants.length} Risked •
+                          ${parlay.betAmount * picks.length} Risked •
                           ${parlay.totalPayout || 0} Total Payout •
-                          ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length))} Net Profit
-                          {parlay.placedBy && ` • Placed by ${parlay.placedBy}`}
+                          ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * picks.length))} Net Profit
+                          {submittedBy && ` • Submitted by ${submittedBy}`}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 flex-wrap">
@@ -779,50 +800,63 @@ const AllBrolays = () => {
 
                     {/* Individual Picks */}
                     <div className="space-y-2">
-                      {Object.entries(parlay.participants).map(([pid, participant]) => {
+                      {picks.map((pick, pickIndex) => {
+                        const bigGuy = getPickBigGuy(pick);
+                        const result = getPickResult(pick);
+                        const actualStats = getPickActualStats(pick);
+                        const autoUpdated = pick.outcome?.autoUpdated || pick.autoUpdated;
+                        const autoUpdatedAt = pick.outcome?.settledAt || pick.autoUpdatedAt;
+
                         let teamDisplay = '';
-                        if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(participant.betType)) {
-                          teamDisplay = `${participant.awayTeam} @ ${participant.homeTeam}`;
+                        if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(pick.betType)) {
+                          const awayTeam = pick.game?.awayTeam || pick.awayTeam;
+                          const homeTeam = pick.game?.homeTeam || pick.homeTeam;
+                          teamDisplay = `${awayTeam} @ ${homeTeam}`;
                         } else {
-                          teamDisplay = participant.team;
+                          if (pick.entities && pick.entities.length > 0) {
+                            const primary = pick.entities.find(e => e.role === 'primary') || pick.entities[0];
+                            teamDisplay = primary?.name || pick.team;
+                          } else {
+                            teamDisplay = pick.team;
+                          }
                         }
 
-                        const betDetails = formatBetDescription(participant);
+                        const betDetails = formatBetDescription(pick);
 
                         return (
-                          <div key={pid} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-900/50 p-2 rounded gap-1 border border-gray-800">
+                          <div key={pickIndex} className="flex flex-col md:flex-row md:items-center md:justify-between text-xs md:text-sm bg-gray-900/50 p-2 rounded gap-1 border border-gray-800">
                             <span className="flex-1 text-gray-300">
-                              <strong className="text-white">{participant.player}</strong> - {participant.sport} - {teamDisplay} {betDetails}
-                              {participant.odds && (
+                              <strong className="text-white">{bigGuy}</strong> - {pick.sport} - {teamDisplay} {betDetails}
+                              {pick.odds && (
                                 <span className="ml-2 text-purple-400 font-semibold">
-                                  {participant.odds}
-                                  {participant.oddsSource && <span className="text-xs text-gray-500"> ({participant.oddsSource})</span>}
+                                  {pick.odds}
+                                  {pick.oddsSource && <span className="text-xs text-gray-500"> ({pick.oddsSource})</span>}
                                 </span>
                               )}
-                              {participant.actualStats && (
+                              {actualStats && (
                                 <span className="ml-2 text-blue-400 font-semibold">
-                                  [{participant.actualStats}]
+                                  [{actualStats}]
                                 </span>
                               )}
                             </span>
 
                             <div className="flex items-center gap-2">
-                              {participant.autoUpdated && (
+                              {autoUpdated && (
                                 <span
                                   className="text-blue-400 cursor-help text-base"
-                                  title={`Auto-updated on ${new Date(participant.autoUpdatedAt).toLocaleString()}`}
+                                  title={`Auto-updated on ${new Date(autoUpdatedAt).toLocaleString()}`}
                                 >
                                   🤖
                                 </span>
                               )}
 
                               <span className={`font-semibold ${
-                                participant.result === 'win' ? 'text-green-400' :
-                                participant.result === 'loss' ? 'text-red-400' :
-                                participant.result === 'push' ? 'text-yellow-400' :
+                                result === 'win' ? 'text-green-400' :
+                                result === 'loss' ? 'text-red-400' :
+                                result === 'push' ? 'text-yellow-400' :
                                 'text-gray-500'
                               }`}>
-                                {participant.result.toUpperCase()}
+                                {result?.toUpperCase() || 'PENDING'}
                               </span>
                             </div>
                           </div>

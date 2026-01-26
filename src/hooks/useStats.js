@@ -1,10 +1,92 @@
 import { useMemo } from 'react';
 
 /**
+ * Helper to get picks from a parlay (supports both old and new schema)
+ * Old schema: parlay.participants
+ * New schema: parlay.picks
+ */
+const getPicksArray = (parlay) => {
+  // New schema uses 'picks', old schema uses 'participants'
+  const picksObj = parlay.picks || parlay.participants;
+  if (!picksObj) return [];
+  return Object.values(picksObj);
+};
+
+/**
+ * Helper to get the Big Guy name from a pick (supports both schemas)
+ * Old schema: pick.player
+ * New schema: pick.bigGuy
+ */
+const getBigGuy = (pick) => pick.bigGuy || pick.player;
+
+/**
+ * Helper to get the result/status from a pick (supports both schemas)
+ * Old schema: pick.result
+ * New schema: pick.outcome.status
+ */
+const getResult = (pick) => {
+  if (pick.outcome?.status) return pick.outcome.status;
+  return pick.result;
+};
+
+/**
+ * Helper to get prop type info for multi-player props (supports both schemas)
+ * New schema stores in entities[].statType
+ */
+const getPlayer1PropType = (pick) => {
+  // New schema: check entities array
+  if (pick.entities && pick.entities.length > 0) {
+    const primary = pick.entities.find(e => e.role === 'primary');
+    if (primary?.statType) return primary.statType;
+  }
+  // New schema: line.statType
+  if (pick.line?.statType) return pick.line.statType;
+  // Old schema
+  return pick.player1PropType;
+};
+
+const getPlayer2PropType = (pick) => {
+  // New schema: check entities array
+  if (pick.entities && pick.entities.length > 1) {
+    const opponent = pick.entities.find(e => e.role === 'opponent' || e.role === 'secondary');
+    if (opponent?.statType) return opponent.statType;
+  }
+  // Old schema
+  return pick.player2PropType;
+};
+
+/**
+ * Helper to get player1/player2 names (supports both schemas)
+ */
+const getPlayer1Name = (pick) => {
+  if (pick.entities && pick.entities.length > 0) {
+    const primary = pick.entities.find(e => e.role === 'primary');
+    if (primary?.name) return primary.name;
+  }
+  return pick.player1;
+};
+
+const getPlayer2Name = (pick) => {
+  if (pick.entities && pick.entities.length > 1) {
+    const opponent = pick.entities.find(e => e.role === 'opponent' || e.role === 'secondary');
+    if (opponent?.name) return opponent.name;
+  }
+  return pick.player2;
+};
+
+/**
+ * Helper to get prop type from pick (for Either/Combined props)
+ */
+const getPropType = (pick) => {
+  if (pick.line?.statType) return pick.line.statType;
+  return pick.propType;
+};
+
+/**
  * Custom hook for calculating statistics from brolay (parlay) data
  *
  * @param {Array} parlays - Array of parlay objects from Firebase
- * @param {Array} players - Array of player names
+ * @param {Array} players - Array of player names (Big Guys)
  * @param {Object} editingParlay - Currently editing parlay (excluded from calculations)
  * @returns {Object} Statistics object with player stats and helper functions
  */
@@ -42,121 +124,132 @@ export const useStats = (parlays, players, editingParlay = null) => {
       if (editingParlay && parlay.id === editingParlay.id) {
         return;
       }
-      const participants = Object.values(parlay.participants);
-      const losers = participants.filter(p => p.result === 'loss');
-      const winners = participants.filter(p => p.result === 'win');
+      const picks = getPicksArray(parlay);
+      const losers = picks.filter(p => getResult(p) === 'loss');
+      const winners = picks.filter(p => getResult(p) === 'win');
       const parlayWon = losers.length === 0 && winners.length > 0;
-      const and1 = losers.length === 1 && winners.length === participants.length - 1;
+      const and1 = losers.length === 1 && winners.length === picks.length - 1;
 
-      participants.forEach(participant => {
-        if (!participant.player || participant.player === '' || !participant.sport || !participant.betType) return;
+      picks.forEach(pick => {
+        const bigGuy = getBigGuy(pick);
+        const result = getResult(pick);
 
-        const playerStats = stats[participant.player];
+        if (!bigGuy || bigGuy === '' || !pick.sport || !pick.betType) return;
+
+        const playerStats = stats[bigGuy];
+        if (!playerStats) return; // Skip if not a known Big Guy
+
         playerStats.totalPicks++;
 
-        if (!playerStats.bySport[participant.sport]) {
-        playerStats.bySport[participant.sport] = { wins: 0, losses: 0, total: 0 };
+        if (!playerStats.bySport[pick.sport]) {
+          playerStats.bySport[pick.sport] = { wins: 0, losses: 0, total: 0 };
         }
-        playerStats.bySport[participant.sport].total++;
+        playerStats.bySport[pick.sport].total++;
 
-        if (!playerStats.byBetType[participant.betType]) {
-          playerStats.byBetType[participant.betType] = { wins: 0, losses: 0, total: 0 };
+        if (!playerStats.byBetType[pick.betType]) {
+          playerStats.byBetType[pick.betType] = { wins: 0, losses: 0, total: 0 };
         }
-        playerStats.byBetType[participant.betType].total++;
+        playerStats.byBetType[pick.betType].total++;
 
         // Track multi-entity props
-        if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
+        const player1PropType = getPlayer1PropType(pick);
+        const player2PropType = getPlayer2PropType(pick);
+        const player1Name = getPlayer1Name(pick);
+        const player2Name = getPlayer2Name(pick);
+        const propType = getPropType(pick);
+
+        if (pick.betType === 'H2H Prop' && player1PropType && player2PropType) {
           playerStats.h2hProps.total++;
 
           // Track by prop type combination
-          const propCombo = participant.player1PropType === participant.player2PropType
-            ? participant.player1PropType
-            : `${participant.player1PropType} vs ${participant.player2PropType}`;
+          const propCombo = player1PropType === player2PropType
+            ? player1PropType
+            : `${player1PropType} vs ${player2PropType}`;
 
           if (!playerStats.byH2HPropType[propCombo]) {
             playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
           }
           playerStats.byH2HPropType[propCombo].total++;
-        } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
+        } else if (pick.betType === 'Either Prop' && propType && player1Name && player2Name) {
           playerStats.eitherProps.total++;
 
-          if (!playerStats.byEitherPropType[participant.propType]) {
-            playerStats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+          if (!playerStats.byEitherPropType[propType]) {
+            playerStats.byEitherPropType[propType] = { wins: 0, losses: 0, total: 0 };
           }
-          playerStats.byEitherPropType[participant.propType].total++;
-        } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
+          playerStats.byEitherPropType[propType].total++;
+        } else if (pick.betType === 'Combined Prop' && propType && player1Name && player2Name) {
           playerStats.combinedProps.total++;
 
-          if (!playerStats.byCombinedPropType[participant.propType]) {
-            playerStats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+          if (!playerStats.byCombinedPropType[propType]) {
+            playerStats.byCombinedPropType[propType] = { wins: 0, losses: 0, total: 0 };
           }
-          playerStats.byCombinedPropType[participant.propType].total++;
+          playerStats.byCombinedPropType[propType].total++;
         }
 
-        if (participant.result === 'win') {
+        if (result === 'win') {
           playerStats.wins++;
-          playerStats.bySport[participant.sport].wins++;
-          playerStats.byBetType[participant.betType].wins++;
+          playerStats.bySport[pick.sport].wins++;
+          playerStats.byBetType[pick.betType].wins++;
 
-        // Track multi-entity prop wins
-        if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
-          playerStats.h2hProps.wins++;
-          const propCombo = participant.player1PropType === participant.player2PropType
-            ? participant.player1PropType
-            : `${participant.player1PropType} vs ${participant.player2PropType}`;
-          if (playerStats.byH2HPropType[propCombo]) {
-            playerStats.byH2HPropType[propCombo].wins++;
+          // Track multi-entity prop wins
+          if (pick.betType === 'H2H Prop' && player1PropType && player2PropType) {
+            playerStats.h2hProps.wins++;
+            const propCombo = player1PropType === player2PropType
+              ? player1PropType
+              : `${player1PropType} vs ${player2PropType}`;
+            if (playerStats.byH2HPropType[propCombo]) {
+              playerStats.byH2HPropType[propCombo].wins++;
+            }
+          } else if (pick.betType === 'Either Prop' && propType && player1Name && player2Name) {
+            playerStats.eitherProps.wins++;
+            if (playerStats.byEitherPropType[propType]) {
+              playerStats.byEitherPropType[propType].wins++;
+            }
+          } else if (pick.betType === 'Combined Prop' && propType && player1Name && player2Name) {
+            playerStats.combinedProps.wins++;
+            if (playerStats.byCombinedPropType[propType]) {
+              playerStats.byCombinedPropType[propType].wins++;
+            }
           }
-        } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
-          playerStats.eitherProps.wins++;
-          if (playerStats.byEitherPropType[participant.propType]) {
-            playerStats.byEitherPropType[participant.propType].wins++;
-          }
-        } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
-          playerStats.combinedProps.wins++;
-          if (playerStats.byCombinedPropType[participant.propType]) {
-            playerStats.byCombinedPropType[participant.propType].wins++;
-          }
-        }
 
           if (parlayWon) {
-            const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+            const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
             playerStats.moneyWon += netProfit / winners.length;
           }
-        } else if (participant.result === 'loss') {
+        } else if (result === 'loss') {
           playerStats.losses++;
-          playerStats.bySport[participant.sport].losses++;
-          playerStats.byBetType[participant.betType].losses++;
+          playerStats.bySport[pick.sport].losses++;
+          playerStats.byBetType[pick.betType].losses++;
 
           // Track multi-entity prop losses
-          if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
+          if (pick.betType === 'H2H Prop' && player1PropType && player2PropType) {
             playerStats.h2hProps.losses++;
-            const propCombo = participant.player1PropType === participant.player2PropType
-              ? participant.player1PropType
-              : `${participant.player1PropType} vs ${participant.player2PropType}`;
+            const propCombo = player1PropType === player2PropType
+              ? player1PropType
+              : `${player1PropType} vs ${player2PropType}`;
             if (playerStats.byH2HPropType[propCombo]) {
               playerStats.byH2HPropType[propCombo].losses++;
             }
-          } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
+          } else if (pick.betType === 'Either Prop' && propType && player1Name && player2Name) {
             playerStats.eitherProps.losses++;
-            if (playerStats.byEitherPropType[participant.propType]) {
-              playerStats.byEitherPropType[participant.propType].losses++;
+            if (playerStats.byEitherPropType[propType]) {
+              playerStats.byEitherPropType[propType].losses++;
             }
-          } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
+          } else if (pick.betType === 'Combined Prop' && propType && player1Name && player2Name) {
             playerStats.combinedProps.losses++;
-            if (playerStats.byCombinedPropType[participant.propType]) {
-              playerStats.byCombinedPropType[participant.propType].losses++;
+            if (playerStats.byCombinedPropType[propType]) {
+              playerStats.byCombinedPropType[propType].losses++;
             }
           }
 
           if (and1) {
             playerStats.and1s++;
             // For And-1s, the cost is the potential net profit we would have won
-            const potentialNetProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+            const potentialNetProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
             playerStats.and1Cost += potentialNetProfit;
-            playerStats.moneyLost += parlay.betAmount * participants.length;
+            playerStats.moneyLost += parlay.betAmount * picks.length;
           } else {
-            playerStats.moneyLost += (parlay.betAmount * participants.length) / losers.length;
+            playerStats.moneyLost += (parlay.betAmount * picks.length) / losers.length;
           }
         }
       });
@@ -166,9 +259,9 @@ export const useStats = (parlays, players, editingParlay = null) => {
   }, [parlays, players, editingParlay]);
 
   /**
-   * Calculate detailed statistics for a specific player
+   * Calculate detailed statistics for a specific player (Big Guy)
    *
-   * @param {string} player - Player name
+   * @param {string} player - Player name (Big Guy)
    * @param {Array} parlaysList - List of parlays to analyze
    * @returns {Object} Detailed player statistics
    */
@@ -194,135 +287,144 @@ export const useStats = (parlays, players, editingParlay = null) => {
     };
 
     parlaysList.forEach(parlay => {
-      const participants = Object.values(parlay.participants);
-      const losers = participants.filter(p => p.result === 'loss');
-      const winners = participants.filter(p => p.result === 'win');
+      const picks = getPicksArray(parlay);
+      const losers = picks.filter(p => getResult(p) === 'loss');
+      const winners = picks.filter(p => getResult(p) === 'win');
       const parlayWon = losers.length === 0 && winners.length > 0;
-      const and1 = losers.length === 1 && winners.length === participants.length - 1;
+      const and1 = losers.length === 1 && winners.length === picks.length - 1;
 
-      participants.forEach(participant => {
-        if (participant.player !== player || !participant.sport || !participant.betType) return;
+      picks.forEach(pick => {
+        const bigGuy = getBigGuy(pick);
+        const result = getResult(pick);
+
+        if (bigGuy !== player || !pick.sport || !pick.betType) return;
 
         playerStats.totalPicks++;
-        if (!playerStats.bySport[participant.sport]) {
-          playerStats.bySport[participant.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        if (!playerStats.bySport[pick.sport]) {
+          playerStats.bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
         }
-        playerStats.bySport[participant.sport].total++;
+        playerStats.bySport[pick.sport].total++;
 
-        if (!playerStats.byBetType[participant.betType]) {
-          playerStats.byBetType[participant.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        if (!playerStats.byBetType[pick.betType]) {
+          playerStats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
         }
-        playerStats.byBetType[participant.betType].total++;
+        playerStats.byBetType[pick.betType].total++;
 
         // Track multi-entity props
-        if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
+        const player1PropType = getPlayer1PropType(pick);
+        const player2PropType = getPlayer2PropType(pick);
+        const player1Name = getPlayer1Name(pick);
+        const player2Name = getPlayer2Name(pick);
+        const propType = getPropType(pick);
+
+        if (pick.betType === 'H2H Prop' && player1PropType && player2PropType) {
           playerStats.h2hProps.total++;
-          const propCombo = participant.player1PropType === participant.player2PropType
-            ? participant.player1PropType
-            : `${participant.player1PropType} vs ${participant.player2PropType}`;
+          const propCombo = player1PropType === player2PropType
+            ? player1PropType
+            : `${player1PropType} vs ${player2PropType}`;
           if (!playerStats.byH2HPropType[propCombo]) {
             playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
           }
           playerStats.byH2HPropType[propCombo].total++;
-        } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
+        } else if (pick.betType === 'Either Prop' && propType && player1Name && player2Name) {
           playerStats.eitherProps.total++;
-          if (!playerStats.byEitherPropType[participant.propType]) {
-            playerStats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+          if (!playerStats.byEitherPropType[propType]) {
+            playerStats.byEitherPropType[propType] = { wins: 0, losses: 0, total: 0 };
           }
-          playerStats.byEitherPropType[participant.propType].total++;
-        } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
+          playerStats.byEitherPropType[propType].total++;
+        } else if (pick.betType === 'Combined Prop' && propType && player1Name && player2Name) {
           playerStats.combinedProps.total++;
-          if (!playerStats.byCombinedPropType[participant.propType]) {
-            playerStats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+          if (!playerStats.byCombinedPropType[propType]) {
+            playerStats.byCombinedPropType[propType] = { wins: 0, losses: 0, total: 0 };
           }
-          playerStats.byCombinedPropType[participant.propType].total++;
+          playerStats.byCombinedPropType[propType].total++;
         }
 
-        if (participant.result === 'win') {
+        if (result === 'win') {
           playerStats.wins++;
-          playerStats.bySport[participant.sport].wins++;
-          playerStats.byBetType[participant.betType].wins++;
+          playerStats.bySport[pick.sport].wins++;
+          playerStats.byBetType[pick.betType].wins++;
 
           // Track multi-entity prop wins
-          if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
+          if (pick.betType === 'H2H Prop' && player1PropType && player2PropType) {
             playerStats.h2hProps.wins++;
-            const propCombo = participant.player1PropType === participant.player2PropType
-              ? participant.player1PropType
-              : `${participant.player1PropType} vs ${participant.player2PropType}`;
+            const propCombo = player1PropType === player2PropType
+              ? player1PropType
+              : `${player1PropType} vs ${player2PropType}`;
             if (!playerStats.byH2HPropType[propCombo]) {
               playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
             }
             playerStats.byH2HPropType[propCombo].wins++;
-          } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
+          } else if (pick.betType === 'Either Prop' && propType && player1Name && player2Name) {
             playerStats.eitherProps.wins++;
-            if (!playerStats.byEitherPropType[participant.propType]) {
-              playerStats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+            if (!playerStats.byEitherPropType[propType]) {
+              playerStats.byEitherPropType[propType] = { wins: 0, losses: 0, total: 0 };
             }
-            playerStats.byEitherPropType[participant.propType].wins++;
-          } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
+            playerStats.byEitherPropType[propType].wins++;
+          } else if (pick.betType === 'Combined Prop' && propType && player1Name && player2Name) {
             playerStats.combinedProps.wins++;
-            if (!playerStats.byCombinedPropType[participant.propType]) {
-              playerStats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+            if (!playerStats.byCombinedPropType[propType]) {
+              playerStats.byCombinedPropType[propType] = { wins: 0, losses: 0, total: 0 };
             }
-            playerStats.byCombinedPropType[participant.propType].wins++;
+            playerStats.byCombinedPropType[propType].wins++;
           }
 
           if (parlayWon) {
-            const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+            const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
             playerStats.moneyWon += netProfit / winners.length;
           }
-        } else if (participant.result === 'loss') {
+        } else if (result === 'loss') {
           playerStats.losses++;
-          playerStats.bySport[participant.sport].losses++;
-          playerStats.byBetType[participant.betType].losses++;
+          playerStats.bySport[pick.sport].losses++;
+          playerStats.byBetType[pick.betType].losses++;
 
           // Track multi-entity prop losses
-          if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
+          if (pick.betType === 'H2H Prop' && player1PropType && player2PropType) {
             playerStats.h2hProps.losses++;
-            const propCombo = participant.player1PropType === participant.player2PropType
-              ? participant.player1PropType
-              : `${participant.player1PropType} vs ${participant.player2PropType}`;
+            const propCombo = player1PropType === player2PropType
+              ? player1PropType
+              : `${player1PropType} vs ${player2PropType}`;
             if (!playerStats.byH2HPropType[propCombo]) {
               playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
             }
             playerStats.byH2HPropType[propCombo].losses++;
-          } else if (participant.betType === 'Either Prop' && participant.propType && participant.player1 && participant.player2) {
+          } else if (pick.betType === 'Either Prop' && propType && player1Name && player2Name) {
             playerStats.eitherProps.losses++;
-            if (!playerStats.byEitherPropType[participant.propType]) {
-              playerStats.byEitherPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+            if (!playerStats.byEitherPropType[propType]) {
+              playerStats.byEitherPropType[propType] = { wins: 0, losses: 0, total: 0 };
             }
-            playerStats.byEitherPropType[participant.propType].losses++;
-          } else if (participant.betType === 'Combined Prop' && participant.propType && participant.player1 && participant.player2) {
+            playerStats.byEitherPropType[propType].losses++;
+          } else if (pick.betType === 'Combined Prop' && propType && player1Name && player2Name) {
             playerStats.combinedProps.losses++;
-            if (!playerStats.byCombinedPropType[participant.propType]) {
-              playerStats.byCombinedPropType[participant.propType] = { wins: 0, losses: 0, total: 0 };
+            if (!playerStats.byCombinedPropType[propType]) {
+              playerStats.byCombinedPropType[propType] = { wins: 0, losses: 0, total: 0 };
             }
-            playerStats.byCombinedPropType[participant.propType].losses++;
+            playerStats.byCombinedPropType[propType].losses++;
           }
 
           if (and1) {
             playerStats.and1s++;
-            const potentialNetProfit = (parlay.totalPayout || 0) - (parlay.betAmount * participants.length);
+            const potentialNetProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
             playerStats.and1Cost += potentialNetProfit;
-            playerStats.moneyLost += parlay.betAmount * participants.length;
+            playerStats.moneyLost += parlay.betAmount * picks.length;
           } else {
-            playerStats.moneyLost += (parlay.betAmount * participants.length) / losers.length;
+            playerStats.moneyLost += (parlay.betAmount * picks.length) / losers.length;
           }
-        } else if (participant.result === 'push') {
+        } else if (result === 'push') {
           playerStats.pushes++;
-          if (playerStats.bySport[participant.sport]) {
-            playerStats.bySport[participant.sport].pushes = (playerStats.bySport[participant.sport].pushes || 0) + 1;
+          if (playerStats.bySport[pick.sport]) {
+            playerStats.bySport[pick.sport].pushes = (playerStats.bySport[pick.sport].pushes || 0) + 1;
           }
-          if (playerStats.byBetType[participant.betType]) {
-            playerStats.byBetType[participant.betType].pushes = (playerStats.byBetType[participant.betType].pushes || 0) + 1;
+          if (playerStats.byBetType[pick.betType]) {
+            playerStats.byBetType[pick.betType].pushes = (playerStats.byBetType[pick.betType].pushes || 0) + 1;
           }
 
           // Track multi-entity prop pushes
-          if (participant.betType === 'H2H Prop' && participant.player1PropType && participant.player2PropType) {
+          if (pick.betType === 'H2H Prop' && player1PropType && player2PropType) {
             playerStats.h2hProps.pushes++;
-            const propCombo = participant.player1PropType === participant.player2PropType
-              ? participant.player1PropType
-              : `${participant.player1PropType} vs ${participant.player2PropType}`;
+            const propCombo = player1PropType === player2PropType
+              ? player1PropType
+              : `${player1PropType} vs ${player2PropType}`;
             if (!playerStats.byH2HPropType[propCombo]) {
               playerStats.byH2HPropType[propCombo] = { wins: 0, losses: 0, pushes: 0, total: 0 };
             }
