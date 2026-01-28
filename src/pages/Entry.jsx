@@ -67,23 +67,20 @@ const Entry = () => {
     // Helper to get Big Guy from pick (supports both schemas)
     const getPickBigGuy = (pick) => pick.bigGuy || pick.player;
 
-    // Look for the most recent 4-person brolay that either:
-    // 1. Was an And-1 (1 loss, rest wins)
+    // Look for the most recent brolay that either:
+    // 1. Had exactly 1 loss (And-1) - any number of participants
     // 2. Was a winning 4-person brolay
     for (const parlay of sortedParlays) {
       // Support both new schema (picks) and old schema (participants)
       const picksObj = parlay.picks || parlay.participants;
       const picks = Object.values(picksObj || {});
 
-      // Skip if not 4 people
-      if (picks.length !== 4) continue;
-
       const losers = picks.filter(p => getPickResult(p) === 'loss');
       const winners = picks.filter(p => getPickResult(p) === 'win');
       const pushes = picks.filter(p => getPickResult(p) === 'push');
 
-      // Check for And-1 (1 loss, rest wins/pushes)
-      const isAnd1 = losers.length === 1 && winners.length === picks.length - 1;
+      // Check for And-1 (exactly 1 loss, regardless of participant count)
+      const isAnd1 = losers.length === 1;
       if (isAnd1) {
         const loserBigGuy = getPickBigGuy(losers[0]);
         return {
@@ -95,17 +92,20 @@ const Entry = () => {
       }
 
       // Check for winning 4-person brolay (no losses, at least one win)
-      const isWinning = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
-      if (isWinning) {
-        // Find who was NOT in this brolay
-        const bigGuysInParlay = picks.map(p => getPickBigGuy(p));
-        const playerOut = players.find(p => !bigGuysInParlay.includes(p));
-        return {
-          player: playerOut,
-          reason: '4-person win',
-          date: parlay.date,
-          parlayId: parlay.id
-        };
+      // Skip if not 4 people
+      if (picks.length === 4) {
+        const isWinning = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
+        if (isWinning) {
+          // Find who was NOT in this brolay
+          const bigGuysInParlay = picks.map(p => getPickBigGuy(p));
+          const playerOut = players.find(p => !bigGuysInParlay.includes(p));
+          return {
+            player: playerOut,
+            reason: '4-person win',
+            date: parlay.date,
+            parlayId: parlay.id
+          };
+        }
       }
     }
 
