@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS, SPORTS, PRELOADED_TEAMS } from '../constants/sports';
 import { formatBetDescription, formatCalendarDate, formatDateForDisplay, getPickBigGuy, getPickResult, getPicksArray, getSubmittedBy, getPickActualStats } from '../utils/formatters';
@@ -125,25 +125,31 @@ const AllBrolays = () => {
     });
   };
 
-  const filteredParlays = applyFilters([...parlays]).sort((a, b) => {
-    const dateCompare = new Date(b.date) - new Date(a.date);
-    if (dateCompare !== 0) return dateCompare;
-    // For same-day brolays, use sortOrder if available
-    if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
-      return b.sortOrder - a.sortOrder;
-    }
-    const aKey = a.id || a.id;
-    const bKey = b.id || b.id;
-    return String(bKey).localeCompare(String(aKey));
-  });
+  // Memoize filtered and sorted parlays - recalculates only when parlays or filters change
+  const filteredParlays = useMemo(() => {
+    return applyFilters([...parlays]).sort((a, b) => {
+      const dateCompare = new Date(b.date) - new Date(a.date);
+      if (dateCompare !== 0) return dateCompare;
+      // For same-day brolays, use sortOrder if available
+      if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+        return b.sortOrder - a.sortOrder;
+      }
+      const aKey = a.id || a.id;
+      const bKey = b.id || b.id;
+      return String(bKey).localeCompare(String(aKey));
+    });
+  }, [parlays, filters]);
 
-  const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
-    const picks = getPicksArray(parlay);
-    return count + picks.filter(p => getPickResult(p) === 'pending').length;
-  }, 0);
+  // Memoize pending picks count - depends on filteredParlays
+  const pendingPicksCount = useMemo(() => {
+    return filteredParlays.reduce((count, parlay) => {
+      const picks = getPicksArray(parlay);
+      return count + picks.filter(p => getPickResult(p) === 'pending').length;
+    }, 0);
+  }, [filteredParlays]);
 
-  // Calculate dynamic color scale thresholds based on all settled brolays
-  const calculateDynamicThresholds = () => {
+  // Memoize dynamic color scale thresholds - only recalculates when parlays change
+  const thresholds = useMemo(() => {
     const allProfits = [];
     const allLosses = [];
 
@@ -190,9 +196,7 @@ const AllBrolays = () => {
         huge: getPercentile(allLosses, 0.95) || -200
       }
     };
-  };
-
-  const thresholds = calculateDynamicThresholds();
+  }, [parlays]);
 
   // Calendar data
   const currentMonth = calendarMonth.getMonth();

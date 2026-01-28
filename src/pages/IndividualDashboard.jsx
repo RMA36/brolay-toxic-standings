@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS, SPORTS, PRELOADED_TEAMS } from '../constants/sports';
@@ -95,64 +95,74 @@ const IndividualDashboard = () => {
     });
   };
 
-  const filteredParlays = applyFilters([...parlays]);
+  // Memoize filtered parlays - recalculates only when parlays or filters change
+  const filteredParlays = useMemo(() => {
+    return applyFilters([...parlays]);
+  }, [parlays, filters]);
 
-    // Count pending picks (supports both old and new schemas)
-    const pendingPicksCount = filteredParlays.reduce((count, parlay) => {
-        const picks = getPicksArray(parlay);
-        return count + picks.filter(p => getPickResult(p) === 'pending').length;
-      }, 0);
-    
-    // Calculate insights
-    const allStats = players.map(p => ({
+  // Memoize pending picks count
+  const pendingPicksCount = useMemo(() => {
+    return filteredParlays.reduce((count, parlay) => {
+      const picks = getPicksArray(parlay);
+      return count + picks.filter(p => getPickResult(p) === 'pending').length;
+    }, 0);
+  }, [filteredParlays]);
+
+  // Memoize stats and insights calculations
+  const { allStats, currentInsight } = useMemo(() => {
+    const stats = players.map(p => ({
       player: p,
       ...calculateStatsForPlayer(p, filteredParlays)
     }));
-    
-    const hottestPlayer = allStats
+
+    const hottestPlayer = stats
       .filter(s => s.totalPicks >= 5)
       .sort((a, b) => {
         const aWinRate = ((a.wins + a.pushes * 0.5) / a.totalPicks) * 100;
         const bWinRate = ((b.wins + b.pushes * 0.5) / b.totalPicks) * 100;
         return bWinRate - aWinRate;
       })[0];
-    
-    const coldestPlayer = allStats
+
+    const coldestPlayer = stats
       .filter(s => s.totalPicks >= 5)
       .sort((a, b) => {
         const aWinRate = ((a.wins + a.pushes * 0.5) / a.totalPicks) * 100;
         const bWinRate = ((b.wins + b.pushes * 0.5) / b.totalPicks) * 100;
         return aWinRate - bWinRate;
       })[0];
-    
-    const biggestWinner = [...allStats].sort((a, b) => 
+
+    const biggestWinner = [...stats].sort((a, b) =>
       (b.moneyWon - b.moneyLost) - (a.moneyWon - a.moneyLost)
     )[0];
-    
-    const mostAnd1s = [...allStats].sort((a, b) => b.and1s - a.and1s)[0];
-    
+
+    const mostAnd1s = [...stats].sort((a, b) => b.and1s - a.and1s)[0];
+
     const insights = [];
-    
+
     if (hottestPlayer) {
       const winRate = ((hottestPlayer.wins + hottestPlayer.pushes * 0.5) / hottestPlayer.totalPicks * 100).toFixed(1);
       insights.push(`🔥 ${hottestPlayer.player} is on fire with a ${winRate}% win rate!`);
     }
-    
+
     if (coldestPlayer) {
       const winRate = ((coldestPlayer.wins + coldestPlayer.pushes * 0.5) / coldestPlayer.totalPicks * 100).toFixed(1);
       insights.push(`❄️ ${coldestPlayer.player} is struggling at ${winRate}% - time to turn it around!`);
     }
-    
+
     if (biggestWinner && (biggestWinner.moneyWon - biggestWinner.moneyLost) > 0) {
       const netMoney = (biggestWinner.moneyWon - biggestWinner.moneyLost).toFixed(2);
       insights.push(`💰 ${biggestWinner.player} leads with $${netMoney} in profits!`);
     }
-    
+
     if (mostAnd1s && mostAnd1s.and1s > 0) {
       insights.push(`💀 ${mostAnd1s.player} has the most And-1s (${mostAnd1s.and1s}) - so close!`);
     }
-       
-    const currentInsight = insights[currentInsightIndex] || 'Keep betting to unlock insights!';
+
+    return {
+      allStats: stats,
+      currentInsight: insights[currentInsightIndex] || 'Keep betting to unlock insights!'
+    };
+  }, [filteredParlays, players, calculateStatsForPlayer, currentInsightIndex]);
     
 return (
     <div className="space-y-4 md:space-y-6">

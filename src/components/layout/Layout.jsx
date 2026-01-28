@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, RefreshCw, Loader } from 'lucide-react';
 import { useBrolayContext } from '../../contexts/BrolayContext';
 import Button from '../common/Button';
+import RouteLoader from '../common/RouteLoader';
 
 /**
  * Layout - Main application layout with navigation
@@ -310,7 +311,9 @@ const Layout = () => {
 
       {/* Main Content */}
       <div className="container mx-auto p-4 md:p-6">
-        <Outlet />
+        <Suspense fallback={<RouteLoader />}>
+          <Outlet />
+        </Suspense>
       </div>
     </div>
   );

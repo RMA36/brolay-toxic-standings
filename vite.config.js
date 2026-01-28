@@ -97,7 +97,9 @@ export default defineConfig({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'firebase-vendor': ['firebase/app', 'firebase/firestore']
-        }
+        },
+        // Chunk naming for better debugging and cache management
+        chunkFileNames: 'assets/[name]-[hash].js'
       }
     }
   }

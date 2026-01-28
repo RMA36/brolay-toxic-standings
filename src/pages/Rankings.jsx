@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS } from '../constants/sports';
 import Card from '../components/common/Card';
@@ -16,23 +16,28 @@ const Rankings = () => {
   // Get context values
   const { parlays } = useBrolayContext();
   const players = PLAYERS;
-  // Calculate Sole Survivors (supports both old and new schemas)
-  const soleSurvivors = {};
-  players.forEach(player => { soleSurvivors[player] = 0; });
 
-  parlays.forEach(parlay => {
-    const picks = getPicksArray(parlay);
-    const winners = picks.filter(p => getPickResult(p) === 'win');
-    const losers = picks.filter(p => getPickResult(p) === 'loss');
+  // Memoize Sole Survivors calculation
+  const soleSurvivors = useMemo(() => {
+    const survivors = {};
+    players.forEach(player => { survivors[player] = 0; });
 
-    if (winners.length === 1 && losers.length > 0) {
-      const survivor = getPickBigGuy(winners[0]);
-      if (survivor) soleSurvivors[survivor]++;
-    }
-  });
+    parlays.forEach(parlay => {
+      const picks = getPicksArray(parlay);
+      const winners = picks.filter(p => getPickResult(p) === 'win');
+      const losers = picks.filter(p => getPickResult(p) === 'loss');
 
-  // Calculate Hot/Cold Streaks (supports both old and new schemas)
-  const getStreaks = () => {
+      if (winners.length === 1 && losers.length > 0) {
+        const survivor = getPickBigGuy(winners[0]);
+        if (survivor) survivors[survivor]++;
+      }
+    });
+
+    return survivors;
+  }, [parlays, players]);
+
+  // Memoize Hot/Cold Streaks calculation
+  const { currentStreaks, allTimeStreaks } = useMemo(() => {
     const playerPicks = {};
     players.forEach(player => { playerPicks[player] = []; });
 
@@ -70,8 +75,8 @@ const Rankings = () => {
     });
 
     // Calculate current and all-time streaks
-    const currentStreaks = { hot: [], cold: [] };
-    const allTimeStreaks = { hot: [], cold: [] };
+    const currentStreaksResult = { hot: [], cold: [] };
+    const allTimeStreaksResult = { hot: [], cold: [] };
 
     players.forEach(player => {
       const picks = playerPicks[player];
@@ -112,7 +117,7 @@ const Rankings = () => {
           streakData.lastWinDate = lastOppositeDate;
         }
 
-        currentStreaks[currentType].push(streakData);
+        currentStreaksResult[currentType].push(streakData);
       }
 
       // All-time streaks
@@ -136,7 +141,7 @@ const Rankings = () => {
           streakEnd = pick.date;
         } else {
           if (streak >= 3) {
-            allTimeStreaks[streakType].push({
+            allTimeStreaksResult[streakType].push({
               player,
               count: streak,
               startDate: streakStart,
@@ -150,7 +155,7 @@ const Rankings = () => {
         }
 
         if (idx === picks.length - 1 && streak >= 3) {
-          allTimeStreaks[streakType].push({
+          allTimeStreaksResult[streakType].push({
             player,
             count: streak,
             startDate: streakStart,
@@ -160,107 +165,29 @@ const Rankings = () => {
       });
     });
 
-    currentStreaks.hot.sort((a, b) => b.count - a.count);
-    currentStreaks.cold.sort((a, b) => b.count - a.count);
-    allTimeStreaks.hot.sort((a, b) => b.count - a.count);
-    allTimeStreaks.cold.sort((a, b) => b.count - a.count);
+    currentStreaksResult.hot.sort((a, b) => b.count - a.count);
+    currentStreaksResult.cold.sort((a, b) => b.count - a.count);
+    allTimeStreaksResult.hot.sort((a, b) => b.count - a.count);
+    allTimeStreaksResult.cold.sort((a, b) => b.count - a.count);
 
-    return { currentStreaks, allTimeStreaks };
-  };
+    return { currentStreaks: currentStreaksResult, allTimeStreaks: allTimeStreaksResult };
+  }, [parlays, players]);
 
-  const { currentStreaks, allTimeStreaks } = getStreaks();
+  // Memoize Player/Sport Combinations calculation
+  const { topCombos, worstCombos } = useMemo(() => {
+    const playerSportCombos = {};
+    parlays.forEach(parlay => {
+      const picks = getPicksArray(parlay);
+      picks.forEach(p => {
+        const bigGuy = getPickBigGuy(p);
+        const result = getPickResult(p);
+        if (!bigGuy || !p.sport || result === 'pending') return;
 
-  // Calculate Player/Sport Combinations (supports both old and new schemas)
-  const playerSportCombos = {};
-  parlays.forEach(parlay => {
-    const picks = getPicksArray(parlay);
-    picks.forEach(p => {
-      const bigGuy = getPickBigGuy(p);
-      const result = getPickResult(p);
-      if (!bigGuy || !p.sport || result === 'pending') return;
-
-      const key = `${bigGuy}-${p.sport}`;
-      if (!playerSportCombos[key]) {
-        playerSportCombos[key] = {
-          player: bigGuy,
-          sport: p.sport,
-          wins: 0,
-          losses: 0,
-          pushes: 0,
-          total: 0
-        };
-      }
-
-      playerSportCombos[key].total++;
-      if (result === 'win') playerSportCombos[key].wins++;
-      else if (result === 'loss') playerSportCombos[key].losses++;
-      else if (result === 'push') playerSportCombos[key].pushes++;
-    });
-  });
-
-  const combosWithMin10 = Object.values(playerSportCombos)
-    .filter(combo => combo.total >= 10)
-    .map(combo => {
-      const adjustedWins = combo.wins + (combo.pushes * 0.5);
-      return {
-        ...combo,
-        winPct: (adjustedWins / combo.total) * 100
-      };
-    });
-
-  const topCombos = [...combosWithMin10].sort((a, b) => b.winPct - a.winPct).slice(0, 5);
-  const worstCombos = [...combosWithMin10].sort((a, b) => a.winPct - b.winPct).slice(0, 5);
-
-  // Most Picked Teams/Players (supports both old and new schemas)
-  const teamCounts = {};
-  parlays.forEach(parlay => {
-    const picks = getPicksArray(parlay);
-    picks.forEach(p => {
-      // Support both direct fields and nested game object
-      const team = p.team;
-      const awayTeam = p.awayTeam || p.game?.awayTeam;
-      const homeTeam = p.homeTeam || p.game?.homeTeam;
-
-      if (team) {
-        teamCounts[team] = (teamCounts[team] || 0) + 1;
-      }
-      if (awayTeam) {
-        teamCounts[awayTeam] = (teamCounts[awayTeam] || 0) + 1;
-      }
-      if (homeTeam) {
-        teamCounts[homeTeam] = (teamCounts[homeTeam] || 0) + 1;
-      }
-    });
-  });
-
-  const topTeams = Object.entries(teamCounts)
-    .map(([team, count]) => ({ team, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  // Player/Team Combinations (supports both old and new schemas)
-  const playerTeamCombos = {};
-  parlays.forEach(parlay => {
-    const picks = getPicksArray(parlay);
-    picks.forEach(p => {
-      const bigGuy = getPickBigGuy(p);
-      const result = getPickResult(p);
-      if (!bigGuy || result === 'pending') return;
-
-      // Support both direct fields and nested game object
-      const teams = [];
-      if (p.team) teams.push(p.team);
-      const awayTeam = p.awayTeam || p.game?.awayTeam;
-      const homeTeam = p.homeTeam || p.game?.homeTeam;
-      if (awayTeam) teams.push(awayTeam);
-      if (homeTeam) teams.push(homeTeam);
-
-      teams.forEach(team => {
-        const key = `${bigGuy}-${team}`;
-        if (!playerTeamCombos[key]) {
-          playerTeamCombos[key] = {
+        const key = `${bigGuy}-${p.sport}`;
+        if (!playerSportCombos[key]) {
+          playerSportCombos[key] = {
             player: bigGuy,
-            team: team,
+            sport: p.sport,
             wins: 0,
             losses: 0,
             pushes: 0,
@@ -268,35 +195,117 @@ const Rankings = () => {
           };
         }
 
-        playerTeamCombos[key].total++;
-        if (result === 'win') playerTeamCombos[key].wins++;
-        else if (result === 'loss') playerTeamCombos[key].losses++;
-        else if (result === 'push') playerTeamCombos[key].pushes++;
+        playerSportCombos[key].total++;
+        if (result === 'win') playerSportCombos[key].wins++;
+        else if (result === 'loss') playerSportCombos[key].losses++;
+        else if (result === 'push') playerSportCombos[key].pushes++;
       });
     });
-  });
 
-  const topPlayerTeamCombos = Object.values(playerTeamCombos)
-    .sort((a, b) => b.total - a.total)
-    .slice(0, 5);
+    const combosWithMin10 = Object.values(playerSportCombos)
+      .filter(combo => combo.total >= 10)
+      .map(combo => {
+        const adjustedWins = combo.wins + (combo.pushes * 0.5);
+        return {
+          ...combo,
+          winPct: (adjustedWins / combo.total) * 100
+        };
+      });
 
-  const playerTeamCombosWithMin5 = Object.values(playerTeamCombos)
-    .filter(combo => combo.total >= 5)
-    .map(combo => {
-      const adjustedWins = combo.wins + (combo.pushes * 0.5);
-      return {
-        ...combo,
-        winPct: (adjustedWins / combo.total) * 100
-      };
+    return {
+      topCombos: [...combosWithMin10].sort((a, b) => b.winPct - a.winPct).slice(0, 5),
+      worstCombos: [...combosWithMin10].sort((a, b) => a.winPct - b.winPct).slice(0, 5)
+    };
+  }, [parlays]);
+
+  // Memoize Most Picked Teams/Players calculation
+  const topTeams = useMemo(() => {
+    const teamCounts = {};
+    parlays.forEach(parlay => {
+      const picks = getPicksArray(parlay);
+      picks.forEach(p => {
+        // Support both direct fields and nested game object
+        const team = p.team;
+        const awayTeam = p.awayTeam || p.game?.awayTeam;
+        const homeTeam = p.homeTeam || p.game?.homeTeam;
+
+        if (team) {
+          teamCounts[team] = (teamCounts[team] || 0) + 1;
+        }
+        if (awayTeam) {
+          teamCounts[awayTeam] = (teamCounts[awayTeam] || 0) + 1;
+        }
+        if (homeTeam) {
+          teamCounts[homeTeam] = (teamCounts[homeTeam] || 0) + 1;
+        }
+      });
     });
 
-  const topPlayerTeamWinPct = [...playerTeamCombosWithMin5]
-    .sort((a, b) => b.winPct - a.winPct)
-    .slice(0, 5);
+    return Object.entries(teamCounts)
+      .map(([team, count]) => ({ team, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [parlays]);
 
-  const worstPlayerTeamWinPct = [...playerTeamCombosWithMin5]
-    .sort((a, b) => a.winPct - b.winPct)
-    .slice(0, 5);
+  // Memoize Player/Team Combinations calculation
+  const { topPlayerTeamCombos, topPlayerTeamWinPct, worstPlayerTeamWinPct } = useMemo(() => {
+    const playerTeamCombos = {};
+    parlays.forEach(parlay => {
+      const picks = getPicksArray(parlay);
+      picks.forEach(p => {
+        const bigGuy = getPickBigGuy(p);
+        const result = getPickResult(p);
+        if (!bigGuy || result === 'pending') return;
+
+        // Support both direct fields and nested game object
+        const teams = [];
+        if (p.team) teams.push(p.team);
+        const awayTeam = p.awayTeam || p.game?.awayTeam;
+        const homeTeam = p.homeTeam || p.game?.homeTeam;
+        if (awayTeam) teams.push(awayTeam);
+        if (homeTeam) teams.push(homeTeam);
+
+        teams.forEach(team => {
+          const key = `${bigGuy}-${team}`;
+          if (!playerTeamCombos[key]) {
+            playerTeamCombos[key] = {
+              player: bigGuy,
+              team: team,
+              wins: 0,
+              losses: 0,
+              pushes: 0,
+              total: 0
+            };
+          }
+
+          playerTeamCombos[key].total++;
+          if (result === 'win') playerTeamCombos[key].wins++;
+          else if (result === 'loss') playerTeamCombos[key].losses++;
+          else if (result === 'push') playerTeamCombos[key].pushes++;
+        });
+      });
+    });
+
+    const topCombos = Object.values(playerTeamCombos)
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 5);
+
+    const combosWithMin5 = Object.values(playerTeamCombos)
+      .filter(combo => combo.total >= 5)
+      .map(combo => {
+        const adjustedWins = combo.wins + (combo.pushes * 0.5);
+        return {
+          ...combo,
+          winPct: (adjustedWins / combo.total) * 100
+        };
+      });
+
+    return {
+      topPlayerTeamCombos: topCombos,
+      topPlayerTeamWinPct: [...combosWithMin5].sort((a, b) => b.winPct - a.winPct).slice(0, 5),
+      worstPlayerTeamWinPct: [...combosWithMin5].sort((a, b) => a.winPct - b.winPct).slice(0, 5)
+    };
+  }, [parlays]);
 
   return (
     <div className="space-y-4 md:space-y-6">

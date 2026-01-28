@@ -98,25 +98,51 @@ This document tracks the progress of refactoring the Brolay Toxic Standings appl
 
 ## Track 3: Performance Optimization
 
-### Phase 3.1: React Performance
-**Goal**: Optimize rendering and state updates
+### ✅ Phase 3.1: Route-Level Code Splitting (COMPLETE)
+**Goal**: Reduce initial bundle size via lazy loading
+**Status**: Complete (January 28, 2026)
+
+**Completed**:
+- ✅ Created RouteLoader component for Suspense fallback
+- ✅ Converted 10 page imports to React.lazy()
+- ✅ Added Suspense boundary in Layout.jsx
+- ✅ Added chunk naming in vite.config.js
+
+### ✅ Phase 3.2: Calculation Memoization (COMPLETE)
+**Goal**: Eliminate expensive recalculations on every render
+**Status**: Complete (January 28, 2026)
+
+**Completed**:
+- ✅ AllBrolays.jsx: memoized thresholds, filteredParlays, pendingPicksCount
+- ✅ Rankings.jsx: memoized soleSurvivors, streaks, playerSportCombos, topTeams
+- ✅ IndividualDashboard.jsx: memoized filteredParlays, pendingPicksCount, allStats
+
+### ✅ Phase 3.3: Context Splitting (COMPLETE)
+**Goal**: Prevent UI state from triggering data component re-renders
+**Status**: Complete (January 28, 2026)
+
+**Completed**:
+- ✅ Created UIContext for mobile/UI state
+- ✅ Created FilterContext for filter/search state
+- ✅ Updated BrolayContext to use split contexts
+- ✅ Maintained backward compatibility (re-exports)
+
+### Phase 3.4: Component Memoization (Optional)
+**Goal**: Add React.memo to expensive components
 **Status**: Not Started
 
 **Planned**:
-- Add React.memo to expensive components
-- Optimize useEffect dependencies
-- Implement useMemo/useCallback where beneficial
-- Add React DevTools Profiler analysis
+- Add React.memo to calendar day cells
+- Add React.memo to player leaderboard cards
+- Add React.memo to brolay list items
 
-### Phase 3.2: Bundle Optimization
-**Goal**: Reduce bundle size and improve load times
+### Phase 3.5: Event Handler Memoization (Optional)
+**Goal**: Add useCallback to prevent child re-renders
 **Status**: Not Started
 
 **Planned**:
-- Analyze bundle with webpack-bundle-analyzer
-- Implement code splitting with React.lazy
-- Optimize imports (tree shaking)
-- Switch from Tailwind CDN to PostCSS build (production requirement)
+- Add useCallback to filter handlers
+- Add useCallback to auto-update handlers
 
 ---
 
@@ -171,27 +197,39 @@ This document tracks the progress of refactoring the Brolay Toxic Standings appl
 
 ## Summary
 
-### ✅ Track 1 Status: **100% COMPLETE** 🎉
+### ✅ Track 1 Status: **100% COMPLETE**
 - Phase 1.1: ✅ Complete
 - Phase 1.2: ✅ Complete
 - Phase 1.3: ✅ Complete
 - Phase 1.4: ✅ Complete
 - Phase 1.5: ✅ Complete
 
+### ✅ Track 2 Status: **IN OBSERVATION** (Data Restructure)
+- Completed January 28, 2026
+- 30-day observation period ends February 27, 2026
+- See TRACK_2_SESSION_HANDOFF.md for details
+
+### ✅ Track 3 Status: **PHASES 1-3 COMPLETE** (Performance)
+- Phase 3.1: ✅ Route-level code splitting
+- Phase 3.2: ✅ Calculation memoization
+- Phase 3.3: ✅ Context splitting
+- Phase 3.4: ⏳ Optional (React.memo)
+- Phase 3.5: ⏳ Optional (useCallback)
+- See TRACK_3_SESSION_HANDOFF.md for details
+
 ### Overall Progress
 - **Lines Reduced**: 9,050 lines (98.7% reduction from 9,166 → 116!)
-- **Files Created**: 25 new files (constants, utils, hooks, components, pages, context, router, layout, modals, styles)
+- **Files Created**: 28+ new files (constants, utils, hooks, components, pages, contexts, router, layout, modals, styles)
 - **Code Quality**: Complete separation of concerns with modern React patterns
 - **Maintainability**: Dramatically easier to navigate and modify
 - **Architecture**: Context API + React Router v6 fully implemented
+- **Performance**: Route-level code splitting, calculation memoization, context splitting
 - **Pattern Established**: Clear, reusable patterns for all future development
 
-### Next Priority: Track 2 (Type Safety)
-Track 1 is complete! Next steps:
-1. **Track 2**: Add type safety with PropTypes or TypeScript
-2. **Track 3**: Performance optimization and production build setup
-3. **Track 4**: Testing infrastructure (Jest, React Testing Library)
-4. **Track 5**: Feature enhancements and polish
+### Next Priority: Track 4 (Testing)
+Tracks 1-3 are complete! Next steps:
+1. **Track 4**: Testing infrastructure (Jest, React Testing Library)
+2. **Track 5**: Feature enhancements and polish
 
 ---
 

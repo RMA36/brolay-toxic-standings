@@ -1,17 +1,21 @@
-import React from 'react';
+import React, { lazy } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import Layout from '../components/layout/Layout';
+
+// Keep Entry eager - most common first page
 import Entry from '../pages/Entry';
-import Search from '../pages/Search';
-import AllBrolays from '../pages/AllBrolays';
-import AllPicks from '../pages/AllPicks';
-import IndividualDashboard from '../pages/IndividualDashboard';
-import GroupDashboard from '../pages/GroupDashboard';
-import Payments from '../pages/Payments';
-import Rankings from '../pages/Rankings';
-import Grid from '../pages/Grid';
-import Settings from '../pages/Settings';
-import Import from '../pages/Import';
+
+// Route-level code splitting - heavy pages loaded on demand
+const Search = lazy(() => import('../pages/Search'));
+const AllBrolays = lazy(() => import('../pages/AllBrolays'));
+const AllPicks = lazy(() => import('../pages/AllPicks'));
+const IndividualDashboard = lazy(() => import('../pages/IndividualDashboard'));
+const GroupDashboard = lazy(() => import('../pages/GroupDashboard'));
+const Payments = lazy(() => import('../pages/Payments'));
+const Rankings = lazy(() => import('../pages/Rankings'));
+const Grid = lazy(() => import('../pages/Grid'));
+const Settings = lazy(() => import('../pages/Settings'));
+const Import = lazy(() => import('../pages/Import'));
 
 /**
  * Application router configuration using React Router v6

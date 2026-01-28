@@ -8,20 +8,24 @@ import { getCurrentETDate } from '../utils/formatters';
 import { findMoneyMaker, findDangerZone, getCurrentDayOfWeek, getCurrentSportsInSeason, getSeasonalTip } from '../insightsHelper';
 import { PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
 import { extractTeamsFromParlays, saveLearnedData } from '../utils/actionHandlers';
+import { useUIContext } from './UIContext';
+import { useFilterContext } from './FilterContext';
 
 /**
  * BrolayContext - Provides shared application state and handlers
  *
- * This context consolidates:
+ * NOTE: UI and Filter state have been extracted to UIContext and FilterContext
+ * for better performance. This context re-exports those values for backward
+ * compatibility, but new components should import from the specific contexts.
+ *
+ * This context provides:
  * - Brolay data (parlays, CRUD operations)
  * - ESPN integration
  * - Statistics
  * - Odds API
- * - Filter state
- * - Search state
- * - Calendar state
- * - Mobile UI state
  * - Insights data
+ * - (Re-exported) Filter state from FilterContext
+ * - (Re-exported) UI state from UIContext
  */
 const BrolayContext = createContext(null);
 
@@ -34,6 +38,48 @@ const BrolayContext = createContext(null);
  * @param {React.ReactNode} props.children
  */
 export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
+  // Import state from separated contexts for re-export (backward compatibility)
+  const uiContext = useUIContext();
+  const filterContext = useFilterContext();
+
+  // Destructure UI state
+  const {
+    isMobile,
+    sidebarOpen,
+    setSidebarOpen,
+    mobileDropdownOpen,
+    setMobileDropdownOpen,
+    refreshing,
+    setRefreshing,
+    pullStartY,
+    setPullStartY,
+    pullDistance,
+    setPullDistance,
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd
+  } = uiContext;
+
+  // Destructure Filter state
+  const {
+    filters,
+    setFilters,
+    filtersExpanded,
+    setFiltersExpanded,
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    setSearchResults,
+    lastSearchedQuery,
+    setLastSearchedQuery,
+    searchCache,
+    setSearchCache,
+    showSuggestions,
+    setShowSuggestions,
+    suggestions: filterSuggestions,
+    setSuggestions: setFilterSuggestions
+  } = filterContext;
+
   // Players configuration
   const [players] = useState(['Management', 'CD', '914', 'Junior', 'Jacoby']);
 
@@ -69,31 +115,6 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   const currentSports = useMemo(() => getCurrentSportsInSeason(), []);
   const seasonalTip = useMemo(() => getSeasonalTip(), []);
 
-  // Filter state - supports both old (placedBy) and new (submittedBy) schema
-  const [filters, setFilters] = useState({
-    dateFrom: '',
-    dateTo: '',
-    player: '',
-    sport: '',
-    teamPlayer: '',
-    submittedBy: '',
-    placedBy: '', // Legacy support
-    minPayout: '',
-    maxPayout: '',
-    result: '',
-    autoUpdated: '',
-    betType: '',
-    propType: ''
-  });
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-
-  // Search state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState(null);
-  const [lastSearchedQuery, setLastSearchedQuery] = useState('');
-  const [searchCache, setSearchCache] = useState({});
-  const [showSuggestions, setShowSuggestions] = useState({});
-
   // Calendar state
   const [calendarView, setCalendarView] = useState(false); // Default to list view
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(null);
@@ -117,7 +138,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   });
   const [editingPick, setEditingPick] = useState(null);
 
-  // UI state
+  // UI state (not in UIContext - specific to this context)
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -125,13 +146,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   const [learnedPropTypes, setLearnedPropTypes] = useState([]);
   const [learnedPlayers, setLearnedPlayers] = useState([]);
 
-  // Mobile state
-  const [isMobile, setIsMobile] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [pullStartY, setPullStartY] = useState(0);
-  const [pullDistance, setPullDistance] = useState(0);
-  const [mobileDropdownOpen, setMobileDropdownOpen] = useState(null);
+  // Mobile state is now provided by UIContext (see destructuring above)
 
   // Pagination state
   const [picksToShow, setPicksToShow] = useState(20);
@@ -173,42 +188,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     }
   }, [parlays, learnedTeams, learnedPlayers, learnedPropTypes]);
 
-  // Detect mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Touch handlers for pull-to-refresh
-  const handleTouchStart = (e) => {
-    if (!isMobile || window.scrollY > 0) return;
-    setPullStartY(e.touches[0].clientY);
-  };
-
-  const handleTouchMove = (e) => {
-    if (!isMobile || window.scrollY > 0 || pullStartY === 0) return;
-    const currentY = e.touches[0].clientY;
-    const distance = Math.max(0, currentY - pullStartY);
-    setPullDistance(Math.min(distance, 100));
-  };
-
-  const handleTouchEnd = async () => {
-    if (!isMobile) return;
-    if (pullDistance > 80) {
-      setRefreshing(true);
-      setTimeout(() => {
-        setRefreshing(false);
-      }, 500);
-    }
-    setPullDistance(0);
-    setPullStartY(0);
-  };
+  // Mobile detection and touch handlers are now in UIContext
 
   // Parlay management handlers
   const handleToggleSettlement = async (parlayId) => {

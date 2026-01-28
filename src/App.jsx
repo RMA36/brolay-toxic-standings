@@ -3,6 +3,8 @@ import { RouterProvider } from 'react-router-dom';
 import { initializeApp } from 'firebase/app';
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from 'firebase/firestore';
 import { BrolayProvider } from './contexts/BrolayContext';
+import { UIProvider } from './contexts/UIContext';
+import { FilterProvider } from './contexts/FilterContext';
 import { router } from './router';
 import LoadingSpinner from './components/common/LoadingSpinner';
 
@@ -109,14 +111,20 @@ const App = () => {
   }
 
   // Show main app wrapped in Context and Router
+  // UIProvider and FilterProvider are separated from BrolayProvider to prevent
+  // unnecessary re-renders when UI or filter state changes
   return (
-    <BrolayProvider
-      db={db}
-      authenticated={authenticated}
-      oddsApiKey={THE_ODDS_API_KEY}
-    >
-      <RouterProvider router={router} />
-    </BrolayProvider>
+    <UIProvider>
+      <FilterProvider>
+        <BrolayProvider
+          db={db}
+          authenticated={authenticated}
+          oddsApiKey={THE_ODDS_API_KEY}
+        >
+          <RouterProvider router={router} />
+        </BrolayProvider>
+      </FilterProvider>
+    </UIProvider>
   );
 };
 
