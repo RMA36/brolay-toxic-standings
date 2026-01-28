@@ -186,11 +186,23 @@ export const getPickActualStats = (pick) => pick.outcome?.actualStats || pick.ac
 
 /**
  * Get picks array from parlay (supports both schemas)
+ * New schema: parlay.picks is an array
+ * Old schema: parlay.participants is an object with keys
  */
 export const getPicksArray = (parlay) => {
-  const picksObj = parlay.picks || parlay.participants;
-  if (!picksObj) return [];
-  return Object.values(picksObj);
+  // New schema: picks is already an array
+  if (Array.isArray(parlay.picks)) {
+    return parlay.picks;
+  }
+  // Old schema: participants is an object, convert to array
+  if (parlay.participants && typeof parlay.participants === 'object') {
+    return Object.values(parlay.participants);
+  }
+  // Fallback: check if picks is an object (shouldn't happen but be safe)
+  if (parlay.picks && typeof parlay.picks === 'object') {
+    return Object.values(parlay.picks);
+  }
+  return [];
 };
 
 /**

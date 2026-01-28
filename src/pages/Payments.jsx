@@ -25,8 +25,7 @@ const Payments = () => {
     handleToggleSettlement,
     saving,
     settledBrolaysToShow,
-    setSettledBrolaysToShow,
-    forceRefresh
+    setSettledBrolaysToShow
   } = useBrolayContext();
 
   const players = PLAYERS;
@@ -39,8 +38,8 @@ const Payments = () => {
       if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
       if (filters.dateTo && parlay.date > filters.dateTo) return false;
 
-      // PlacedBy filter
-      if (filters.placedBy && parlay.placedBy !== filters.placedBy) return false;
+      // PlacedBy filter (use getSubmittedBy for dual-schema support)
+      if (filters.placedBy && getSubmittedBy(parlay) !== filters.placedBy) return false;
 
       return true;
     });
@@ -185,27 +184,9 @@ const Payments = () => {
     });
   });
 
-  const handleForceRefresh = async () => {
-    const result = await forceRefresh();
-    if (result.success) {
-      alert(`Refreshed! Loaded ${result.count} brolays from server.`);
-    } else {
-      alert('Error refreshing data. Check console for details.');
-    }
-  };
-
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl md:text-2xl font-bold text-yellow-400">💰 Payment Tracker</h2>
-        <Button
-          onClick={handleForceRefresh}
-          variant="outline"
-          size="small"
-        >
-          🔄 Force Refresh
-        </Button>
-      </div>
+      <h2 className="text-xl md:text-2xl font-bold text-yellow-400">💰 Payment Tracker</h2>
 
       {/* Filters - Compact for Payments */}
       <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
