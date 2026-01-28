@@ -4,7 +4,7 @@ import { PLAYERS } from '../constants/sports';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import { AlertCircle } from 'lucide-react';
-import { formatDateForDisplay } from '../utils/formatters';
+import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult, getSubmittedBy } from '../utils/formatters';
 
 /**
  * Payments - Payment tracking and settlement interface
@@ -73,14 +73,14 @@ const Payments = () => {
   const settledParlays = filteredParlays.filter(p => p.settled);
 
   const lostParlays = unsettledParlays.filter(p => {
-    const participants = Object.values(p.participants);
-    return participants.some(part => part.result === 'loss');
+    const picks = getPicksArray(p);
+    return picks.some(pick => getPickResult(pick) === 'loss');
   });
 
   const wonParlays = unsettledParlays.filter(p => {
-    const participants = Object.values(p.participants);
-    const losers = participants.filter(part => part.result === 'loss');
-    return losers.length === 0 && participants.some(part => part.result === 'win');
+    const picks = getPicksArray(p);
+    const losers = picks.filter(pick => getPickResult(pick) === 'loss');
+    return losers.length === 0 && picks.some(pick => getPickResult(pick) === 'win');
   });
 
   // Debug logging
@@ -92,18 +92,20 @@ const Payments = () => {
 
   // Lost parlays - winners get paid by placer
   lostParlays.forEach(parlay => {
-    const participants = Object.values(parlay.participants);
-    const losers = participants.filter(p => p.result === 'loss');
-    const winners = participants.filter(p => p.result === 'win');
-    const and1 = losers.length === 1 && winners.length === participants.length - 1;
-    const totalAmount = parlay.betAmount * participants.length;
+    const picks = getPicksArray(parlay);
+    const losers = picks.filter(p => getPickResult(p) === 'loss');
+    const winners = picks.filter(p => getPickResult(p) === 'win');
+    const and1 = losers.length === 1 && winners.length === picks.length - 1;
+    const totalAmount = parlay.betAmount * picks.length;
     const amountPerLoser = losers.length === 1 ? totalAmount : totalAmount / losers.length;
+    const placedBy = getSubmittedBy(parlay);
 
     losers.forEach(loser => {
-      if (loser.player && parlay.placedBy) {
+      const loserPlayer = getPickBigGuy(loser);
+      if (loserPlayer && placedBy) {
         payments.push({
-          from: loser.player,
-          to: parlay.placedBy,
+          from: loserPlayer,
+          to: placedBy,
           amount: amountPerLoser,
           parlayId: parlay.id,
           parlayDate: parlay.date,
@@ -116,16 +118,18 @@ const Payments = () => {
 
   // Won parlays - placer pays winners
   wonParlays.forEach(parlay => {
-    const participants = Object.values(parlay.participants);
-    const winners = participants.filter(p => p.result === 'win');
-    const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
+    const picks = getPicksArray(parlay);
+    const winners = picks.filter(p => getPickResult(p) === 'win');
+    const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * picks.length));
     const amountPerWinner = winners.length > 0 ? netProfit / winners.length : 0;
+    const placedBy = getSubmittedBy(parlay);
 
     winners.forEach(winner => {
-      if (winner.player && parlay.placedBy) {
+      const winnerPlayer = getPickBigGuy(winner);
+      if (winnerPlayer && placedBy) {
         payments.push({
-          from: parlay.placedBy,
-          to: winner.player,
+          from: placedBy,
+          to: winnerPlayer,
           amount: amountPerWinner,
           parlayId: parlay.id,
           parlayDate: parlay.date,
@@ -328,10 +332,11 @@ const Payments = () => {
             <p className="text-gray-500 text-center py-4">No won brolays to settle</p>
           ) : (
             wonParlays.map(parlay => {
-              const participants = Object.values(parlay.participants);
-              const winners = participants.filter(p => p.result === 'win');
-              const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * participants.length));
+              const picks = getPicksArray(parlay);
+              const winners = picks.filter(p => getPickResult(p) === 'win');
+              const netProfit = Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * picks.length));
               const amountPerWinner = winners.length > 0 ? netProfit / winners.length : 0;
+              const placedBy = getSubmittedBy(parlay);
 
               return (
                 <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
@@ -339,7 +344,7 @@ const Payments = () => {
                     <div>
                       <div className="font-semibold text-white">{formatDateForDisplay(parlay.date)}</div>
                       <div className="text-sm text-gray-400">
-                        Placed by: {parlay.placedBy || 'Unknown'}
+                        Placed by: {placedBy || 'Unknown'}
                       </div>
                     </div>
                     <div className="text-right">
@@ -352,8 +357,8 @@ const Payments = () => {
                     </div>
                   </div>
                   <div className="text-sm mb-2 text-gray-300">
-                    <span className="font-medium text-white">{parlay.placedBy || 'Unknown'} pays winners: </span>
-                    {winners.map(winner => `${winner.player} ($${amountPerWinner.toFixed(2)})`).join(', ')}
+                    <span className="font-medium text-white">{placedBy || 'Unknown'} pays winners: </span>
+                    {winners.map(winner => `${getPickBigGuy(winner)} ($${amountPerWinner.toFixed(2)})`).join(', ')}
                   </div>
                   <Button
                     onClick={() => toggleSettlement(parlay.id)}
@@ -378,12 +383,13 @@ const Payments = () => {
             <p className="text-gray-500 text-center py-4">No lost brolays to settle</p>
           ) : (
             lostParlays.map(parlay => {
-              const participants = Object.values(parlay.participants);
-              const losers = participants.filter(p => p.result === 'loss');
-              const winners = participants.filter(p => p.result === 'win');
-              const and1 = losers.length === 1 && winners.length === participants.length - 1;
-              const totalLost = parlay.betAmount * participants.length;
+              const picks = getPicksArray(parlay);
+              const losers = picks.filter(p => getPickResult(p) === 'loss');
+              const winners = picks.filter(p => getPickResult(p) === 'win');
+              const and1 = losers.length === 1 && winners.length === picks.length - 1;
+              const totalLost = parlay.betAmount * picks.length;
               const amountPerLoser = losers.length > 0 ? (totalLost / losers.length) : 0;
+              const placedBy = getSubmittedBy(parlay);
 
               return (
                 <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
@@ -391,19 +397,19 @@ const Payments = () => {
                     <div>
                       <div className="font-semibold text-white">{formatDateForDisplay(parlay.date)}</div>
                       <div className="text-sm text-gray-400">
-                        Placed by: {parlay.placedBy || 'Unknown'}
+                        Placed by: {placedBy || 'Unknown'}
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-base md:text-lg font-bold text-red-400">
-                        ${(parlay.betAmount * participants.length).toFixed(2)}
+                        ${(parlay.betAmount * picks.length).toFixed(2)}
                       </div>
                       {and1 && <span className="text-xs text-red-400 font-semibold">And-1</span>}
                     </div>
                   </div>
                   <div className="text-sm mb-2 text-gray-300">
-                    <span className="font-medium text-white">Losers pay {parlay.placedBy || 'Unknown'}: </span>
-                    {losers.map(loser => `${loser.player} ($${Number(amountPerLoser).toFixed(2)})`).join(', ')}
+                    <span className="font-medium text-white">Losers pay {placedBy || 'Unknown'}: </span>
+                    {losers.map(loser => `${getPickBigGuy(loser)} ($${Number(amountPerLoser).toFixed(2)})`).join(', ')}
                   </div>
                   <Button
                     onClick={() => toggleSettlement(parlay.id)}
@@ -436,10 +442,11 @@ const Payments = () => {
                 })
                 .slice(0, settledBrolaysToShow)
                 .map(parlay => {
-                  const participants = Object.values(parlay.participants);
-                  const winners = participants.filter(p => p.result === 'win');
-                  const losers = participants.filter(p => p.result === 'loss');
+                  const picks = getPicksArray(parlay);
+                  const winners = picks.filter(p => getPickResult(p) === 'win');
+                  const losers = picks.filter(p => getPickResult(p) === 'loss');
                   const won = losers.length === 0 && winners.length > 0;
+                  const placedBy = getSubmittedBy(parlay);
 
                   return (
                     <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
@@ -447,8 +454,8 @@ const Payments = () => {
                         <div className="flex-1">
                           <div className="font-semibold text-sm text-white">{formatDateForDisplay(parlay.date)}</div>
                           <div className="text-xs text-gray-400">
-                            {won ? `Winners paid by ${parlay.placedBy || 'Unknown'}: ${winners.map(w => w.player).join(', ')}`
-                                 : `Losers paid ${parlay.placedBy || 'Unknown'}: ${losers.map(l => l.player).join(', ')}`}
+                            {won ? `Winners paid by ${placedBy || 'Unknown'}: ${winners.map(w => getPickBigGuy(w)).join(', ')}`
+                                 : `Losers paid ${placedBy || 'Unknown'}: ${losers.map(l => getPickBigGuy(l)).join(', ')}`}
                           </div>
                         </div>
                         <Button

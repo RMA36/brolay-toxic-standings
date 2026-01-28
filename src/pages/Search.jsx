@@ -2,7 +2,7 @@ import React from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
-import { formatDateForDisplay } from '../utils/formatters';
+import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult } from '../utils/formatters';
 import { tokenizeQuery, findBestTeamMatch, filterByRelevance } from '../searchUtils';
 import { SPORTS, PLAYERS, PICK_TYPES, PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
 import { formatComboDescription } from '../insightsHelper';
@@ -115,10 +115,13 @@ const Search = () => {
         const adjustedDayIndex = pickDayIndex === 0 ? 6 : pickDayIndex - 1;
 
         if (adjustedDayIndex === dayIndex) {
-          Object.values(parlay.participants || {}).forEach(pick => {
-            if (pick.result !== 'pending') {
+          getPicksArray(parlay).forEach(pick => {
+            const result = getPickResult(pick);
+            if (result !== 'pending') {
               matchingPicks.push({
                 ...pick,
+                player: getPickBigGuy(pick),
+                result: result,
                 parlayDate: parlay.date
               });
             }
@@ -197,8 +200,9 @@ const Search = () => {
 
       const matchingPicks = [];
       parlays.forEach(parlay => {
-        Object.values(parlay.participants || {}).forEach(pick => {
-          if (pick.result === 'pending') return;
+        getPicksArray(parlay).forEach(pick => {
+          const result = getPickResult(pick);
+          if (result === 'pending') return;
 
           const pickPropLower = (pick.propType || pick.betType || '').toLowerCase();
           const matchesProp = pickPropLower.includes(lowerQuery) ||
@@ -208,6 +212,8 @@ const Search = () => {
           if (matchesProp) {
             matchingPicks.push({
               ...pick,
+              player: getPickBigGuy(pick),
+              result: result,
               parlayDate: parlay.date
             });
           }
@@ -262,14 +268,15 @@ const Search = () => {
 
       const matchingPicks = [];
       parlays.forEach(parlay => {
-        Object.values(parlay.participants || {}).forEach(pick => {
-          if (pick.result === 'pending') return;
+        getPicksArray(parlay).forEach(pick => {
+          const result = getPickResult(pick);
+          if (result === 'pending') return;
 
           // Check ALL possible team-related fields
           const pickTeam = pick.team || '';
           const pickOpp = pick.opponent || '';
-          const pickAwayTeam = pick.awayTeam || '';
-          const pickHomeTeam = pick.homeTeam || '';
+          const pickAwayTeam = pick.awayTeam || pick.game?.awayTeam || '';
+          const pickHomeTeam = pick.homeTeam || pick.game?.homeTeam || '';
           const pickFavorite = pick.favorite || '';
 
           // Match if the searched team appears in ANY team field
@@ -280,6 +287,8 @@ const Search = () => {
               pickFavorite.includes(searchContext.matchedTeam)) {
             matchingPicks.push({
               ...pick,
+              player: getPickBigGuy(pick),
+              result: result,
               parlayDate: parlay.date
             });
           }
@@ -347,12 +356,16 @@ const Search = () => {
 
       const matchingPicks = [];
       parlays.forEach(parlay => {
-        Object.values(parlay.participants || {}).forEach(pick => {
-          if (!pick.player || !pick.betType) return;
-          if (pick.result === 'pending') return;
+        getPicksArray(parlay).forEach(pick => {
+          const bigGuy = getPickBigGuy(pick);
+          const result = getPickResult(pick);
+          if (!bigGuy || !pick.betType) return;
+          if (result === 'pending') return;
           if (pick.sport === matchedSport) {
             matchingPicks.push({
               ...pick,
+              player: bigGuy,
+              result: result,
               parlayDate: parlay.date
             });
           }
@@ -419,11 +432,15 @@ const Search = () => {
 
       const matchingPicks = [];
       parlays.forEach(parlay => {
-        Object.values(parlay.participants || {}).forEach(pick => {
-          if (pick.result === 'pending') return;
-          if (pick.player === targetPlayer) {
+        getPicksArray(parlay).forEach(pick => {
+          const bigGuy = getPickBigGuy(pick);
+          const result = getPickResult(pick);
+          if (result === 'pending') return;
+          if (bigGuy === targetPlayer) {
             matchingPicks.push({
               ...pick,
+              player: bigGuy,
+              result: result,
               parlayDate: parlay.date
             });
           }
