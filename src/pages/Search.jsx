@@ -198,6 +198,10 @@ const Search = () => {
         lowerQuery.includes(prop.toLowerCase())
       );
 
+      console.log('🔍 Prop Type Search Debug:');
+      console.log('  Query:', lowerQuery);
+      console.log('  Matched Prop Type:', matchedPropType);
+
       const matchingPicks = [];
       parlays.forEach(parlay => {
         getPicksArray(parlay).forEach(pick => {
@@ -222,6 +226,19 @@ const Search = () => {
                              lowerQuery.includes(pickTeamLower);
 
           if (matchesProp) {
+            console.log('  ✅ MATCH:', {
+              player: getPickBigGuy(pick),
+              propType: pickPropType,
+              position: pickPlayerPosition,
+              team: pickPlayerTeam,
+              betType: pick.betType,
+              matchReason: {
+                propMatch: pickPropLower.includes(lowerQuery) || lowerQuery.includes(pickPropLower),
+                propTypeMatch: matchedPropType && pickPropLower.includes(matchedPropType.toLowerCase()),
+                positionMatch: pickPositionLower.includes(lowerQuery) || lowerQuery.includes(pickPositionLower),
+                teamMatch: pickTeamLower.includes(lowerQuery) || lowerQuery.includes(pickTeamLower)
+              }
+            });
             matchingPicks.push({
               ...pick,
               player: getPickBigGuy(pick),
@@ -231,6 +248,8 @@ const Search = () => {
           }
         });
       });
+
+      console.log('  Total Matches:', matchingPicks.length);
 
       // Apply relevance filtering for more specific queries
       const filteredPicks = isSport || isPlayer ?
