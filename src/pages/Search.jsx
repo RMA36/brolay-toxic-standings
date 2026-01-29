@@ -204,12 +204,22 @@ const Search = () => {
           const result = getPickResult(pick);
           if (result === 'pending') return;
 
-          // Use the new helper to extract prop type consistently
+          // Use the new helper to extract prop type, position, and team consistently
           const pickPropType = getPickPropType(pick);
+          const pickPlayerPosition = getPickPlayerPosition(pick);
+          const pickPlayerTeam = getPickPlayerTeam(pick);
+
           const pickPropLower = (pickPropType || '').toLowerCase();
+          const pickPositionLower = (pickPlayerPosition || '').toLowerCase();
+          const pickTeamLower = (pickPlayerTeam || '').toLowerCase();
+
           const matchesProp = pickPropLower.includes(lowerQuery) ||
                              lowerQuery.includes(pickPropLower) ||
-                             (matchedPropType && pickPropLower.includes(matchedPropType.toLowerCase()));
+                             (matchedPropType && pickPropLower.includes(matchedPropType.toLowerCase())) ||
+                             pickPositionLower.includes(lowerQuery) ||
+                             lowerQuery.includes(pickPositionLower) ||
+                             pickTeamLower.includes(lowerQuery) ||
+                             lowerQuery.includes(pickTeamLower);
 
           if (matchesProp) {
             matchingPicks.push({
