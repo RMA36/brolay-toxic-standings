@@ -58,6 +58,8 @@ const Search = () => {
     }
 
     const lowerQuery = query.toLowerCase();
+    console.log('🚀 Starting search analysis for:', lowerQuery);
+
     const results = {
       query: query,
       matchedCategory: null,
@@ -95,6 +97,14 @@ const Search = () => {
     const isBetType = betTypes.some(type =>
       lowerQuery.includes(type.toLowerCase())
     );
+
+    console.log('🔎 Search category detection:', {
+      isPropType,
+      isSport,
+      isPlayer,
+      isTeam,
+      isBetType
+    });
 
     // Check if searching by day of week
     const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -812,10 +822,13 @@ const Search = () => {
       // Check cache first
       const cacheKey = trimmedQuery.toLowerCase();
       if (searchCache[cacheKey]) {
+        console.log('⚡ Using cached results for:', trimmedQuery);
+        console.log('💡 TIP: Clear cache by refreshing page to test new logic');
         setSearchResults(searchCache[cacheKey]);
         return;
       }
 
+      console.log('🔄 Running fresh search for:', trimmedQuery);
       const results = analyzeSearchQuery(trimmedQuery);
       setSearchResults(results);
 
