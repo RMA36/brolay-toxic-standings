@@ -252,4 +252,20 @@ npx vite-bundle-visualizer
 ---
 
 **Session Status**: ✅ PHASES 1-3 COMPLETE
-**Next Steps**: Verify build, optionally implement Phase 4-5
+**Build Status**: ✅ Verified (committed and pushed Jan 28, 2026)
+**Next Steps**: Optionally implement Phase 4-5 (React.memo, useCallback)
+
+---
+
+## POST-IMPLEMENTATION BUG FIXES (January 28, 2026)
+
+After Track 3 was committed, several dual-schema issues were discovered and fixed:
+
+| Issue | Root Cause | Fix | Commit |
+|-------|-----------|-----|--------|
+| Search page crash | `getPicksArray()` called `Object.values()` on array | Check `Array.isArray()` first | `5baee2f` |
+| Payments page crash | Same `getPicksArray()` issue | Same fix | `5baee2f` |
+| Payments filter broken | `applyFilters` used `parlay.placedBy` directly | Use `getSubmittedBy()` helper | `5baee2f` |
+| Bet type search no results | `isBetType` detected but no handler existed | Added `betType` search category | `3a205d8` |
+
+All fixes are committed and pushed to main.

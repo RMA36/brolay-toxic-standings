@@ -273,14 +273,15 @@ If issues are discovered with the new schema:
 **End Date**: February 27, 2026
 
 ### What to Monitor
-- [ ] All pages load correctly
+- [x] All pages load correctly (fixed Jan 28 - Search, Payments crashes resolved)
 - [ ] New brolays save correctly
 - [ ] Editing existing brolays works
 - [ ] Statistics calculate correctly
-- [ ] Filters work properly
+- [x] Filters work properly (fixed Jan 28 - Payments placedBy filter)
 - [ ] ESPN auto-update functions
-- [ ] No console errors
+- [x] No console errors (fixed Jan 28 - TypeError crashes resolved)
 - [ ] No data loss or corruption
+- [x] Search/Insights returns results (fixed Jan 28 - bet type search added)
 
 ### After Observation Period
 Once stable for 30 days:
@@ -319,6 +320,21 @@ getPickActualStats(pick)   // Returns 'outcome.actualStats' or 'actualStats'
 ### Issue 3: Missing Metadata Fields
 **Problem**: migrated-data.json had different metadata structure than restore script expected
 **Solution**: Added `exportedAt` and `collection` fields to metadata
+
+### Issue 4: getPicksArray() Crashed on Array-Type Picks (Post-Migration)
+**Problem**: `getPicksArray()` called `Object.values()` on the picks field, but new schema stores `picks` as an **array** (not an object). This crashed Search and Payments pages with `TypeError: Cannot convert undefined or null to object`.
+**Solution**: Updated `getPicksArray()` to check `Array.isArray(parlay.picks)` first, then fall back to `Object.values()` for object-type picks.
+**Commit**: `5baee2f` (January 28, 2026)
+
+### Issue 5: Payments Page Used Old Field Names Directly
+**Problem**: `applyFilters()` in Payments.jsx used `parlay.placedBy` directly instead of `getSubmittedBy(parlay)`, breaking the "Placed By" filter with new schema data.
+**Solution**: Updated to use `getSubmittedBy()` dual-schema helper.
+**Commit**: `5baee2f` (January 28, 2026)
+
+### Issue 6: Search/Insights Had No Bet Type Search Handler
+**Problem**: The search logic detected `isBetType` but had no handler for it. Searches like "spread" or "moneyline" returned no results.
+**Solution**: Added a `betType` search category with player/sport breakdowns, insights generation, and render support.
+**Commit**: `3a205d8` (January 28, 2026)
 
 ---
 

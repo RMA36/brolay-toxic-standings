@@ -242,12 +242,24 @@ Tracks 1-3 are complete! Next steps:
 - Git commits after each extraction allow easy rollback
 - Large page components (1,000+ lines) can often be broken down further
 
+### Post-Track 2/3 Bug Fixes (January 28, 2026)
+After Tracks 2-3 were completed, several pages still referenced old schema fields directly instead of using dual-schema helpers. Issues found and fixed:
+- `getPicksArray()` crashed when `picks` was an array (new schema) instead of an object
+- Payments `applyFilters` used `parlay.placedBy` instead of `getSubmittedBy(parlay)`
+- Search/Insights had no handler for bet type queries (e.g., "spread", "moneyline")
+- Force Refresh button removed from Payments page
+- All fixes committed: `5baee2f`, `3a205d8`
+
+### Remaining Known Issues
+- PWA service worker may cache old builds; users need hard refresh (Ctrl+Shift+R) or service worker unregister after deploys
+- Search cache may hold stale results from before fixes; cleared on page refresh
+
 ### Technical Debt Identified
 - Tailwind CDN should be replaced with PostCSS build for production
-- Some helper functions still in App.jsx could be extracted to utils
 - Calendar logic could be extracted to a custom hook
 - GroupDashboard could be split into smaller sub-components
 - FilterBar could use React Hook Form for better form management
+- Several pages may still have direct old-schema field access that hasn't been caught yet (audit recommended)
 
 ### Dependencies Added
 - None (all refactoring used existing dependencies)
