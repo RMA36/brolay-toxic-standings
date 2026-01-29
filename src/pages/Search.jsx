@@ -2,7 +2,7 @@ import React from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
-import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult } from '../utils/formatters';
+import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult, getPickPropType, getPickPlayerPosition, getPickPlayerTeam } from '../utils/formatters';
 import { tokenizeQuery, findBestTeamMatch, filterByRelevance } from '../searchUtils';
 import { SPORTS, PLAYERS, PICK_TYPES, PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
 import { formatComboDescription } from '../insightsHelper';
@@ -204,7 +204,9 @@ const Search = () => {
           const result = getPickResult(pick);
           if (result === 'pending') return;
 
-          const pickPropLower = (pick.propType || pick.betType || '').toLowerCase();
+          // Use the new helper to extract prop type consistently
+          const pickPropType = getPickPropType(pick);
+          const pickPropLower = (pickPropType || '').toLowerCase();
           const matchesProp = pickPropLower.includes(lowerQuery) ||
                              lowerQuery.includes(pickPropLower) ||
                              (matchedPropType && pickPropLower.includes(matchedPropType.toLowerCase()));

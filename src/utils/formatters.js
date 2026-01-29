@@ -294,3 +294,56 @@ export const getCurrentETDate = () => {
   const day = String(etDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 };
+
+/**
+ * Get player position from pick (supports both schemas)
+ */
+export const getPickPlayerPosition = (pick) => {
+  // Old schema: direct field
+  if (pick.playerPosition) return pick.playerPosition;
+
+  // New schema: extract from entities
+  if (pick.entities && pick.entities.length > 0) {
+    const primary = pick.entities.find(e => e.role === 'primary' && e.entityType === 'player') ||
+                    pick.entities.find(e => e.entityType === 'player');
+    if (primary && primary.position) return primary.position;
+  }
+
+  return null;
+};
+
+/**
+ * Get player team from pick (supports both schemas)
+ */
+export const getPickPlayerTeam = (pick) => {
+  // Old schema: direct field
+  if (pick.playerTeam) return pick.playerTeam;
+
+  // New schema: extract from entities
+  if (pick.entities && pick.entities.length > 0) {
+    const primary = pick.entities.find(e => e.role === 'primary' && e.entityType === 'player') ||
+                    pick.entities.find(e => e.entityType === 'player');
+    if (primary && primary.team) return primary.team;
+  }
+
+  return null;
+};
+
+/**
+ * Get prop type from pick (supports both schemas)
+ */
+export const getPickPropType = (pick) => {
+  // Old schema: direct propType field
+  if (pick.propType) return pick.propType;
+
+  // New schema: extract from line.statType
+  if (pick.line && pick.line.statType) return pick.line.statType;
+
+  // New schema: extract from entities
+  if (pick.entities && pick.entities.length > 0) {
+    const primary = pick.entities.find(e => e.role === 'primary') || pick.entities[0];
+    if (primary && primary.statType) return primary.statType;
+  }
+
+  return null;
+};

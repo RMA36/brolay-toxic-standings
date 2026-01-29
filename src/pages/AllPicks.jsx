@@ -2,7 +2,7 @@ import React from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS, SPORTS, PICK_TYPES, COMMON_PROP_TYPES } from '../constants/sports';
 import Button from '../components/common/Button';
-import { formatDateForDisplay, formatBetDescription, normalizePropType, getPicksArray, getPickBigGuy, getPickResult, getPickActualStats, getSubmittedBy } from '../utils/formatters';
+import { formatDateForDisplay, formatBetDescription, normalizePropType, getPicksArray, getPickBigGuy, getPickResult, getPickActualStats, getSubmittedBy, getPickPropType, getPickPlayerPosition, getPickPlayerTeam } from '../utils/formatters';
 
 /**
  * AllPicks Page Component
@@ -71,12 +71,13 @@ const AllPicks = () => {
     // Bet Type filter
     if (filters.betType && pick.betType !== filters.betType) return false;
 
-    // Prop Type filter (only applies to Prop Bets)
+    // Prop Type filter (works with both old and new schema)
     if (filters.propType) {
-      if (pick.betType !== 'Prop Bet') return false;
-      if (!pick.propType) return false;
+      // Use helper function to extract prop type consistently
+      const pickPropType = getPickPropType(pick);
+      if (!pickPropType) return false;
 
-      const normalizedPickProp = normalizePropType(pick.propType);
+      const normalizedPickProp = normalizePropType(pickPropType);
       const normalizedFilterProp = normalizePropType(filters.propType);
 
       if (!normalizedPickProp.includes(normalizedFilterProp) &&
@@ -87,9 +88,14 @@ const AllPicks = () => {
 
     if (filters.teamPlayer) {
       const normalizedFilter = filters.teamPlayer.toLowerCase();
+      // Also check playerTeam and playerPosition fields for new schema support
+      const pickPlayerTeam = getPickPlayerTeam(pick);
+      const pickPlayerPosition = getPickPlayerPosition(pick);
       const hasTeamPlayer = (pick.team && pick.team.toLowerCase().includes(normalizedFilter)) ||
                             (pick.awayTeam && pick.awayTeam.toLowerCase().includes(normalizedFilter)) ||
-                            (pick.homeTeam && pick.homeTeam.toLowerCase().includes(normalizedFilter));
+                            (pick.homeTeam && pick.homeTeam.toLowerCase().includes(normalizedFilter)) ||
+                            (pickPlayerTeam && pickPlayerTeam.toLowerCase().includes(normalizedFilter)) ||
+                            (pickPlayerPosition && pickPlayerPosition.toLowerCase().includes(normalizedFilter));
       if (!hasTeamPlayer) return false;
     }
 
