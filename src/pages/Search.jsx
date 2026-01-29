@@ -217,13 +217,15 @@ const Search = () => {
           const pickPositionLower = (pickPlayerPosition || '').toLowerCase();
           const pickTeamLower = (pickPlayerTeam || '').toLowerCase();
 
-          const matchesProp = pickPropLower.includes(lowerQuery) ||
-                             lowerQuery.includes(pickPropLower) ||
-                             (matchedPropType && pickPropLower.includes(matchedPropType.toLowerCase())) ||
-                             pickPositionLower.includes(lowerQuery) ||
-                             lowerQuery.includes(pickPositionLower) ||
-                             pickTeamLower.includes(lowerQuery) ||
-                             lowerQuery.includes(pickTeamLower);
+          // Fix: Only match if the values are non-empty to avoid false matches
+          const matchesProp =
+            (pickPropLower && pickPropLower.includes(lowerQuery)) ||
+            (pickPropLower && lowerQuery.includes(pickPropLower)) ||
+            (matchedPropType && pickPropLower && pickPropLower.includes(matchedPropType.toLowerCase())) ||
+            (pickPositionLower && pickPositionLower.includes(lowerQuery)) ||
+            (pickPositionLower && lowerQuery.includes(pickPositionLower)) ||
+            (pickTeamLower && pickTeamLower.includes(lowerQuery)) ||
+            (pickTeamLower && lowerQuery.includes(pickTeamLower));
 
           if (matchesProp) {
             console.log('  ✅ MATCH:', {
