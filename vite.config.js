@@ -84,12 +84,18 @@ export default defineConfig({
         clientsClaim: true
       },
       devOptions: {
-        enabled: true,
+        enabled: false, // Disable PWA in dev to prevent aggressive caching
         type: 'module'
       }
     })
   ],
   base: '/',
+  server: {
+    // Prevent aggressive caching in development
+    headers: {
+      'Cache-Control': 'no-store'
+    }
+  },
   build: {
     sourcemap: false,
     rollupOptions: {

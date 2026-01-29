@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Unregister Service Worker</title>
+</head>
+<body>
+  <h1>Unregistering Service Workers...</h1>
+  <p id="status">Working...</p>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) {
+          registration.unregister();
+        }
+        document.getElementById('status').innerHTML = 'Service workers unregistered! You can close this page and refresh your app.';
+      });
+    } else {
+      document.getElementById('status').innerHTML = 'No service workers found.';
+    }
+  </script>
+</body>
+</html>
