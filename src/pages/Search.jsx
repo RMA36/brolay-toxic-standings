@@ -348,6 +348,84 @@ const Search = () => {
       return results;
     }
 
+    // Bet type search
+    if (isBetType && !isTeam && !isPropType) {
+      results.matchedCategory = 'betType';
+
+      const matchedBetType = betTypes.find(type =>
+        lowerQuery.includes(type.toLowerCase())
+      );
+
+      const matchingPicks = [];
+      parlays.forEach(parlay => {
+        getPicksArray(parlay).forEach(pick => {
+          const bigGuy = getPickBigGuy(pick);
+          const result = getPickResult(pick);
+          if (!bigGuy || !pick.betType) return;
+          if (result === 'pending') return;
+          if (pick.betType === matchedBetType) {
+            matchingPicks.push({
+              ...pick,
+              player: bigGuy,
+              result: result,
+              parlayDate: parlay.date
+            });
+          }
+        });
+      });
+
+      // Apply relevance filtering for specific queries
+      const filteredPicks = isSport || isPlayer ?
+        filterByRelevance(matchingPicks, searchContext, 8) : matchingPicks;
+
+      const stats = {
+        betType: matchedBetType,
+        total: filteredPicks.length,
+        wins: filteredPicks.filter(p => p.result === 'win').length,
+        losses: filteredPicks.filter(p => p.result === 'loss').length,
+        pushes: filteredPicks.filter(p => p.result === 'push').length,
+        winPct: 0,
+        byPlayer: {},
+        bySport: {}
+      };
+
+      const adjustedWins = stats.wins + (stats.pushes * 0.5);
+      stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
+
+      filteredPicks.forEach(pick => {
+        if (!pick.player) return;
+        if (!stats.byPlayer[pick.player]) {
+          stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        }
+        if (pick.sport && !stats.bySport[pick.sport]) {
+          stats.bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        }
+
+        if (pick.result === 'win') {
+          stats.byPlayer[pick.player].wins++;
+          if (pick.sport) stats.bySport[pick.sport].wins++;
+        } else if (pick.result === 'loss') {
+          stats.byPlayer[pick.player].losses++;
+          if (pick.sport) stats.bySport[pick.sport].losses++;
+        } else if (pick.result === 'push') {
+          stats.byPlayer[pick.player].pushes++;
+          if (pick.sport) stats.bySport[pick.sport].pushes++;
+        }
+        stats.byPlayer[pick.player].total++;
+        if (pick.sport) stats.bySport[pick.sport].total++;
+      });
+
+      stats.recentPicks = filteredPicks
+        .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
+        .slice(0, 10);
+
+      results.data = stats;
+      results.searchContext = searchContext;
+
+      if (filteredPicks.length === 0) return null;
+      return results;
+    }
+
     // Sport search with strict matching
     if (isSport) {
       results.matchedCategory = 'sport';
@@ -595,6 +673,42 @@ const Search = () => {
           const adjustedWins = bestPlayer[1].wins + (bestPlayer[1].pushes * 0.5);
           const winRate = ((adjustedWins / bestPlayer[1].total) * 100).toFixed(1);
           insights.push(`🔥 ${bestPlayer[0]} has the best record on ${data.team} at ${winRate}%`);
+        }
+      }
+
+    } else if (matchedCategory === 'betType') {
+      // Bet type insights
+      const bestPlayer = Object.entries(data.byPlayer)
+        .filter(([_, stats]) => stats.total >= 3)
+        .sort((a, b) => {
+          const aAdjusted = a[1].wins + (a[1].pushes * 0.5);
+          const bAdjusted = b[1].wins + (b[1].pushes * 0.5);
+          const aRate = a[1].total > 0 ? (aAdjusted / a[1].total) : 0;
+          const bRate = b[1].total > 0 ? (bAdjusted / b[1].total) : 0;
+          return bRate - aRate;
+        })[0];
+
+      if (bestPlayer) {
+        const adjustedWins = bestPlayer[1].wins + (bestPlayer[1].pushes * 0.5);
+        const winRate = ((adjustedWins / bestPlayer[1].total) * 100).toFixed(1);
+        insights.push(`⭐ ${bestPlayer[0]} leads in ${data.betType} with ${winRate}% win rate`);
+      }
+
+      if (Object.keys(data.bySport).length > 1) {
+        const bestSport = Object.entries(data.bySport)
+          .filter(([_, stats]) => stats.total >= 3)
+          .sort((a, b) => {
+            const aAdjusted = a[1].wins + (a[1].pushes * 0.5);
+            const bAdjusted = b[1].wins + (b[1].pushes * 0.5);
+            const aRate = a[1].total > 0 ? (aAdjusted / a[1].total) : 0;
+            const bRate = b[1].total > 0 ? (bAdjusted / b[1].total) : 0;
+            return bRate - aRate;
+          })[0];
+
+        if (bestSport) {
+          const adjustedWins = bestSport[1].wins + (bestSport[1].pushes * 0.5);
+          const winRate = ((adjustedWins / bestSport[1].total) * 100).toFixed(1);
+          insights.push(`🏆 ${data.betType} works best in ${bestSport[0]} at ${winRate}%`);
         }
       }
 
@@ -965,6 +1079,31 @@ const Search = () => {
                   })}
                 </div>
               </div>
+
+              {/* Show sport breakdown for bet type searches */}
+              {searchResults.matchedCategory === 'betType' && searchResults.data.bySport && Object.keys(searchResults.data.bySport).length > 0 && (
+                <div className="mb-6">
+                  <h4 className="font-semibold text-lg mb-3 text-yellow-400">🏈 By Sport</h4>
+                  <div className="space-y-2">
+                    {Object.entries(searchResults.data.bySport).map(([sport, stats]) => {
+                      const adjustedWins = stats.wins + (stats.pushes * 0.5);
+                      const winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
+                      const recordDisplay = stats.pushes > 0
+                        ? `${stats.wins}-${stats.losses}-${stats.pushes}`
+                        : `${stats.wins}-${stats.losses}`;
+
+                      return (
+                        <div key={sport} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                          <span className="font-semibold text-white">{sport}</span>
+                          <span className="text-sm text-gray-300">
+                            {recordDisplay} ({winPct}%)
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
