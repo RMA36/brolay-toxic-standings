@@ -160,9 +160,11 @@ const Search = () => {
       stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
 
       filteredPicks.forEach(pick => {
-        if (!pick.player || !pick.betType || !pick.sport) return;
-        if (!stats.byPlayer[pick.player]) {
-          stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        const bigGuy = getPickBigGuy(pick);
+        const result = getPickResult(pick);
+        if (!bigGuy || !pick.betType || !pick.sport) return;
+        if (!stats.byPlayer[bigGuy]) {
+          stats.byPlayer[bigGuy] = { wins: 0, losses: 0, pushes: 0, total: 0 };
         }
         if (!stats.bySport[pick.sport]) {
           stats.bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
@@ -171,20 +173,20 @@ const Search = () => {
           stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
         }
 
-        if (pick.result === 'win') {
-          stats.byPlayer[pick.player].wins++;
+        if (result === 'win') {
+          stats.byPlayer[bigGuy].wins++;
           stats.bySport[pick.sport].wins++;
           stats.byBetType[pick.betType].wins++;
-        } else if (pick.result === 'loss') {
-          stats.byPlayer[pick.player].losses++;
+        } else if (result === 'loss') {
+          stats.byPlayer[bigGuy].losses++;
           stats.bySport[pick.sport].losses++;
           stats.byBetType[pick.betType].losses++;
-        } else if (pick.result === 'push') {
-          stats.byPlayer[pick.player].pushes++;
+        } else if (result === 'push') {
+          stats.byPlayer[bigGuy].pushes++;
           stats.bySport[pick.sport].pushes++;
           stats.byBetType[pick.betType].pushes++;
         }
-        stats.byPlayer[pick.player].total++;
+        stats.byPlayer[bigGuy].total++;
         stats.bySport[pick.sport].total++;
         stats.byBetType[pick.betType].total++;
       });
@@ -280,18 +282,20 @@ const Search = () => {
       stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
 
       filteredPicks.forEach(pick => {
-        if (!pick.player) return;
-        if (!stats.byPlayer[pick.player]) {
-          stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        const bigGuy = getPickBigGuy(pick);
+        const result = getPickResult(pick);
+        if (!bigGuy) return;
+        if (!stats.byPlayer[bigGuy]) {
+          stats.byPlayer[bigGuy] = { wins: 0, losses: 0, pushes: 0, total: 0 };
         }
-        if (pick.result === 'win') {
-          stats.byPlayer[pick.player].wins++;
-        } else if (pick.result === 'loss') {
-          stats.byPlayer[pick.player].losses++;
-        } else if (pick.result === 'push') {
-          stats.byPlayer[pick.player].pushes++;
+        if (result === 'win') {
+          stats.byPlayer[bigGuy].wins++;
+        } else if (result === 'loss') {
+          stats.byPlayer[bigGuy].losses++;
+        } else if (result === 'push') {
+          stats.byPlayer[bigGuy].pushes++;
         }
-        stats.byPlayer[pick.player].total++;
+        stats.byPlayer[bigGuy].total++;
       });
 
       stats.recentPicks = filteredPicks
@@ -358,25 +362,27 @@ const Search = () => {
       stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
 
       filteredPicks.forEach(pick => {
-        if (!pick.player || !pick.betType) return;
-        if (!stats.byPlayer[pick.player]) {
-          stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        const bigGuy = getPickBigGuy(pick);
+        const result = getPickResult(pick);
+        if (!bigGuy || !pick.betType) return;
+        if (!stats.byPlayer[bigGuy]) {
+          stats.byPlayer[bigGuy] = { wins: 0, losses: 0, pushes: 0, total: 0 };
         }
         if (!stats.byBetType[pick.betType]) {
           stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
         }
 
-        if (pick.result === 'win') {
-          stats.byPlayer[pick.player].wins++;
+        if (result === 'win') {
+          stats.byPlayer[bigGuy].wins++;
           stats.byBetType[pick.betType].wins++;
-        } else if (pick.result === 'loss') {
-          stats.byPlayer[pick.player].losses++;
+        } else if (result === 'loss') {
+          stats.byPlayer[bigGuy].losses++;
           stats.byBetType[pick.betType].losses++;
-        } else if (pick.result === 'push') {
-          stats.byPlayer[pick.player].pushes++;
+        } else if (result === 'push') {
+          stats.byPlayer[bigGuy].pushes++;
           stats.byBetType[pick.betType].pushes++;
         }
-        stats.byPlayer[pick.player].total++;
+        stats.byPlayer[bigGuy].total++;
         stats.byBetType[pick.betType].total++;
       });
 
@@ -512,25 +518,27 @@ const Search = () => {
       stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
 
       filteredPicks.forEach(pick => {
-        if (!pick.player || !pick.betType) return;
-        if (!stats.byPlayer[pick.player]) {
-          stats.byPlayer[pick.player] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+        const bigGuy = getPickBigGuy(pick);
+        const result = getPickResult(pick);
+        if (!bigGuy || !pick.betType) return;
+        if (!stats.byPlayer[bigGuy]) {
+          stats.byPlayer[bigGuy] = { wins: 0, losses: 0, pushes: 0, total: 0 };
         }
         if (!stats.byBetType[pick.betType]) {
           stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
         }
 
-        if (pick.result === 'win') {
-          stats.byPlayer[pick.player].wins++;
+        if (result === 'win') {
+          stats.byPlayer[bigGuy].wins++;
           stats.byBetType[pick.betType].wins++;
-        } else if (pick.result === 'loss') {
-          stats.byPlayer[pick.player].losses++;
+        } else if (result === 'loss') {
+          stats.byPlayer[bigGuy].losses++;
           stats.byBetType[pick.betType].losses++;
-        } else if (pick.result === 'push') {
-          stats.byPlayer[pick.player].pushes++;
+        } else if (result === 'push') {
+          stats.byPlayer[bigGuy].pushes++;
           stats.byBetType[pick.betType].pushes++;
         }
-        stats.byPlayer[pick.player].total++;
+        stats.byPlayer[bigGuy].total++;
         stats.byBetType[pick.betType].total++;
       });
 
@@ -587,6 +595,7 @@ const Search = () => {
       stats.winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
 
       filteredPicks.forEach(pick => {
+        const result = getPickResult(pick);
         if (!pick.sport || !pick.betType) return;
         if (!stats.bySport[pick.sport]) {
           stats.bySport[pick.sport] = { wins: 0, losses: 0, pushes: 0, total: 0 };
@@ -595,13 +604,13 @@ const Search = () => {
           stats.byBetType[pick.betType] = { wins: 0, losses: 0, pushes: 0, total: 0 };
         }
 
-        if (pick.result === 'win') {
+        if (result === 'win') {
           stats.bySport[pick.sport].wins++;
           stats.byBetType[pick.betType].wins++;
-        } else if (pick.result === 'loss') {
+        } else if (result === 'loss') {
           stats.bySport[pick.sport].losses++;
           stats.byBetType[pick.betType].losses++;
-        } else if (pick.result === 'push') {
+        } else if (result === 'push') {
           stats.bySport[pick.sport].pushes++;
           stats.byBetType[pick.betType].pushes++;
         }
@@ -1313,28 +1322,32 @@ const Search = () => {
             <div>
               <h4 className="font-semibold text-lg mb-3 text-yellow-400">📅 Recent Picks</h4>
               <div className="space-y-2">
-                {searchResults.data.recentPicks.map((pick, idx) => (
+                {searchResults.data.recentPicks.map((pick, idx) => {
+                  const result = getPickResult(pick);
+                  const bigGuy = getPickBigGuy(pick);
+                  return (
                   <div key={idx} className="p-3 bg-gray-900/50 rounded text-sm border border-gray-700">
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-semibold text-white">{formatDateForDisplay(pick.parlayDate)}</span>
                       <span className={`font-semibold ${
-                        pick.result === 'win' ? 'text-green-400' :
-                        pick.result === 'loss' ? 'text-red-400' :
-                        pick.result === 'push' ? 'text-yellow-400' :
+                        result === 'win' ? 'text-green-400' :
+                        result === 'loss' ? 'text-red-400' :
+                        result === 'push' ? 'text-yellow-400' :
                         'text-gray-400'
                       }`}>
-                        {pick.result.toUpperCase()}
+                        {result.toUpperCase()}
                       </span>
                     </div>
                     <div className="text-gray-300">
-                      {pick.player} - {pick.sport} - {pick.team || `${pick.awayTeam} @ ${pick.homeTeam}`}
+                      {bigGuy} - {pick.sport} - {pick.team || `${pick.awayTeam} @ ${pick.homeTeam}`}
                       {pick.betType === 'Prop Bet' && ` - ${pick.propType} ${pick.overUnder} ${pick.line}`}
                     </div>
                     {pick.actualStats && (
                       <div className="text-blue-400 mt-1">[{pick.actualStats}]</div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}

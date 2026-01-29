@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, useMemo, useEffect, useCallback } from 'react';
 import { getFirestore, deleteField } from 'firebase/firestore';
 import { useBrolays } from '../hooks/useBrolays';
 import { useESPN } from '../hooks/useESPN';
@@ -191,7 +191,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   // Mobile detection and touch handlers are now in UIContext
 
   // Parlay management handlers
-  const handleToggleSettlement = async (parlayId) => {
+  const handleToggleSettlement = useCallback(async (parlayId) => {
     console.log('🔄 Attempting to toggle settlement for parlay ID:', parlayId);
 
     const parlayToUpdate = parlays.find(p => p.id === parlayId);
@@ -225,9 +225,9 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
       alert(`Error: ${error.message}`);
       setSaving(false);
     }
-  };
+  }, [parlays, updateBrolay, setSaving]);
 
-  const handleDeleteParlay = async (parlayId) => {
+  const handleDeleteParlay = useCallback(async (parlayId) => {
     if (window.confirm('Are you sure you want to delete this parlay?')) {
       const parlayToDelete = parlays.find(p => p.id === parlayId);
 
@@ -239,7 +239,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
         }
       }
     }
-  };
+  }, [parlays, deleteBrolay]);
 
   const handleSaveEditedParlay = async (editedParlay) => {
     try {
@@ -316,7 +316,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     }
   };
 
-  const handleAutoUpdate = async () => {
+  const handleAutoUpdate = useCallback(async () => {
     const result = await autoUpdatePendingPicks(parlays, updateBrolay);
 
     if (result.success) {
@@ -328,7 +328,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     } else {
       alert(`Error updating picks: ${result.error || 'Please try again.'}`);
     }
-  };
+  }, [parlays, autoUpdatePendingPicks, updateBrolay]);
 
   // Autocomplete suggestion helpers
   const getTeamSuggestions = (input, sport) => {

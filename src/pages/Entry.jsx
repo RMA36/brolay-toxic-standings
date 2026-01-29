@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { AlertCircle, PlusCircle } from 'lucide-react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS, SPORTS, PICK_TYPES, PRELOADED_TEAMS, COMMON_PROP_TYPES, PRELOADED_PLAYERS } from '../constants/sports';
-import { formatDateForDisplay, getCurrentETDate } from '../utils/formatters';
+import { formatDateForDisplay, getCurrentETDate, getPickResult, getPickBigGuy, getPicksArray } from '../utils/formatters';
 import { saveLearnedData, createDefaultParticipant } from '../utils/actionHandlers';
 import Button from '../components/common/Button';
 import PickEntry from '../components/forms/PickEntry';
@@ -62,18 +62,11 @@ const Entry = () => {
       return String(bKey).localeCompare(String(aKey));
     });
 
-    // Helper to get result from pick (supports both schemas)
-    const getPickResult = (pick) => pick.outcome?.status || pick.result;
-    // Helper to get Big Guy from pick (supports both schemas)
-    const getPickBigGuy = (pick) => pick.bigGuy || pick.player;
-
     // Look for the most recent brolay that either:
     // 1. Had exactly 1 loss (And-1) - any number of participants
     // 2. Was a winning 4-person brolay
     for (const parlay of sortedParlays) {
-      // Support both new schema (picks) and old schema (participants)
-      const picksObj = parlay.picks || parlay.participants;
-      const picks = Object.values(picksObj || {});
+      const picks = getPicksArray(parlay);
 
       const losers = picks.filter(p => getPickResult(p) === 'loss');
       const winners = picks.filter(p => getPickResult(p) === 'win');

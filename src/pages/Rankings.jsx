@@ -127,8 +127,9 @@ const Rankings = () => {
       let streakEnd = null;
 
       picks.forEach((pick, idx) => {
-        const isWin = pick.result === 'win';
-        const isPush = pick.result === 'push';
+        const result = getPickResult(pick);
+        const isWin = result === 'win';
+        const isPush = result === 'push';
 
         if (isPush) return;
 

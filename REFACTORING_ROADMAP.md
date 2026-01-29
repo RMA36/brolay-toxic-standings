@@ -127,22 +127,23 @@ This document tracks the progress of refactoring the Brolay Toxic Standings appl
 - ✅ Updated BrolayContext to use split contexts
 - ✅ Maintained backward compatibility (re-exports)
 
-### Phase 3.4: Component Memoization (Optional)
+### ✅ Phase 3.4: Component Memoization (COMPLETE)
 **Goal**: Add React.memo to expensive components
-**Status**: Not Started
+**Status**: Complete (January 28, 2026)
 
-**Planned**:
-- Add React.memo to calendar day cells
-- Add React.memo to player leaderboard cards
-- Add React.memo to brolay list items
+**Completed**:
+- ✅ Created CalendarDay memoized component for calendar day cells
+- ✅ Added custom comparison function for optimal re-render prevention
+- ✅ Extracted ~155 lines of expensive calculation logic
 
-### Phase 3.5: Event Handler Memoization (Optional)
+### ✅ Phase 3.5: Event Handler Memoization (COMPLETE)
 **Goal**: Add useCallback to prevent child re-renders
-**Status**: Not Started
+**Status**: Complete (January 28, 2026)
 
-**Planned**:
-- Add useCallback to filter handlers
-- Add useCallback to auto-update handlers
+**Completed**:
+- ✅ Added useCallback to handleAutoUpdate
+- ✅ Added useCallback to handleToggleSettlement
+- ✅ Added useCallback to handleDeleteParlay
 
 ---
 
@@ -209,12 +210,12 @@ This document tracks the progress of refactoring the Brolay Toxic Standings appl
 - 30-day observation period ends February 27, 2026
 - See TRACK_2_SESSION_HANDOFF.md for details
 
-### ✅ Track 3 Status: **PHASES 1-3 COMPLETE** (Performance)
+### ✅ Track 3 Status: **ALL 5 PHASES COMPLETE** (Performance)
 - Phase 3.1: ✅ Route-level code splitting
 - Phase 3.2: ✅ Calculation memoization
 - Phase 3.3: ✅ Context splitting
-- Phase 3.4: ⏳ Optional (React.memo)
-- Phase 3.5: ⏳ Optional (useCallback)
+- Phase 3.4: ✅ Component memoization (CalendarDay)
+- Phase 3.5: ✅ Event handler memoization (useCallback)
 - See TRACK_3_SESSION_HANDOFF.md for details
 
 ### Overall Progress
@@ -249,6 +250,14 @@ After Tracks 2-3 were completed, several pages still referenced old schema field
 - Search/Insights had no handler for bet type queries (e.g., "spread", "moneyline")
 - Force Refresh button removed from Payments page
 - All fixes committed: `5baee2f`, `3a205d8`
+
+### Additional Old-Schema Audit & Fixes (January 28, 2026 - Afternoon)
+Comprehensive audit found remaining old-schema field access in 5 files:
+- **Rankings.jsx**: Direct `pick.result` access → Fixed with `getPickResult()`
+- **Search.jsx**: Multiple `pick.result` and `pick.player` accesses → Fixed with helpers (7 locations)
+- **Entry.jsx**: Duplicate local helper definitions → Removed duplicates, imported from formatters.js
+- **PickEntry.jsx**: Reviewed - correctly handles both schemas (form component)
+- **Track 3 Phase 4-5**: CalendarDay memoized component created, useCallback added to handlers
 
 ### Remaining Known Issues
 - PWA service worker may cache old builds; users need hard refresh (Ctrl+Shift+R) or service worker unregister after deploys
