@@ -8,6 +8,13 @@
 
 # production
 /build
+/dist
+
+# backups
+/backups
+
+# temporary files
+/public/temp
 
 # misc
 .DS_Store

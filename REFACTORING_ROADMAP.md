@@ -3,6 +3,8 @@
 ## Overview
 This document tracks the progress of refactoring the Brolay Toxic Standings application to improve maintainability, performance, and code organization.
 
+**📌 Starting a New Session?** See [NEW_SESSION_START_PROMPT.md](./NEW_SESSION_START_PROMPT.md) for ready-to-use prompts to continue work.
+
 ---
 
 ## 🎯 Track 1: Code Organization & Modularization
@@ -268,7 +270,7 @@ Comprehensive audit found remaining old-schema field access in 5 files:
 - Calendar logic could be extracted to a custom hook
 - GroupDashboard could be split into smaller sub-components
 - FilterBar could use React Hook Form for better form management
-- Several pages may still have direct old-schema field access that hasn't been caught yet (audit recommended)
+- Build artifacts (dist/, backups/) should be added to .gitignore
 
 ### Dependencies Added
 - None (all refactoring used existing dependencies)
