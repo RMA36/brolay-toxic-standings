@@ -78,6 +78,17 @@ export const useESPN = () => {
     const awayScore = parseInt(awayComp.score);
     const homeWon = homeScore > awayScore;
 
+    console.log('🎯 determineMoneylineResult DEBUG:', {
+      betTeam: team,
+      homeTeam: homeComp.team.displayName,
+      awayTeam: awayComp.team.displayName,
+      homeScore,
+      awayScore,
+      teamIsHome,
+      homeWon,
+      willReturn: teamIsHome ? (homeWon ? 'win' : 'loss') : (homeWon ? 'loss' : 'win')
+    });
+
     if (teamIsHome) {
       return homeWon ? 'win' : 'loss';
     } else {
