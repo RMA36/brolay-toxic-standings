@@ -24,16 +24,44 @@ export const useESPN = () => {
     // Check for exact match first
     if (normalizedBet === normalizedApi) return true;
 
-    // Check if all words from bet team are in API team (for partial matches)
-    const betWords = normalizedBet.split(' ').filter(word =>
-      !['state', 'university', 'college', 'of', 'the'].includes(word)
-    );
-    const apiWords = normalizedApi.split(' ').filter(word =>
-      !['state', 'university', 'college', 'of', 'the'].includes(word)
-    );
+    // Split into words (DON'T filter out common words yet)
+    const betWords = normalizedBet.split(' ');
+    const apiWords = normalizedApi.split(' ');
+
+    // CRITICAL FIX: Don't match if bet team is a SUBSET of API team's location
+    // Example: "Michigan" should NOT match "Michigan State Spartans"
+    // because "Michigan State" is a different location than "Michigan"
+
+    // Check if betTeam is trying to match a "State" variant
+    // If API has both location words (e.g., "Michigan State"), bet must have them too
+    for (let i = 0; i < apiWords.length - 1; i++) {
+      if (apiWords[i + 1] === 'state') {
+        // Found "X State" in API (e.g., "Michigan State")
+        const locationWords = [apiWords[i], apiWords[i + 1]]; // ["michigan", "state"]
+
+        // Check if bet is trying to match just the first part
+        if (betWords.length === 1 && betWords[0] === apiWords[i]) {
+          // Bet is "Michigan", API is "Michigan State" - DON'T MATCH
+          return false;
+        }
+
+        // If bet has both words, that's OK (e.g., "Michigan State" matches "Michigan State Spartans")
+        if (betWords.includes(apiWords[i]) && betWords.includes('state')) {
+          // Continue checking other words
+          break;
+        }
+      }
+    }
+
+    // Filter out common words for the rest of the matching
+    const commonWords = ['university', 'college', 'of', 'the'];
+    const betWordsFiltered = betWords.filter(word => !commonWords.includes(word));
+    const apiWordsFiltered = apiWords.filter(word => !commonWords.includes(word));
 
     // All significant words from bet must appear in API
-    return betWords.every(word => apiWords.some(apiWord => apiWord.includes(word) || word.includes(apiWord)));
+    return betWordsFiltered.every(word =>
+      apiWordsFiltered.some(apiWord => apiWord.includes(word) || word.includes(apiWord))
+    );
   };
 
   // Map sport to ESPN API endpoint

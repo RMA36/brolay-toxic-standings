@@ -19,8 +19,14 @@ export const matchPlayerName = (pickPlayer, apiPlayer) => {
 
   if (normalizedPick === normalizedApi) return true;
 
-  const pickParts = normalizedPick.split(' ');
-  const apiParts = normalizedApi.split(' ');
+  // Split by underscore since normalizePlayerName replaces spaces with underscores
+  const pickParts = normalizedPick.split('_').filter(part =>
+    !['jr', 'sr', 'ii', 'iii', 'iv'].includes(part)
+  );
+  const apiParts = normalizedApi.split('_').filter(part =>
+    !['jr', 'sr', 'ii', 'iii', 'iv'].includes(part)
+  );
+
   const pickLastName = pickParts[pickParts.length - 1];
   const apiLastName = apiParts[apiParts.length - 1];
 

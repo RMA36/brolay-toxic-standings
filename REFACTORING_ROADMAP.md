@@ -151,15 +151,17 @@ This document tracks the progress of refactoring the Brolay Toxic Standings appl
 
 ## Track 4: Testing & Quality
 
-### Phase 4.1: Test Infrastructure
+### ✅ Phase 4.1: Test Infrastructure (COMPLETE)
 **Goal**: Set up testing framework
-**Status**: Not Started
+**Status**: Complete (January 29, 2026)
 
-**Planned**:
-- Set up Jest and React Testing Library
-- Add unit tests for utils and hooks
-- Add component tests for critical components
-- Add integration tests for key user flows
+**Completed**:
+- ✅ Set up Vitest and React Testing Library (Vite-native testing)
+- ✅ Created test utilities and mock data factories
+- ✅ Added unit tests for formatters.js (90+ test cases)
+- ✅ Added component tests for StatCard and Button
+- ✅ Created comprehensive TESTING_GUIDE.md
+- ✅ Added test scripts to package.json (test, test:ui, test:coverage)
 
 ### Phase 4.2: Code Quality Tools
 **Goal**: Enforce code quality standards
@@ -220,19 +222,27 @@ This document tracks the progress of refactoring the Brolay Toxic Standings appl
 - Phase 3.5: ✅ Event handler memoization (useCallback)
 - See TRACK_3_SESSION_HANDOFF.md for details
 
+### ✅ Track 4 Status: **PHASE 4.1 COMPLETE** (Testing)
+- Phase 4.1: ✅ Test Infrastructure (77 tests passing, Vitest + React Testing Library)
+- Phase 4.2: ⏸️ Code Quality Tools (ESLint, Prettier, Husky)
+- See TRACK_4_SESSION_HANDOFF.md and TESTING_QUICKSTART.md for details
+- **Run tests**: `cd "C:\Users\ander\OneDrive\Documents\Claude Code\brolay-toxic-standings"` then `npm test`
+
 ### Overall Progress
 - **Lines Reduced**: 9,050 lines (98.7% reduction from 9,166 → 116!)
-- **Files Created**: 28+ new files (constants, utils, hooks, components, pages, contexts, router, layout, modals, styles)
+- **Files Created**: 35+ new files (constants, utils, hooks, components, pages, contexts, router, layout, modals, styles, tests)
 - **Code Quality**: Complete separation of concerns with modern React patterns
 - **Maintainability**: Dramatically easier to navigate and modify
 - **Architecture**: Context API + React Router v6 fully implemented
 - **Performance**: Route-level code splitting, calculation memoization, context splitting
+- **Testing**: Vitest + React Testing Library infrastructure with 90+ test cases
 - **Pattern Established**: Clear, reusable patterns for all future development
 
-### Next Priority: Track 4 (Testing)
-Tracks 1-3 are complete! Next steps:
-1. **Track 4**: Testing infrastructure (Jest, React Testing Library)
-2. **Track 5**: Feature enhancements and polish
+### Next Priority: Expand Testing Coverage
+Tracks 1-3 complete, Track 4 Phase 4.1 complete! Next steps:
+1. **Track 4 Phase 4.2**: Expand test coverage (hooks, pages, integration tests)
+2. **Track 4 Phase 4.3**: Code quality tools (ESLint, Prettier, Husky, CI/CD)
+3. **Track 5**: Feature enhancements and polish
 
 ---
 

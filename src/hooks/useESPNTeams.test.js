@@ -1,17 +1,18 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { useESPNTeams } from './useESPNTeams';
+import { vi } from 'vitest';
 
 // Mock fetch globally
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 describe('useESPNTeams', () => {
   beforeEach(() => {
     // Clear all mocks before each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
 
   describe('lookupTeams', () => {
