@@ -341,13 +341,17 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     try {
       // Try ESPN API first
       const espnTeams = await lookupTeams(input, sport);
+      console.log('[getTeamSuggestions] ESPN API returned:', espnTeams);
 
       if (espnTeams && espnTeams.length > 0) {
         // Return full team names from ESPN (e.g., "Michigan Wolverines")
-        return espnTeams.map(team => team.name);
+        const fullNames = espnTeams.map(team => team.name);
+        console.log('[getTeamSuggestions] Returning full names:', fullNames);
+        return fullNames;
       }
 
       // Fallback to static list if ESPN fails
+      console.log('[getTeamSuggestions] ESPN returned empty, using fallback');
       const inputLower = input.toLowerCase();
       const preloaded = PRELOADED_TEAMS[sport] || [];
       const allTeams = [...new Set([...preloaded, ...learnedTeams])];
