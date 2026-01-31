@@ -106,8 +106,12 @@ describe('useESPN - matchTeamName', () => {
   });
 
   describe('Common word filtering', () => {
-    it('should ignore "State" in comparisons', () => {
-      expect(matchTeamName('Michigan State Spartans', 'Michigan Spartans')).toBe(true);
+    it('should NOT filter "State" (needed for State school detection)', () => {
+      // "State" is intentionally NOT filtered because we use it to detect
+      // Michigan State vs Michigan, Iowa State vs Iowa, etc.
+      expect(matchTeamName('Michigan State Spartans', 'Michigan Spartans')).toBe(false);
+      // But full names should still match
+      expect(matchTeamName('Michigan State Spartans', 'Michigan State Spartans')).toBe(true);
     });
 
     it('should ignore "University" in comparisons', () => {
@@ -123,7 +127,10 @@ describe('useESPN - matchTeamName', () => {
     });
 
     it('should ignore "the" in comparisons', () => {
-      expect(matchTeamName('The Ohio State Buckeyes', 'Ohio Buckeyes')).toBe(true);
+      // "The" is filtered, so "The Ohio State" becomes "Ohio State"
+      // But this won't match "Ohio" alone due to State school protection
+      expect(matchTeamName('Ohio State Buckeyes', 'Ohio State Buckeyes')).toBe(true);
+      expect(matchTeamName('The Ohio State Buckeyes', 'Ohio State Buckeyes')).toBe(true);
     });
   });
 

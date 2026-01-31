@@ -84,13 +84,23 @@ export const useESPNTeams = () => {
       matches.sort((a, b) => {
         const aName = a.name.toLowerCase();
         const bName = b.name.toLowerCase();
+        const aLocation = a.location?.toLowerCase() || '';
+        const bLocation = b.location?.toLowerCase() || '';
 
-        if (aName === normalizedQuery) return -1;
-        if (bName === normalizedQuery) return 1;
+        // Exact match on any field gets highest priority
+        const aExactMatch = aName === normalizedQuery || aLocation === normalizedQuery ||
+                           a.nickname?.toLowerCase() === normalizedQuery;
+        const bExactMatch = bName === normalizedQuery || bLocation === normalizedQuery ||
+                           b.nickname?.toLowerCase() === normalizedQuery;
 
+        if (aExactMatch && !bExactMatch) return -1;
+        if (!aExactMatch && bExactMatch) return 1;
+
+        // Then prioritize starts-with matches
         if (aName.startsWith(normalizedQuery) && !bName.startsWith(normalizedQuery)) return -1;
         if (!aName.startsWith(normalizedQuery) && bName.startsWith(normalizedQuery)) return 1;
 
+        // Finally sort alphabetically
         return aName.localeCompare(bName);
       });
 
