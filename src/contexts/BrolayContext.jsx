@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useMemo, useEffect, useCall
 import { getFirestore, deleteField } from 'firebase/firestore';
 import { useBrolays } from '../hooks/useBrolays';
 import { useESPN } from '../hooks/useESPN';
+import { useESPNTeams } from '../hooks/useESPNTeams';
 import { useStats } from '../hooks/useStats';
 import { useOdds } from '../hooks/useOdds';
 import { getCurrentETDate } from '../utils/formatters';
@@ -100,6 +101,9 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     autoUpdatePendingPicks,
     matchTeamName
   } = useESPN();
+
+  // ESPN Teams for autocomplete
+  const { lookupTeams, loading: teamsLoading } = useESPNTeams();
 
   // Statistics and insights
   const [editingParlay, setEditingParlay] = useState(null);
@@ -331,16 +335,38 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   }, [parlays, autoUpdatePendingPicks, updateBrolay]);
 
   // Autocomplete suggestion helpers
-  const getTeamSuggestions = (input, sport) => {
+  const getTeamSuggestions = async (input, sport) => {
     if (!input || input.length < 2) return [];
 
-    const inputLower = input.toLowerCase();
-    const preloaded = PRELOADED_TEAMS[sport] || [];
-    const allTeams = [...new Set([...preloaded, ...learnedTeams])];
+    try {
+      // Try ESPN API first
+      const espnTeams = await lookupTeams(input, sport);
 
-    return allTeams
-      .filter(team => team.toLowerCase().includes(inputLower))
-      .slice(0, 8);
+      if (espnTeams && espnTeams.length > 0) {
+        // Return full team names from ESPN (e.g., "Michigan Wolverines")
+        return espnTeams.map(team => team.name);
+      }
+
+      // Fallback to static list if ESPN fails
+      const inputLower = input.toLowerCase();
+      const preloaded = PRELOADED_TEAMS[sport] || [];
+      const allTeams = [...new Set([...preloaded, ...learnedTeams])];
+
+      return allTeams
+        .filter(team => team.toLowerCase().includes(inputLower))
+        .slice(0, 8);
+    } catch (error) {
+      console.error('Error fetching team suggestions:', error);
+
+      // Fallback to static list
+      const inputLower = input.toLowerCase();
+      const preloaded = PRELOADED_TEAMS[sport] || [];
+      const allTeams = [...new Set([...preloaded, ...learnedTeams])];
+
+      return allTeams
+        .filter(team => team.toLowerCase().includes(inputLower))
+        .slice(0, 8);
+    }
   };
 
   const getPropTypeSuggestions = (input) => {
@@ -355,8 +381,8 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   };
 
   // Input handlers for autocomplete
-  const handleTeamInput = (id, value, sport) => {
-    const suggestions = getTeamSuggestions(value, sport);
+  const handleTeamInput = async (id, value, sport) => {
+    const suggestions = await getTeamSuggestions(value, sport);
     setSuggestions(suggestions);
     setShowSuggestions({ ...showSuggestions, [`team-${id}`]: suggestions.length > 0 });
   };
@@ -367,14 +393,14 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     setShowSuggestions({ ...showSuggestions, [`prop-${id}`]: suggestions.length > 0 });
   };
 
-  const handleAwayTeamInput = (id, value, sport) => {
-    const suggestions = getTeamSuggestions(value, sport);
+  const handleAwayTeamInput = async (id, value, sport) => {
+    const suggestions = await getTeamSuggestions(value, sport);
     setSuggestions(suggestions);
     setShowSuggestions({ ...showSuggestions, [`awayTeam-${id}`]: suggestions.length > 0 });
   };
 
-  const handleHomeTeamInput = (id, value, sport) => {
-    const suggestions = getTeamSuggestions(value, sport);
+  const handleHomeTeamInput = async (id, value, sport) => {
+    const suggestions = await getTeamSuggestions(value, sport);
     setSuggestions(suggestions);
     setShowSuggestions({ ...showSuggestions, [`homeTeam-${id}`]: suggestions.length > 0 });
   };
