@@ -72,8 +72,12 @@ export const useESPN = () => {
   // Determine moneyline result
   const determineMoneylineResult = (team, homeComp, awayComp) => {
     const teamIsHome = matchTeamName(team, homeComp.team.displayName);
-    const homeWon = homeComp.winner === true;
-    
+
+    // Use scores to determine winner instead of relying on winner property
+    const homeScore = parseInt(homeComp.score);
+    const awayScore = parseInt(awayComp.score);
+    const homeWon = homeScore > awayScore;
+
     if (teamIsHome) {
       return homeWon ? 'win' : 'loss';
     } else {
