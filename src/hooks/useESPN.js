@@ -11,17 +11,24 @@ export const useESPN = () => {
   // Helper function to match team names with fuzzy matching
   const matchTeamName = (betTeam, apiTeam) => {
     if (!betTeam || !apiTeam) return false;
-    
+
     const normalize = (name) => name.toLowerCase()
-      .replace(/[^a-z0-9]/g, '')
-      .replace(/state$/, '')
-      .replace(/university$/, '')
-      .replace(/college$/, '');
-    
+      .replace(/[^a-z0-9\s]/g, '')
+      .replace(/\bstate\b/g, '')
+      .replace(/\buniversity\b/g, '')
+      .replace(/\bcollege\b/g, '')
+      .trim()
+      .replace(/\s+/g, '');
+
     const normalizedBet = normalize(betTeam);
     const normalizedApi = normalize(apiTeam);
-    
-    return normalizedApi.includes(normalizedBet) || normalizedBet.includes(normalizedApi);
+
+    // Check if normalized strings match exactly or if one is a complete word in the other
+    if (normalizedBet === normalizedApi) return true;
+
+    // For partial matches, ensure bet team is at the START of the API team
+    // This prevents "Michigan" from matching "Michigan State"
+    return normalizedApi.startsWith(normalizedBet) || normalizedBet.startsWith(normalizedApi);
   };
 
   // Map sport to ESPN API endpoint
