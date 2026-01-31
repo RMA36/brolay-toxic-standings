@@ -301,6 +301,11 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
         updateObject.submittedBy = editedParlay.submittedBy || editedParlay.placedBy;
         updateObject.placedBy = editedParlay.placedBy || editedParlay.submittedBy; // Keep for compatibility
 
+        // Include sortOrder if it exists (for same-day brolay ordering)
+        if (editedParlay.sortOrder !== undefined) {
+          updateObject.sortOrder = editedParlay.sortOrder;
+        }
+
         const result = await updateBrolay(editedParlay.id, updateObject);
 
         if (!result.success) {
