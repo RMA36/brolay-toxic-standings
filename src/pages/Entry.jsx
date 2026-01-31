@@ -6,6 +6,7 @@ import { formatDateForDisplay, getCurrentETDate, getPickResult, getPickBigGuy, g
 import { saveLearnedData, createDefaultParticipant } from '../utils/actionHandlers';
 import Button from '../components/common/Button';
 import PickEntry from '../components/forms/PickEntry';
+import { useESPNTeams } from '../hooks/useESPNTeams';
 
 /**
  * Entry Page Component
@@ -43,6 +44,9 @@ const Entry = () => {
     fetchOddsFromTheOddsAPI,
     prefetchEventsBySport
   } = useBrolayContext();
+
+  // Initialize ESPN Teams hook for autocomplete
+  const { lookupTeams, loading: teamsLoading } = useESPNTeams();
 
   // Helper function to get day of week from date string
   const getDayOfWeek = (dateString) => {
@@ -150,17 +154,39 @@ const Entry = () => {
     setNewParlay({ ...newParlay, participants: updated });
   };
 
-  // Get team suggestions for autocomplete
-  const getTeamSuggestions = (input, sport) => {
+  // Get team suggestions for autocomplete using ESPN API
+  const getTeamSuggestions = async (input, sport) => {
     if (!input || input.length < 2) return [];
 
-    const inputLower = input.toLowerCase();
-    const preloaded = PRELOADED_TEAMS[sport] || [];
-    const allTeams = [...new Set([...preloaded, ...learnedTeams])];
+    try {
+      // Try ESPN API first
+      const espnTeams = await lookupTeams(input, sport);
 
-    return allTeams
-      .filter(team => team.toLowerCase().includes(inputLower))
-      .slice(0, 8);
+      if (espnTeams && espnTeams.length > 0) {
+        // Return full team names from ESPN (e.g., "Michigan Wolverines")
+        return espnTeams.map(team => team.name);
+      }
+
+      // Fallback to static list if ESPN fails
+      const inputLower = input.toLowerCase();
+      const preloaded = PRELOADED_TEAMS[sport] || [];
+      const allTeams = [...new Set([...preloaded, ...learnedTeams])];
+
+      return allTeams
+        .filter(team => team.toLowerCase().includes(inputLower))
+        .slice(0, 8);
+    } catch (error) {
+      console.error('Error fetching team suggestions:', error);
+
+      // Fallback to static list
+      const inputLower = input.toLowerCase();
+      const preloaded = PRELOADED_TEAMS[sport] || [];
+      const allTeams = [...new Set([...preloaded, ...learnedTeams])];
+
+      return allTeams
+        .filter(team => team.toLowerCase().includes(inputLower))
+        .slice(0, 8);
+    }
   };
 
   // Get prop type suggestions for autocomplete
@@ -192,12 +218,12 @@ const Entry = () => {
   };
 
   // Handle team input with autocomplete
-  const handleTeamInput = (id, value, sport) => {
+  const handleTeamInput = async (id, value, sport) => {
     // Only update newParlay if this is a real participant ID (not editing mode with modified IDs)
     if (newParlay.participants && newParlay.participants[id]) {
       updateParticipant(id, 'team', value);
     }
-    const suggestions = getTeamSuggestions(value, sport);
+    const suggestions = await getTeamSuggestions(value, sport);
     setSuggestions(suggestions);
     setShowSuggestions({ ...showSuggestions, [`team-${id}`]: suggestions.length > 0 });
   };
@@ -214,17 +240,17 @@ const Entry = () => {
   };
 
   // Handle away team input with autocomplete
-  const handleAwayTeamInput = (id, value, sport) => {
+  const handleAwayTeamInput = async (id, value, sport) => {
     updateParticipant(id, 'awayTeam', value);
-    const suggestions = getTeamSuggestions(value, sport);
+    const suggestions = await getTeamSuggestions(value, sport);
     setSuggestions(suggestions);
     setShowSuggestions({ ...showSuggestions, [`awayTeam-${id}`]: suggestions.length > 0 });
   };
 
   // Handle home team input with autocomplete
-  const handleHomeTeamInput = (id, value, sport) => {
+  const handleHomeTeamInput = async (id, value, sport) => {
     updateParticipant(id, 'homeTeam', value);
-    const suggestions = getTeamSuggestions(value, sport);
+    const suggestions = await getTeamSuggestions(value, sport);
     setSuggestions(suggestions);
     setShowSuggestions({ ...showSuggestions, [`homeTeam-${id}`]: suggestions.length > 0 });
   };

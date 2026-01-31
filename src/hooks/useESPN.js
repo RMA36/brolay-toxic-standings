@@ -12,44 +12,28 @@ export const useESPN = () => {
   const matchTeamName = (betTeam, apiTeam) => {
     if (!betTeam || !apiTeam) return false;
 
-    // Normalize to lowercase and split into words
-    const normalizeName = (name) => name.toLowerCase()
+    // Normalize both names for comparison
+    const normalize = (name) => name.toLowerCase()
       .replace(/[^a-z0-9\s]/g, ' ')
-      .trim()
-      .split(/\s+/)
-      .filter(word => !['state', 'university', 'college', 'of'].includes(word));
+      .replace(/\s+/g, ' ')
+      .trim();
 
-    const betWords = normalizeName(betTeam);
-    const apiWords = normalizeName(apiTeam);
+    const normalizedBet = normalize(betTeam);
+    const normalizedApi = normalize(apiTeam);
 
-    // For exact team name match, check if all significant words from bet are in API team
-    // But ensure it's the RIGHT team by checking the mascot/unique identifier
+    // Check for exact match first
+    if (normalizedBet === normalizedApi) return true;
 
-    // If bet has multiple words, ALL must appear in API team
-    if (betWords.length > 1) {
-      return betWords.every(word => apiWords.includes(word));
-    }
+    // Check if all words from bet team are in API team (for partial matches)
+    const betWords = normalizedBet.split(' ').filter(word =>
+      !['state', 'university', 'college', 'of', 'the'].includes(word)
+    );
+    const apiWords = normalizedApi.split(' ').filter(word =>
+      !['state', 'university', 'college', 'of', 'the'].includes(word)
+    );
 
-    // Single word bet (like "Michigan") - must match EXACTLY one of the API words
-    // This prevents "Michigan" from matching "Michigan State"
-    // because "Michigan State" has both "michigan" and another word after state is removed
-    const singleBetWord = betWords[0];
-
-    // Check if the single word matches any complete word in the API team
-    // For "Michigan" to match "Michigan Wolverines": michigan === michigan ✓
-    // For "Michigan" to NOT match "Michigan State Spartans": would need michigan === michigan OR michigan === spartans
-    //   but we want to ensure it's ONLY michigan, not a team with michigan + other location
-
-    // Special handling: if API has "michigan" and another non-mascot word, it's probably Michigan State
-    const hasMichigan = apiWords.includes('michigan');
-    if (singleBetWord === 'michigan' && hasMichigan) {
-      // Check if this is Michigan State (has spartans) vs Michigan (has wolverines)
-      if (apiWords.includes('spartans')) return false; // This is Michigan State, not Michigan
-      if (apiWords.includes('wolverines')) return true; // This is Michigan
-    }
-
-    // General case: single word must be in API words
-    return apiWords.includes(singleBetWord);
+    // All significant words from bet must appear in API
+    return betWords.every(word => apiWords.some(apiWord => apiWord.includes(word) || word.includes(apiWord)));
   };
 
   // Map sport to ESPN API endpoint
@@ -105,17 +89,6 @@ export const useESPN = () => {
     const homeScore = parseInt(homeComp.score);
     const awayScore = parseInt(awayComp.score);
     const homeWon = homeScore > awayScore;
-
-    console.log('🎯 determineMoneylineResult DEBUG:', {
-      betTeam: team,
-      homeTeam: homeComp.team.displayName,
-      awayTeam: awayComp.team.displayName,
-      homeScore,
-      awayScore,
-      teamIsHome,
-      homeWon,
-      willReturn: teamIsHome ? (homeWon ? 'win' : 'loss') : (homeWon ? 'loss' : 'win')
-    });
 
     if (teamIsHome) {
       return homeWon ? 'win' : 'loss';
