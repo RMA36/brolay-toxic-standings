@@ -33,21 +33,39 @@ export const useESPNTeams = () => {
    * @returns {Promise<Array>} - Array of team suggestions
    */
   const lookupTeams = async (query, sport) => {
-    if (!query || query.length < 2) return [];
-    if (!sport) return [];
+    console.log('[lookupTeams] Called with query:', query, 'sport:', sport);
+
+    if (!query || query.length < 2) {
+      console.log('[lookupTeams] Query too short, returning empty');
+      return [];
+    }
+    if (!sport) {
+      console.log('[lookupTeams] No sport provided, returning empty');
+      return [];
+    }
 
     const espnSport = getESPNSport(sport);
-    if (!espnSport) return [];
+    console.log('[lookupTeams] ESPN sport mapped to:', espnSport);
+
+    if (!espnSport) {
+      console.log('[lookupTeams] Sport not found in mapping, returning empty');
+      return [];
+    }
 
     setLoading(true);
 
     try {
       // Fetch teams from ESPN API
       const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/teams`;
+      console.log('[lookupTeams] Fetching from URL:', url);
+
       const response = await fetch(url);
       const data = await response.json();
 
+      console.log('[lookupTeams] API response data:', data);
+
       if (!data.sports?.[0]?.leagues?.[0]?.teams) {
+        console.log('[lookupTeams] No teams found in response structure');
         setLoading(false);
         return [];
       }
@@ -66,6 +84,8 @@ export const useESPNTeams = () => {
         };
       });
 
+      console.log('[lookupTeams] Extracted teams count:', teams.length);
+
       // Filter teams based on query
       const normalizedQuery = query.toLowerCase();
       const matches = teams.filter(team => {
@@ -79,6 +99,8 @@ export const useESPNTeams = () => {
 
         return searchFields.some(field => field.includes(normalizedQuery));
       });
+
+      console.log('[lookupTeams] Matches found:', matches.length, matches);
 
       // Sort matches: exact matches first, then starts-with, then contains
       matches.sort((a, b) => {
