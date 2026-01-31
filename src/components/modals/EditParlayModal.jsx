@@ -154,6 +154,24 @@ const EditParlayModal = ({
     }
   };
 
+  const handleSelectSuggestionWrapper = (partId, field, value) => {
+    // Extract base participant ID (remove -player1, -player2 suffixes)
+    const baseId = partId.replace(/-player[12]$/, '');
+    const updated = { ...editedParlay };
+
+    // Update the field in editedParlay
+    if (field === 'player1' || field === 'player2') {
+      updated[picksFieldName][baseId][field] = value;
+    } else {
+      updated[picksFieldName][baseId][field] = value;
+    }
+
+    setEditedParlay(updated);
+    if (onSelectSuggestion) {
+      onSelectSuggestion(partId, field, value);
+    }
+  };
+
   const handleSave = () => {
     if (onSave) {
       onSave(editedParlay);
@@ -281,7 +299,7 @@ const EditParlayModal = ({
                 onAwayTeamInput={handleAwayTeamInputWrapper}
                 onHomeTeamInput={handleHomeTeamInputWrapper}
                 onPlayerInput={handlePlayerInputWrapper}
-                onSelectSuggestion={onSelectSuggestion}
+                onSelectSuggestion={handleSelectSuggestionWrapper}
                 isMobile={isMobile}
                 isEditMode={true}
               />
