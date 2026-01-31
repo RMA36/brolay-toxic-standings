@@ -55,8 +55,8 @@ export const useESPNTeams = () => {
     setLoading(true);
 
     try {
-      // Fetch teams from ESPN API
-      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/teams`;
+      // Fetch teams from ESPN API with limit parameter to get all teams
+      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/teams?limit=1000`;
       console.log('[lookupTeams] Fetching from URL:', url);
 
       const response = await fetch(url);
