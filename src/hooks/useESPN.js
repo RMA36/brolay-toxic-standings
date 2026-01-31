@@ -9,6 +9,8 @@ export const useESPN = () => {
   const [autoUpdating, setAutoUpdating] = useState(false);
 
   // Helper function to match team names with fuzzy matching
+  // Primary use: Match full team names from autocomplete (e.g., "Michigan Wolverines")
+  // Fallback: Support legacy data with partial names (e.g., "Michigan")
   const matchTeamName = (betTeam, apiTeam) => {
     if (!betTeam || !apiTeam) return false;
 
@@ -21,46 +23,41 @@ export const useESPN = () => {
     const normalizedBet = normalize(betTeam);
     const normalizedApi = normalize(apiTeam);
 
-    // Check for exact match first
+    // Check for exact match first (ideal case with autocomplete)
     if (normalizedBet === normalizedApi) return true;
 
-    // Split into words (DON'T filter out common words yet)
-    const betWords = normalizedBet.split(' ');
-    const apiWords = normalizedApi.split(' ');
+    // Filter out common filler words
+    const commonWords = ['university', 'college', 'of', 'the'];
+    const filterWords = (str) => str.split(' ').filter(word => !commonWords.includes(word));
 
-    // CRITICAL FIX: Don't match if bet team is a SUBSET of API team's location
-    // Example: "Michigan" should NOT match "Michigan State Spartans"
-    // because "Michigan State" is a different location than "Michigan"
+    const betWords = filterWords(normalizedBet);
+    const apiWords = filterWords(normalizedApi);
 
-    // Check if betTeam is trying to match a "State" variant
-    // If API has both location words (e.g., "Michigan State"), bet must have them too
-    for (let i = 0; i < apiWords.length - 1; i++) {
-      if (apiWords[i + 1] === 'state') {
-        // Found "X State" in API (e.g., "Michigan State")
-        const locationWords = [apiWords[i], apiWords[i + 1]]; // ["michigan", "state"]
+    // CRITICAL: Prevent "Michigan" from matching "Michigan State Spartans"
+    // Strategy: If API contains "X State" and bet is just "X", don't match
+    // This handles legacy data where team might be stored as just "Michigan"
 
-        // Check if bet is trying to match just the first part
-        if (betWords.length === 1 && betWords[0] === apiWords[i]) {
-          // Bet is "Michigan", API is "Michigan State" - DON'T MATCH
+    // Check if API team has "State" as part of location (not filtered out)
+    const stateIndex = normalizedApi.split(' ').indexOf('state');
+    if (stateIndex > 0) {
+      // API has "State" in it (e.g., "Michigan State Spartans" or "Iowa State Cyclones")
+      const apiLocationWords = normalizedApi.split(' ').slice(0, stateIndex + 1); // ["michigan", "state"]
+
+      // If bet is a single word and matches the first part of "X State", reject it
+      if (betWords.length === 1) {
+        const betWord = betWords[0];
+        const firstApiWord = normalizedApi.split(' ')[0];
+
+        if (betWord === firstApiWord) {
+          // Bet is "michigan", API is "michigan state ..." - DON'T MATCH
           return false;
-        }
-
-        // If bet has both words, that's OK (e.g., "Michigan State" matches "Michigan State Spartans")
-        if (betWords.includes(apiWords[i]) && betWords.includes('state')) {
-          // Continue checking other words
-          break;
         }
       }
     }
 
-    // Filter out common words for the rest of the matching
-    const commonWords = ['university', 'college', 'of', 'the'];
-    const betWordsFiltered = betWords.filter(word => !commonWords.includes(word));
-    const apiWordsFiltered = apiWords.filter(word => !commonWords.includes(word));
-
-    // All significant words from bet must appear in API
-    return betWordsFiltered.every(word =>
-      apiWordsFiltered.some(apiWord => apiWord.includes(word) || word.includes(apiWord))
+    // All words from bet must be in API (allows partial matching for legacy data)
+    return betWords.every(word =>
+      apiWords.some(apiWord => apiWord.includes(word) || word.includes(apiWord))
     );
   };
 
