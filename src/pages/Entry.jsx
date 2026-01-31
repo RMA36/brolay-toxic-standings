@@ -61,6 +61,10 @@ const Entry = () => {
     const sortedParlays = [...parlays].sort((a, b) => {
       const dateCompare = new Date(b.date) - new Date(a.date);
       if (dateCompare !== 0) return dateCompare;
+      // For same-day brolays, use sortOrder if available (higher sortOrder = more recent)
+      if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+        return b.sortOrder - a.sortOrder;
+      }
       const aKey = a.id || a.id;
       const bKey = b.id || b.id;
       return String(bKey).localeCompare(String(aKey));
