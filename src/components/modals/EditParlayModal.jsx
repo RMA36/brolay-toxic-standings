@@ -209,7 +209,7 @@ const EditParlayModal = ({
           <h2 className="text-xl md:text-2xl font-bold mb-4 text-yellow-400">Edit Brolay</h2>
 
           {/* Brolay Info */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6">
             <div>
               <label className="block text-sm font-medium mb-1 text-white">Date</label>
               <input
@@ -235,6 +235,26 @@ const EditParlayModal = ({
                 <option value="">Select Big Guy</option>
                 {players.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-white">
+                Sort Order
+                <span className="text-xs text-gray-400 ml-1">(for same-day brolays)</span>
+              </label>
+              <input
+                type="number"
+                value={editedParlay.sortOrder ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEditedParlay({
+                    ...editedParlay,
+                    sortOrder: value === '' ? undefined : Number(value)
+                  });
+                }}
+                placeholder="Optional"
+                className="w-full px-3 py-2 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none"
+                style={{ fontSize: isMobile ? '16px' : '14px' }}
+              />
             </div>
           </div>
 
