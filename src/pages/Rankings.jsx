@@ -4,6 +4,7 @@ import { useFilterContext } from '../contexts/FilterContext';
 import { PLAYERS } from '../constants/sports';
 import Card from '../components/common/Card';
 import RankingsFilter from '../components/filters/RankingsFilter';
+import AdvancedStats from '../components/stats/AdvancedStats';
 import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult } from '../utils/formatters';
 
 /**
@@ -601,6 +602,11 @@ const Rankings = () => {
             )}
           </Card>
         </div>
+      </div>
+
+      {/* Advanced Statistics */}
+      <div className="mt-8">
+        <AdvancedStats filteredParlays={filteredParlays} />
       </div>
     </div>
   );
