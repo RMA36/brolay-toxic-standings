@@ -30,6 +30,16 @@ export const FilterProvider = ({ children }) => {
   });
   const [filtersExpanded, setFiltersExpanded] = useState(false);
 
+  // Rankings-specific filters
+  const [rankingsFilters, setRankingsFilters] = useState({
+    dateFrom: '',
+    dateTo: '',
+    players: [], // Multi-select array
+    sports: [], // Multi-select array
+    minSampleSize: 10 // Default minimum sample size for combos
+  });
+  const [rankingsFiltersExpanded, setRankingsFiltersExpanded] = useState(false);
+
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState(null);
@@ -41,11 +51,17 @@ export const FilterProvider = ({ children }) => {
   const [suggestions, setSuggestions] = useState([]);
 
   const value = {
-    // Filter state
+    // Filter state (for AllBrolays, etc.)
     filters,
     setFilters,
     filtersExpanded,
     setFiltersExpanded,
+
+    // Rankings filter state
+    rankingsFilters,
+    setRankingsFilters,
+    rankingsFiltersExpanded,
+    setRankingsFiltersExpanded,
 
     // Search state
     searchQuery,

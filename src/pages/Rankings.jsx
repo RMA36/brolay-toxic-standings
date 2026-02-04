@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
+import { useFilterContext } from '../contexts/FilterContext';
 import { PLAYERS } from '../constants/sports';
 import Card from '../components/common/Card';
+import RankingsFilter from '../components/filters/RankingsFilter';
 import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult } from '../utils/formatters';
 
 /**
@@ -14,15 +16,65 @@ import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult } fro
  */
 const Rankings = () => {
   // Get context values
-  const { parlays } = useBrolayContext();
+  const { parlays, isMobile } = useBrolayContext();
+  const {
+    rankingsFilters,
+    setRankingsFilters,
+    rankingsFiltersExpanded,
+    setRankingsFiltersExpanded
+  } = useFilterContext();
   const players = PLAYERS;
+
+  // Apply filters to parlays
+  const filteredParlays = useMemo(() => {
+    return parlays.filter(parlay => {
+      // Date filters
+      if (rankingsFilters.dateFrom && parlay.date < rankingsFilters.dateFrom) return false;
+      if (rankingsFilters.dateTo && parlay.date > rankingsFilters.dateTo) return false;
+
+      // Player filter (multi-select) - check if ANY pick matches selected players
+      if (rankingsFilters.players && rankingsFilters.players.length > 0) {
+        const picks = getPicksArray(parlay);
+        const hasMatchingPlayer = picks.some(p =>
+          rankingsFilters.players.includes(getPickBigGuy(p))
+        );
+        if (!hasMatchingPlayer) return false;
+      }
+
+      // Sport filter (multi-select) - check if ANY pick matches selected sports
+      if (rankingsFilters.sports && rankingsFilters.sports.length > 0) {
+        const picks = getPicksArray(parlay);
+        const hasMatchingSport = picks.some(p =>
+          rankingsFilters.sports.includes(p.sport)
+        );
+        if (!hasMatchingSport) return false;
+      }
+
+      return true;
+    });
+  }, [parlays, rankingsFilters]);
+
+  // Use filteredParlays instead of parlays for all calculations
+  const parlaysToUse = filteredParlays;
+  const minSampleSize = rankingsFilters.minSampleSize || 10;
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setRankingsFilters({
+      dateFrom: '',
+      dateTo: '',
+      players: [],
+      sports: [],
+      minSampleSize: 10
+    });
+  };
 
   // Memoize Sole Survivors calculation
   const soleSurvivors = useMemo(() => {
     const survivors = {};
     players.forEach(player => { survivors[player] = 0; });
 
-    parlays.forEach(parlay => {
+    parlaysToUse.forEach(parlay => {
       const picks = getPicksArray(parlay);
       const winners = picks.filter(p => getPickResult(p) === 'win');
       const losers = picks.filter(p => getPickResult(p) === 'loss');
@@ -34,7 +86,7 @@ const Rankings = () => {
     });
 
     return survivors;
-  }, [parlays, players]);
+  }, [parlaysToUse, players]);
 
   // Memoize Hot/Cold Streaks calculation
   const { currentStreaks, allTimeStreaks } = useMemo(() => {
@@ -42,7 +94,7 @@ const Rankings = () => {
     players.forEach(player => { playerPicks[player] = []; });
 
     // Get all picks chronologically - sort by date first, then by sortOrder/firestoreId/id for same-day brolays
-    const sortedParlays = [...parlays].sort((a, b) => {
+    const sortedParlays = [...parlaysToUse].sort((a, b) => {
       const dateCompare = new Date(a.date) - new Date(b.date);
       if (dateCompare !== 0) return dateCompare;
       // If dates are the same, use sortOrder if available, otherwise fall back to firestoreId/id
@@ -172,12 +224,12 @@ const Rankings = () => {
     allTimeStreaksResult.cold.sort((a, b) => b.count - a.count);
 
     return { currentStreaks: currentStreaksResult, allTimeStreaks: allTimeStreaksResult };
-  }, [parlays, players]);
+  }, [parlaysToUse, players]);
 
   // Memoize Player/Sport Combinations calculation
   const { topCombos, worstCombos } = useMemo(() => {
     const playerSportCombos = {};
-    parlays.forEach(parlay => {
+    parlaysToUse.forEach(parlay => {
       const picks = getPicksArray(parlay);
       picks.forEach(p => {
         const bigGuy = getPickBigGuy(p);
@@ -204,7 +256,7 @@ const Rankings = () => {
     });
 
     const combosWithMin10 = Object.values(playerSportCombos)
-      .filter(combo => combo.total >= 10)
+      .filter(combo => combo.total >= minSampleSize)
       .map(combo => {
         const adjustedWins = combo.wins + (combo.pushes * 0.5);
         return {
@@ -217,12 +269,12 @@ const Rankings = () => {
       topCombos: [...combosWithMin10].sort((a, b) => b.winPct - a.winPct).slice(0, 5),
       worstCombos: [...combosWithMin10].sort((a, b) => a.winPct - b.winPct).slice(0, 5)
     };
-  }, [parlays]);
+  }, [parlaysToUse, minSampleSize]);
 
   // Memoize Most Picked Teams/Players calculation
   const topTeams = useMemo(() => {
     const teamCounts = {};
-    parlays.forEach(parlay => {
+    parlaysToUse.forEach(parlay => {
       const picks = getPicksArray(parlay);
       picks.forEach(p => {
         // Support both direct fields and nested game object
@@ -246,12 +298,12 @@ const Rankings = () => {
       .map(([team, count]) => ({ team, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-  }, [parlays]);
+  }, [parlaysToUse]);
 
   // Memoize Player/Team Combinations calculation
   const { topPlayerTeamCombos, topPlayerTeamWinPct, worstPlayerTeamWinPct } = useMemo(() => {
     const playerTeamCombos = {};
-    parlays.forEach(parlay => {
+    parlaysToUse.forEach(parlay => {
       const picks = getPicksArray(parlay);
       picks.forEach(p => {
         const bigGuy = getPickBigGuy(p);
@@ -306,11 +358,21 @@ const Rankings = () => {
       topPlayerTeamWinPct: [...combosWithMin5].sort((a, b) => b.winPct - a.winPct).slice(0, 5),
       worstPlayerTeamWinPct: [...combosWithMin5].sort((a, b) => a.winPct - b.winPct).slice(0, 5)
     };
-  }, [parlays]);
+  }, [parlaysToUse]);
 
   return (
     <div className="space-y-4 md:space-y-6">
       <h2 className="text-xl md:text-2xl font-bold text-yellow-400">🏆 Rankings & Records</h2>
+
+      {/* Rankings Filter */}
+      <RankingsFilter
+        filters={rankingsFilters}
+        setFilters={setRankingsFilters}
+        onClear={handleClearFilters}
+        expanded={rankingsFiltersExpanded}
+        onToggle={() => setRankingsFiltersExpanded(!rankingsFiltersExpanded)}
+        isMobile={isMobile}
+      />
 
       {/* Sole Survivors */}
       <Card title="💪 Sole Survivors" subtitle="Only winner when everyone else lost">
@@ -413,7 +475,7 @@ const Rankings = () => {
 
       {/* Player/Sport Combinations */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card title="⭐ Top 5 Player/Sport Combos" subtitle="Minimum 10 picks" className="text-green-400">
+        <Card title="⭐ Top 5 Player/Sport Combos" subtitle={`Minimum ${minSampleSize} picks`} className="text-green-400">
           {topCombos.length > 0 ? (
             <div className="space-y-2">
               {topCombos.map((combo, idx) => (
@@ -433,7 +495,7 @@ const Rankings = () => {
           )}
         </Card>
 
-        <Card title="⚠️ Worst 5 Player/Sport Combos" subtitle="Minimum 10 picks" className="text-red-400">
+        <Card title="⚠️ Worst 5 Player/Sport Combos" subtitle={`Minimum ${minSampleSize} picks`} className="text-red-400">
           {worstCombos.length > 0 ? (
             <div className="space-y-2">
               {worstCombos.map((combo, idx) => (
