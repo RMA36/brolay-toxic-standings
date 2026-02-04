@@ -4,7 +4,7 @@ import { PLAYERS, SPORTS, PRELOADED_TEAMS } from '../constants/sports';
 import { formatBetDescription, formatCalendarDate, formatDateForDisplay, getPickBigGuy, getPickResult, getPicksArray, getSubmittedBy, getPickActualStats } from '../utils/formatters';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
-import FilterBar from '../components/filters/FilterBar';
+import AllBrolaysFilter from '../components/filters/AllBrolaysFilter';
 import EditParlayModal from '../components/modals/EditParlayModal';
 import CalendarDay from '../components/calendar/CalendarDay';
 import { RefreshCw } from 'lucide-react';
@@ -109,11 +109,13 @@ const AllBrolays = () => {
       // Pick-level filters (supports both schemas)
       const picks = getPicksArray(parlay);
 
-      // Big Guy filter
-      if (filters.player && !picks.some(p => getPickBigGuy(p) === filters.player)) return false;
+      // Big Guy filter - support both old single-select and new multi-select
+      const playerFilter = filters.players && filters.players.length > 0 ? filters.players : (filters.player ? [filters.player] : []);
+      if (playerFilter.length > 0 && !picks.some(p => playerFilter.includes(getPickBigGuy(p)))) return false;
 
-      // Sport filter
-      if (filters.sport && !picks.some(p => p.sport === filters.sport)) return false;
+      // Sport filter - support both old single-select and new multi-select
+      const sportFilter = filters.sports && filters.sports.length > 0 ? filters.sports : (filters.sport ? [filters.sport] : []);
+      if (sportFilter.length > 0 && !picks.some(p => sportFilter.includes(p.sport))) return false;
 
       // Team/Player filter
       if (filters.teamPlayer && !picks.some(p =>
@@ -212,6 +214,27 @@ const AllBrolays = () => {
     return etDate.toDateString();
   };
   const todayET = getTodayET();
+
+  // Clear all filters
+  const handleClearFilters = () => {
+    setFilters({
+      dateFrom: '',
+      dateTo: '',
+      player: '',
+      players: [],
+      sport: '',
+      sports: [],
+      teamPlayer: '',
+      submittedBy: '',
+      placedBy: '',
+      minPayout: '',
+      maxPayout: '',
+      result: '',
+      autoUpdated: '',
+      betType: '',
+      propType: ''
+    });
+  };
 
   return (
     <div className="space-y-4 md:space-y-6">
@@ -440,157 +463,16 @@ const AllBrolays = () => {
       {!calendarView && (
         <>
           {/* Filters */}
-          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">
-            <Button
-              onClick={() => setFiltersExpanded(!filtersExpanded)}
-              variant="ghost"
-              className="w-full flex justify-between items-center text-base md:text-lg font-semibold mb-2 text-white"
-            >
-              <span>Filters</span>
-              <span className="text-2xl">{filtersExpanded ? '−' : '+'}</span>
-            </Button>
-
-            {filtersExpanded && (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mt-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Date From</label>
-                    <input
-                      type="date"
-                      value={filters.dateFrom}
-                      onChange={(e) => setFilters({...filters, dateFrom: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Date To</label>
-                    <input
-                      type="date"
-                      value={filters.dateTo}
-                      onChange={(e) => setFilters({...filters, dateTo: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Big Guy</label>
-                    <select
-                      value={filters.player}
-                      onChange={(e) => setFilters({...filters, player: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    >
-                      <option value="">All</option>
-                      {players.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Sport</label>
-                    <select
-                      value={filters.sport}
-                      onChange={(e) => setFilters({...filters, sport: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    >
-                      <option value="">All</option>
-                      {sports.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Submitted By</label>
-                    <select
-                      value={filters.submittedBy || filters.placedBy || ''}
-                      onChange={(e) => setFilters({...filters, submittedBy: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    >
-                      <option value="">All</option>
-                      {players.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Min Payout</label>
-                    <input
-                      type="number"
-                      value={filters.minPayout}
-                      onChange={(e) => setFilters({...filters, minPayout: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      placeholder="$0"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Max Payout</label>
-                    <input
-                      type="number"
-                      value={filters.maxPayout}
-                      onChange={(e) => setFilters({...filters, maxPayout: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      placeholder="Any"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Result</label>
-                    <select
-                      value={filters.result}
-                      onChange={(e) => setFilters({...filters, result: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    >
-                      <option value="">All</option>
-                      <option value="win">Win</option>
-                      <option value="loss">Loss</option>
-                      <option value="push">Push</option>
-                      <option value="pending">Pending</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Auto-Updated</label>
-                    <select
-                      value={filters.autoUpdated}
-                      onChange={(e) => setFilters({...filters, autoUpdated: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                    >
-                      <option value="">All</option>
-                      <option value="true">Auto-Updated Only</option>
-                      <option value="false">Manual Only</option>
-                    </select>
-                  </div>
-                  <div className="relative">
-                    <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
-                    <input
-                      type="text"
-                      value={filters.teamPlayer}
-                      onChange={(e) => setFilters({...filters, teamPlayer: e.target.value})}
-                      className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
-                      style={{ fontSize: isMobile ? '16px' : '14px' }}
-                      placeholder="Search teams/players..."
-                      list="team-player-suggestions"
-                    />
-                    <datalist id="team-player-suggestions">
-                      {[...new Set([...Object.values(preloadedTeams).flat(), ...learnedTeams])].map((team, idx) => (
-                        <option key={idx} value={team} />
-                      ))}
-                    </datalist>
-                  </div>
-                </div>
-                <Button
-                  onClick={() => setFilters({
-                    dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
-                    submittedBy: '', placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
-                    betType: '', propType: ''
-                  })}
-                  variant="secondary"
-                  className={`mt-4 ${isMobile ? 'min-h-[44px]' : ''}`}
-                >
-                  Clear Filters
-                </Button>
-              </>
-            )}
-          </div>
+          <AllBrolaysFilter
+            filters={filters}
+            setFilters={setFilters}
+            onClear={handleClearFilters}
+            expanded={filtersExpanded}
+            onToggle={() => setFiltersExpanded(!filtersExpanded)}
+            isMobile={isMobile}
+            learnedTeams={learnedTeams}
+            preloadedTeams={preloadedTeams}
+          />
 
           {/* Brolays List */}
           <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl p-4 md:p-6 border border-yellow-500/20">

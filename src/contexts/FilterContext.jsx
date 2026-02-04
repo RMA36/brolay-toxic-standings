@@ -16,8 +16,10 @@ export const FilterProvider = ({ children }) => {
   const [filters, setFilters] = useState({
     dateFrom: '',
     dateTo: '',
-    player: '',
-    sport: '',
+    player: '', // Legacy single-select (will be deprecated)
+    players: [], // New multi-select array
+    sport: '', // Legacy single-select (will be deprecated)
+    sports: [], // New multi-select array
     teamPlayer: '',
     submittedBy: '',
     placedBy: '', // Legacy support
