@@ -204,11 +204,13 @@ const WinRateTrendsChart = ({ filteredParlays = [] }) => {
     );
   };
 
-  // Player colors
+  // Player colors - each Big Guy gets a unique color per user preference
   const playerColors = {
-    Management: '#3B82F6', // blue
-    Labor: '#10B981', // green
-    Operations: '#8B5CF6' // purple
+    Management: '#8B5CF6', // purple
+    Junior: '#3B82F6', // blue
+    CD: '#EF4444', // red
+    Jacoby: '#10B981', // green
+    '914': '#F59E0B' // orange
   };
 
   const hasData = chartData.length > 0;
