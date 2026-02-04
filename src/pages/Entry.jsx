@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { AlertCircle, PlusCircle } from 'lucide-react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS, SPORTS, PICK_TYPES, PRELOADED_TEAMS, COMMON_PROP_TYPES, PRELOADED_PLAYERS } from '../constants/sports';
@@ -6,7 +6,10 @@ import { formatDateForDisplay, getCurrentETDate, getPickResult, getPickBigGuy, g
 import { saveLearnedData, createDefaultParticipant } from '../utils/actionHandlers';
 import Button from '../components/common/Button';
 import PickEntry from '../components/forms/PickEntry';
+import ImageUploadButton from '../components/forms/ImageUploadButton';
+import BetSlipParseModal from '../components/modals/BetSlipParseModal';
 import { useESPNTeams } from '../hooks/useESPNTeams';
+import { useBetSlipParser } from '../hooks/useBetSlipParser';
 
 /**
  * Entry Page Component
@@ -47,6 +50,70 @@ const Entry = () => {
 
   // Initialize ESPN Teams hook for autocomplete
   const { lookupTeams, loading: teamsLoading } = useESPNTeams();
+
+  // Bet slip parser state
+  const [showBetSlipModal, setShowBetSlipModal] = useState(false);
+  const [betSlipImageFile, setBetSlipImageFile] = useState(null);
+
+  // Initialize bet slip parser hook
+  const {
+    isProcessing: betSlipProcessing,
+    progress: betSlipProgress,
+    progressMessage: betSlipProgressMessage,
+    error: betSlipError,
+    ocrText: betSlipOcrText,
+    parsedPicks: betSlipParsedPicks,
+    parseImage: parseBetSlipImage,
+    updateParsedPick: updateBetSlipPick,
+    removeParsedPick: removeBetSlipPick,
+    reset: resetBetSlipParser
+  } = useBetSlipParser({ learnedTeams, learnedPlayers });
+
+  // Handle bet slip file selection
+  const handleBetSlipFileSelect = async (file) => {
+    setBetSlipImageFile(file);
+    setShowBetSlipModal(true);
+    await parseBetSlipImage(file);
+  };
+
+  // Handle closing bet slip modal
+  const handleCloseBetSlipModal = () => {
+    setShowBetSlipModal(false);
+    setBetSlipImageFile(null);
+    resetBetSlipParser();
+  };
+
+  // Handle confirming parsed picks from bet slip
+  const handleConfirmBetSlipPicks = (picks) => {
+    // Add each parsed pick to the form
+    picks.forEach((pick, index) => {
+      const participantId = Object.keys(newParlay.participants).length + index;
+      const newPick = {
+        ...createDefaultParticipant(),
+        sport: pick.sport || 'NFL',
+        betType: pick.betType || 'Spread',
+        team: pick.team || '',
+        spread: pick.spread || '',
+        favorite: pick.favorite || 'Favorite',
+        total: pick.total || '',
+        overUnder: pick.overUnder || 'Over',
+        propType: pick.propType || '',
+        line: pick.line || '',
+        odds: pick.odds || '',
+        // bigGuy and player remain empty - user fills manually
+      };
+
+      setNewParlay(prev => ({
+        ...prev,
+        participants: {
+          ...prev.participants,
+          [participantId]: newPick
+        }
+      }));
+    });
+
+    handleCloseBetSlipModal();
+  };
 
   // Helper function to get day of week from date string
   const getDayOfWeek = (dateString) => {
@@ -564,7 +631,12 @@ const Entry = () => {
           ))}
         </div>
 
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3">
+          <ImageUploadButton
+            onFileSelect={handleBetSlipFileSelect}
+            disabled={saving}
+            isMobile={isMobile}
+          />
           <Button
             onClick={addParticipant}
             variant="primary"
@@ -584,6 +656,23 @@ const Entry = () => {
           {saving ? 'Submitting...' : 'Submit Brolay'}
         </Button>
       </div>
+
+      {/* Bet Slip Parse Modal */}
+      <BetSlipParseModal
+        isOpen={showBetSlipModal}
+        onClose={handleCloseBetSlipModal}
+        imageFile={betSlipImageFile}
+        isProcessing={betSlipProcessing}
+        progress={betSlipProgress}
+        progressMessage={betSlipProgressMessage}
+        error={betSlipError}
+        ocrText={betSlipOcrText}
+        parsedPicks={betSlipParsedPicks}
+        onUpdatePick={updateBetSlipPick}
+        onRemovePick={removeBetSlipPick}
+        onConfirm={handleConfirmBetSlipPicks}
+        isMobile={isMobile}
+      />
     </div>
   );
 };
