@@ -6,10 +6,9 @@ import AdvancedStats from './AdvancedStats';
  * AdvancedStats Component Tests
  *
  * Tests for the advanced statistics component showing:
- * - Win rate trends over time
+ * - Win rate trends over time (interactive chart)
  * - Head-to-head player comparison
  * - Performance by day of week
- * - Monthly performance breakdown
  */
 describe('AdvancedStats Component', () => {
   describe('Rendering', () => {
@@ -24,7 +23,6 @@ describe('AdvancedStats Component', () => {
       expect(screen.getByText(/Win Rate Trends/i)).toBeInTheDocument();
       expect(screen.getByText(/Head-to-Head Comparison/i)).toBeInTheDocument();
       expect(screen.getByText(/Performance by Day/i)).toBeInTheDocument();
-      expect(screen.getByText(/Monthly Breakdown/i)).toBeInTheDocument();
     });
   });
 
@@ -45,7 +43,7 @@ describe('AdvancedStats Component', () => {
 
     it('should show subtitle describing the metric', () => {
       renderWithProviders(<AdvancedStats />);
-      expect(screen.getByText(/Monthly win percentage over time/i)).toBeInTheDocument();
+      expect(screen.getByText(/Interactive performance trends over time/i)).toBeInTheDocument();
     });
   });
 
@@ -70,18 +68,6 @@ describe('AdvancedStats Component', () => {
     it('should show subtitle describing the metric', () => {
       renderWithProviders(<AdvancedStats />);
       expect(screen.getByText(/Win rate by day of the week/i)).toBeInTheDocument();
-    });
-  });
-
-  describe('Monthly Breakdown', () => {
-    it('should render monthly breakdown section', () => {
-      renderWithProviders(<AdvancedStats />);
-      expect(screen.getByText(/Monthly Breakdown/i)).toBeInTheDocument();
-    });
-
-    it('should show subtitle describing the metric', () => {
-      renderWithProviders(<AdvancedStats />);
-      expect(screen.getByText(/Performance statistics by month/i)).toBeInTheDocument();
     });
   });
 });

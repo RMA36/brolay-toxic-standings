@@ -58,10 +58,16 @@ describe('Rankings Page', () => {
       const filterButton = screen.getByRole('button', { name: /Filters/i });
       await user.click(filterButton);
 
-      expect(screen.getByText(/Last 7 Days/i)).toBeInTheDocument();
-      expect(screen.getByText(/Last 30 Days/i)).toBeInTheDocument();
-      expect(screen.getByText(/This Year/i)).toBeInTheDocument();
-      expect(screen.getByText(/All Time/i)).toBeInTheDocument();
+      // Check for date range buttons - there might be multiple from different components
+      const last7DaysButtons = screen.getAllByText(/Last 7 Days/i);
+      const last30DaysButtons = screen.getAllByText(/Last 30 Days/i);
+      const thisYearButtons = screen.getAllByText(/This Year/i);
+      const allTimeButtons = screen.getAllByText(/All Time/i);
+
+      expect(last7DaysButtons.length).toBeGreaterThan(0);
+      expect(last30DaysButtons.length).toBeGreaterThan(0);
+      expect(thisYearButtons.length).toBeGreaterThan(0);
+      expect(allTimeButtons.length).toBeGreaterThan(0);
     });
   });
 

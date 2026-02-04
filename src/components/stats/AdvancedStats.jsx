@@ -2,17 +2,16 @@ import React, { useMemo, useState } from 'react';
 import { useBrolayContext } from '../../contexts/BrolayContext';
 import { PLAYERS } from '../../constants/sports';
 import Card from '../common/Card';
-import Button from '../common/Button';
+import WinRateTrendsChart from './WinRateTrendsChart';
 import { getPicksArray, getPickBigGuy, getPickResult } from '../../utils/formatters';
 
 /**
  * AdvancedStats - Advanced statistics and analytics
  *
  * Features:
- * - Win rate trends over time (monthly)
+ * - Win rate trends over time (interactive line chart)
  * - Head-to-head player comparison
  * - Performance by day of week
- * - Monthly performance breakdown
  */
 const AdvancedStats = ({ filteredParlays = [] }) => {
   const { isMobile } = useBrolayContext();
@@ -21,60 +20,6 @@ const AdvancedStats = ({ filteredParlays = [] }) => {
   // Head-to-head comparison state
   const [player1, setPlayer1] = useState(players[0]);
   const [player2, setPlayer2] = useState(players[1]);
-
-  // Calculate Win Rate Trends (monthly)
-  const winRateTrends = useMemo(() => {
-    const playerMonthlyStats = {};
-    players.forEach(player => { playerMonthlyStats[player] = {}; });
-
-    filteredParlays.forEach(parlay => {
-      const picks = getPicksArray(parlay);
-      const monthKey = parlay.date.substring(0, 7); // YYYY-MM
-
-      picks.forEach(p => {
-        const bigGuy = getPickBigGuy(p);
-        const result = getPickResult(p);
-        if (!bigGuy || result === 'pending') return;
-
-        if (!playerMonthlyStats[bigGuy][monthKey]) {
-          playerMonthlyStats[bigGuy][monthKey] = { wins: 0, losses: 0, pushes: 0, total: 0 };
-        }
-
-        playerMonthlyStats[bigGuy][monthKey].total++;
-        if (result === 'win') playerMonthlyStats[bigGuy][monthKey].wins++;
-        else if (result === 'loss') playerMonthlyStats[bigGuy][monthKey].losses++;
-        else if (result === 'push') playerMonthlyStats[bigGuy][monthKey].pushes++;
-      });
-    });
-
-    // Get all unique months sorted
-    const allMonths = new Set();
-    Object.values(playerMonthlyStats).forEach(playerStats => {
-      Object.keys(playerStats).forEach(month => allMonths.add(month));
-    });
-    const sortedMonths = Array.from(allMonths).sort();
-
-    // Calculate win % for each player/month
-    const trends = {};
-    players.forEach(player => {
-      trends[player] = sortedMonths.map(month => {
-        const stats = playerMonthlyStats[player][month];
-        if (!stats || stats.total === 0) return { month, winPct: null, total: 0 };
-
-        const adjustedWins = stats.wins + (stats.pushes * 0.5);
-        return {
-          month,
-          winPct: (adjustedWins / stats.total) * 100,
-          total: stats.total,
-          wins: stats.wins,
-          losses: stats.losses,
-          pushes: stats.pushes
-        };
-      });
-    });
-
-    return { trends, months: sortedMonths };
-  }, [filteredParlays, players]);
 
   // Calculate Head-to-Head Comparison
   const headToHead = useMemo(() => {
@@ -189,108 +134,14 @@ const AdvancedStats = ({ filteredParlays = [] }) => {
     return dayStats;
   }, [filteredParlays, players]);
 
-  // Calculate Monthly Breakdown
-  const monthlyBreakdown = useMemo(() => {
-    const playerMonthStats = {};
-    players.forEach(player => { playerMonthStats[player] = {}; });
-
-    filteredParlays.forEach(parlay => {
-      const picks = getPicksArray(parlay);
-      const monthKey = parlay.date.substring(0, 7); // YYYY-MM
-
-      picks.forEach(p => {
-        const bigGuy = getPickBigGuy(p);
-        const result = getPickResult(p);
-        if (!bigGuy || result === 'pending') return;
-
-        if (!playerMonthStats[bigGuy][monthKey]) {
-          playerMonthStats[bigGuy][monthKey] = {
-            wins: 0,
-            losses: 0,
-            pushes: 0,
-            total: 0,
-            winningParlays: 0,
-            losingParlays: 0,
-            totalPayout: 0
-          };
-        }
-
-        playerMonthStats[bigGuy][monthKey].total++;
-        if (result === 'win') playerMonthStats[bigGuy][monthKey].wins++;
-        else if (result === 'loss') playerMonthStats[bigGuy][monthKey].losses++;
-        else if (result === 'push') playerMonthStats[bigGuy][monthKey].pushes++;
-      });
-
-      // Track parlay-level stats
-      const picks2 = getPicksArray(parlay);
-      picks2.forEach(p => {
-        const bigGuy = getPickBigGuy(p);
-        if (!bigGuy) return;
-
-        const monthKey = parlay.date.substring(0, 7);
-        if (playerMonthStats[bigGuy][monthKey]) {
-          if (parlay.result === 'win') {
-            playerMonthStats[bigGuy][monthKey].totalPayout += parlay.payout || 0;
-          }
-        }
-      });
-    });
-
-    // Format for display
-    const breakdown = {};
-    players.forEach(player => {
-      breakdown[player] = Object.entries(playerMonthStats[player])
-        .map(([month, stats]) => {
-          const adjustedWins = stats.wins + (stats.pushes * 0.5);
-          const winPct = stats.total > 0 ? (adjustedWins / stats.total) * 100 : 0;
-          return { month, winPct, ...stats };
-        })
-        .sort((a, b) => b.month.localeCompare(a.month));
-    });
-
-    return breakdown;
-  }, [filteredParlays, players]);
-
   const hasData = filteredParlays.length > 0;
 
   return (
     <div className="space-y-4 md:space-y-6">
       <h2 className="text-xl md:text-2xl font-bold text-yellow-400">📊 Advanced Statistics</h2>
 
-      {/* Win Rate Trends Over Time */}
-      <Card title="📈 Win Rate Trends" subtitle="Monthly win percentage over time">
-        {hasData && winRateTrends.months.length > 0 ? (
-          <div className="space-y-4">
-            {players.map(player => {
-              const playerTrends = winRateTrends.trends[player].filter(t => t.total > 0);
-              if (playerTrends.length === 0) return null;
-
-              return (
-                <div key={player} className="space-y-2">
-                  <h4 className="font-semibold text-yellow-400">{player}</h4>
-                  <div className="space-y-1">
-                    {playerTrends.map(trend => (
-                      <div key={trend.month} className="flex items-center justify-between p-2 bg-gray-900/50 rounded border border-gray-700">
-                        <span className="text-sm text-gray-300">{trend.month}</span>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-gray-400">
-                            {trend.wins}-{trend.losses} ({trend.total} picks)
-                          </span>
-                          <span className={`text-sm font-bold ${trend.winPct >= 50 ? 'text-green-400' : 'text-red-400'}`}>
-                            {trend.winPct.toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-gray-300 text-center py-4">Not enough data yet</p>
-        )}
-      </Card>
+      {/* Win Rate Trends Over Time - Interactive Chart */}
+      <WinRateTrendsChart filteredParlays={filteredParlays} />
 
       {/* Head-to-Head Comparison */}
       <Card title="⚔️ Head-to-Head Comparison" subtitle="Compare two players side by side">
@@ -413,48 +264,6 @@ const AdvancedStats = ({ filteredParlays = [] }) => {
                         ) : (
                           <div className="text-sm text-gray-500">-</div>
                         )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-gray-300 text-center py-4">Not enough data yet</p>
-        )}
-      </Card>
-
-      {/* Monthly Breakdown */}
-      <Card title="📆 Monthly Breakdown" subtitle="Performance statistics by month">
-        {hasData ? (
-          <div className="space-y-4">
-            {players.map(player => {
-              const playerMonths = monthlyBreakdown[player];
-              if (playerMonths.length === 0) return null;
-
-              return (
-                <div key={player} className="space-y-2">
-                  <h4 className="font-semibold text-yellow-400">{player}</h4>
-                  <div className="space-y-1">
-                    {playerMonths.map(month => (
-                      <div key={month.month} className="flex items-center justify-between p-3 bg-gray-900/50 rounded border border-gray-700">
-                        <div className="flex-1">
-                          <div className="font-semibold text-white">{month.month}</div>
-                          <div className="text-xs text-gray-400">
-                            {month.wins}-{month.losses}{month.pushes > 0 && `-${month.pushes}`} ({month.total} picks)
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <div className={`text-lg font-bold ${month.winPct >= 50 ? 'text-green-400' : 'text-red-400'}`}>
-                            {month.winPct.toFixed(1)}%
-                          </div>
-                          {month.totalPayout > 0 && (
-                            <div className="text-xs text-green-400">
-                              +${month.totalPayout.toFixed(2)}
-                            </div>
-                          )}
-                        </div>
                       </div>
                     ))}
                   </div>
