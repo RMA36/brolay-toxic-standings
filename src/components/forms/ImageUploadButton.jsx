@@ -4,7 +4,7 @@
  */
 
 import React, { useRef, useState, useCallback } from 'react';
-import { Camera, Upload } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { validateImageFile } from '../../utils/imageProcessing';
 
 const ImageUploadButton = ({ onFileSelect, disabled = false, isMobile = false }) => {
@@ -73,7 +73,6 @@ const ImageUploadButton = ({ onFileSelect, disabled = false, isMobile = false })
         ref={fileInputRef}
         type="file"
         accept="image/png,image/jpeg,image/jpg,image/webp,image/heic"
-        capture={isMobile ? "environment" : undefined}
         onChange={handleFileChange}
         className="hidden"
       />
@@ -98,11 +97,7 @@ const ImageUploadButton = ({ onFileSelect, disabled = false, isMobile = false })
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
         `}
       >
-        {isMobile ? (
-          <Camera size={24} />
-        ) : (
-          <Upload size={20} />
-        )}
+        <Upload size={isMobile ? 24 : 20} />
         <span>Upload Bet Slip</span>
       </button>
 
