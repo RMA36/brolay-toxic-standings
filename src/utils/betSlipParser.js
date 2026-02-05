@@ -13,7 +13,7 @@ const SPORT_KEYWORDS = {
   MLB: ['mlb', 'baseball', 'yankees', 'dodgers', 'astros', 'braves', 'mets', 'phillies', 'padres', 'cubs', 'red sox', 'cardinals', 'mariners', 'orioles', 'rangers', 'twins', 'guardians', 'rays', 'brewers', 'marlins', 'giants', 'athletics', 'angels', 'reds', 'royals', 'tigers', 'rockies', 'pirates', 'nationals', 'diamondbacks', 'white sox', 'blue jays'],
   NHL: ['nhl', 'hockey', 'bruins', 'oilers', 'panthers', 'avalanche', 'maple leafs', 'lightning', 'rangers', 'devils', 'hurricanes', 'penguins', 'stars', 'wild', 'jets', 'flames', 'predators', 'golden knights', 'kraken', 'canucks', 'sabres', 'senators', 'red wings', 'blackhawks', 'ducks', 'coyotes', 'kings', 'sharks', 'blues', 'canadiens', 'islanders', 'flyers', 'blue jackets'],
   'College Football': ['college football', 'ncaa football', 'cfb', 'ncaaf', 'alabama', 'georgia', 'ohio state', 'michigan state', 'michigan', 'clemson', 'texas', 'usc', 'notre dame', 'lsu', 'florida', 'tennessee', 'oklahoma', 'penn state', 'oregon', 'washington', 'stanford', 'liberty', 'iowa', 'iowa state', 'auburn', 'arkansas', 'missouri', 'ole miss', 'mississippi state', 'south carolina', 'virginia', 'virginia tech', 'nc state', 'wake forest', 'louisville', 'syracuse', 'boston college', 'pitt', 'miami', 'florida state', 'georgia tech', 'byu', 'boise state', 'colorado', 'utah', 'wisconsin', 'nebraska', 'minnesota', 'illinois', 'northwestern', 'indiana', 'maryland', 'rutgers', 'delaware', 'texas a&m', 'texas tech', 'tcu', 'oklahoma state', 'kansas state', 'west virginia', 'cincinnati', 'ucf', 'memphis'],
-  'College Basketball': ['college basketball', 'ncaa basketball', 'cbb', 'ncaab', 'march madness', 'duke', 'north carolina', 'kansas', 'kentucky', 'villanova', 'gonzaga', 'ucla', 'purdue', 'arizona', 'houston', 'baylor', 'uconn', 'creighton', 'marquette', 'st. johns', 'xavier', 'providence', 'seton hall', 'butler', 'depaul', 'georgetown'],
+  'College Basketball': ['college basketball', 'ncaa basketball', 'cbb', 'ncaab', 'march madness', 'duke', 'north carolina', 'kansas', 'kentucky', 'villanova', 'gonzaga', 'ucla', 'purdue', 'arizona', 'houston', 'baylor', 'uconn', 'creighton', 'marquette', 'st. johns', 'xavier', 'providence', 'seton hall', 'butler', 'depaul', 'georgetown', 'alabama', 'georgia', 'ohio state', 'michigan state', 'michigan', 'clemson', 'texas', 'usc', 'notre dame', 'lsu', 'florida', 'tennessee', 'oklahoma', 'penn state', 'oregon', 'washington', 'stanford', 'liberty', 'iowa', 'iowa state', 'auburn', 'arkansas', 'missouri', 'ole miss', 'mississippi state', 'south carolina', 'virginia', 'virginia tech', 'nc state', 'wake forest', 'louisville', 'syracuse', 'boston college', 'pitt', 'miami', 'florida state', 'georgia tech', 'byu', 'boise state', 'colorado', 'utah', 'wisconsin', 'nebraska', 'minnesota', 'illinois', 'northwestern', 'indiana', 'maryland', 'rutgers', 'delaware', 'texas a&m', 'texas tech', 'tcu', 'oklahoma state', 'kansas state', 'west virginia', 'cincinnati', 'ucf', 'memphis'],
   Soccer: ['soccer', 'premier league', 'la liga', 'bundesliga', 'serie a', 'ligue 1', 'mls', 'arsenal', 'chelsea', 'liverpool', 'manchester', 'barcelona', 'real madrid', 'bayern', 'psg', 'juventus', 'inter milan'],
   UFC: ['ufc', 'mma', 'fight night', 'octagon']
 };
@@ -137,6 +137,7 @@ const cleanOCRText = (text) => {
 /**
  * Detect dominant sport from full OCR text using keyword frequency
  * Scans all lines (including matchup context) to determine the most likely sport
+ * Uses season awareness as a tiebreaker when college sports have equal keyword matches
  */
 const detectDominantSport = (text) => {
   const lowerText = text.toLowerCase();
@@ -149,10 +150,29 @@ const detectDominantSport = (text) => {
   // Find sport with most keyword matches
   let bestSport = null;
   let bestScore = 0;
+  const ties = [];
+
   for (const [sport, score] of Object.entries(sportScores)) {
     if (score > bestScore) {
       bestScore = score;
       bestSport = sport;
+      ties.length = 0;
+      ties.push(sport);
+    } else if (score === bestScore && score > 0) {
+      ties.push(sport);
+    }
+  }
+
+  // If there's a tie (common between College Football and College Basketball since
+  // they share school names), use season awareness to break the tie
+  if (ties.length > 1) {
+    const month = new Date().getMonth() + 1;
+    const seasonPriority = getSportsInSeason(month);
+    for (const sport of seasonPriority) {
+      if (ties.includes(sport)) {
+        console.log(`[BetSlipParser] Keyword tie between ${ties.join(', ')} - season tiebreaker picks ${sport}`);
+        return sport;
+      }
     }
   }
 
@@ -339,6 +359,37 @@ const detectSportsbookFormat = (text) => {
 };
 
 /**
+ * Lines to skip during parsing (bet slip UI elements, summaries, navigation, etc.)
+ */
+const SKIP_PATTERNS = [
+  /\d+\s*leg\s*parlay/i,       // "4 leg parlay +1249"
+  /parlay/i,                    // Any parlay summary line
+  /total\s*wager/i,             // "TOTAL WAGER"
+  /total\s*payout/i,            // "TOTAL PAYOUT"
+  /reuse\s*selections/i,        // "Reuse selections"
+  /share\s*bet/i,               // "Share bet"
+  /bet\s*id/i,                  // "BET ID: ..."
+  /placed:/i,                   // "PLACED: 2/4/2026"
+  /^\$[\d,.]+$/,                // Dollar amounts like "$40.00"
+  /^[\d:]+\s*(am|pm|[ap])/i,   // Times like "4:00 7" or "4:59PM"
+  /my\s*bets/i,                 // "My Bets"
+  /open\s*settled/i,            // "Open Settled Saved"
+  /home\s*all\s*sports/i,       // "Home All Sports My Bets Live Now Account"
+  /live\s*now/i,                // "Live Now"
+  /^\d+$/,                      // Standalone numbers
+  /^[a-z]{1,2}$/i,              // Single/double letter lines (OCR noise)
+  /spread\s*betting/i,          // "SPREAD BETTING" header (not a pick)
+  /^\w+\s*@\s*\w+.*\d+:\d+/i,  // Matchup lines: "Michigan State @ Minnesota 4:59PM MST"
+];
+
+/**
+ * Check if a line should be skipped during parsing
+ */
+const shouldSkipLine = (line) => {
+  return SKIP_PATTERNS.some(pattern => pattern.test(line));
+};
+
+/**
  * Parse FanDuel format bet slips
  * FanDuel typically shows: "Sport | Bet Type" then "Team/Player Line" then "Odds"
  */
@@ -350,6 +401,9 @@ const parseFanDuelFormat = (lines, options) => {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     const lowerLine = line.toLowerCase();
+
+    // Skip noise lines (parlay summaries, navigation, timestamps, etc.)
+    if (shouldSkipLine(line)) continue;
 
     // Check for sport/bet type header (e.g., "NFL | Spread")
     const sportMatch = detectSportFromText(line);
@@ -375,7 +429,7 @@ const parseFanDuelFormat = (lines, options) => {
       currentPick.sport = currentSport || options.dominantSport || detectSportFromTeam(teamName, options);
       currentPick.betType = 'Spread';
       currentPick.team = resolveTeamName(teamName, currentPick.sport, options);
-      currentPick.spread = spreadValue.replace('+', '');
+      currentPick.spread = spreadValue.replace(/^[+-]/, ''); // Strip sign — Favorite/Dog field handles direction
       currentPick.favorite = spreadValue.startsWith('-') ? 'Favorite' : 'Dog';
 
       // Odds from same line (3+ digit number like -115)
@@ -474,6 +528,9 @@ const parseDraftKingsFormat = (lines, options) => {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
+    // Skip noise lines
+    if (shouldSkipLine(line)) continue;
+
     // Check for sport indicator
     const sportMatch = detectSportFromText(line);
     if (sportMatch) {
@@ -491,7 +548,7 @@ const parseDraftKingsFormat = (lines, options) => {
       pick.sport = currentSport || options.dominantSport || detectSportFromTeam(teamName, options);
       pick.betType = 'Spread';
       pick.team = resolveTeamName(teamName, pick.sport, options);
-      pick.spread = spreadValue.replace('+', '');
+      pick.spread = spreadValue.replace(/^[+-]/, '');
       pick.favorite = spreadValue.startsWith('-') ? 'Favorite' : 'Dog';
       pick.odds = odds;
 
@@ -548,6 +605,9 @@ const parseGenericFormat = (lines, options) => {
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
+
+    // Skip noise lines
+    if (shouldSkipLine(line)) continue;
 
     // Detect sport from line
     const sportMatch = detectSportFromText(line);

@@ -65,8 +65,34 @@ export const PRELOADED_TEAMS = {
     'St. Louis Blues', 'Tampa Bay Lightning', 'Toronto Maple Leafs', 'Vancouver Canucks', 'Vegas Golden Knights',
     'Washington Capitals', 'Winnipeg Jets'
   ],
-  'College Football': ['Vanderbilt'],
-  'College Basketball': ['Vanderbilt'],
+  'College Football': [
+    'Alabama', 'Arizona State', 'Arkansas', 'Auburn', 'Baylor', 'Boise State', 'Boston College', 'BYU',
+    'California', 'Cincinnati', 'Clemson', 'Colorado', 'Delaware', 'Duke', 'Florida', 'Florida State',
+    'Georgia', 'Georgia Tech', 'Houston', 'Illinois', 'Indiana', 'Iowa', 'Iowa State',
+    'Kansas', 'Kansas State', 'Kentucky', 'Liberty', 'Louisville', 'LSU',
+    'Maryland', 'Memphis', 'Miami', 'Michigan', 'Michigan State', 'Minnesota', 'Mississippi State',
+    'Missouri', 'NC State', 'Nebraska', 'North Carolina', 'Northwestern', 'Notre Dame',
+    'Ohio State', 'Oklahoma', 'Oklahoma State', 'Ole Miss', 'Oregon', 'Oregon State',
+    'Penn State', 'Pitt', 'Purdue', 'Rutgers', 'SMU', 'South Carolina', 'Stanford', 'Syracuse',
+    'TCU', 'Tennessee', 'Texas', 'Texas A&M', 'Texas Tech', 'UCF', 'UCLA', 'USC', 'Utah',
+    'Vanderbilt', 'Virginia', 'Virginia Tech', 'Wake Forest', 'Washington', 'Washington State',
+    'West Virginia', 'Wisconsin'
+  ],
+  'College Basketball': [
+    'Alabama', 'Arizona', 'Arizona State', 'Arkansas', 'Auburn', 'Baylor', 'Boston College', 'BYU',
+    'California', 'Cincinnati', 'Clemson', 'Colorado', 'Connecticut', 'Creighton', 'Delaware',
+    'DePaul', 'Duke', 'Florida', 'Florida State', 'Georgetown', 'Georgia', 'Georgia Tech',
+    'Gonzaga', 'Houston', 'Illinois', 'Indiana', 'Iowa', 'Iowa State',
+    'Kansas', 'Kansas State', 'Kentucky', 'Liberty', 'Louisville', 'LSU',
+    'Marquette', 'Maryland', 'Memphis', 'Miami', 'Michigan', 'Michigan State', 'Minnesota',
+    'Mississippi State', 'Missouri', 'NC State', 'Nebraska', 'North Carolina', 'Northwestern',
+    'Notre Dame', 'Ohio State', 'Oklahoma', 'Oklahoma State', 'Ole Miss', 'Oregon', 'Oregon State',
+    'Penn State', 'Pitt', 'Providence', 'Purdue', 'Rutgers', 'Seton Hall', 'SMU',
+    'South Carolina', 'St. Johns', 'Stanford', 'Syracuse',
+    'TCU', 'Tennessee', 'Texas', 'Texas A&M', 'Texas Tech', 'UCF', 'UCLA', 'UConn', 'USC', 'Utah',
+    'Vanderbilt', 'Villanova', 'Virginia', 'Virginia Tech', 'Wake Forest', 'Washington',
+    'Washington State', 'West Virginia', 'Wisconsin', 'Xavier'
+  ],
   Soccer: [
     'Arsenal', 'Chelsea', 'Liverpool', 'Manchester City', 'Manchester United', 'Tottenham',
     'Barcelona', 'Real Madrid', 'Bayern Munich', 'Paris Saint-Germain', 'Juventus', 'Inter Milan'
