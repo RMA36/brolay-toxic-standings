@@ -12,8 +12,8 @@ const SPORT_KEYWORDS = {
   NBA: ['nba', 'basketball', 'lakers', 'celtics', 'warriors', 'bulls', 'heat', 'knicks', 'nets', 'bucks', '76ers', 'sixers', 'suns', 'nuggets', 'mavs', 'mavericks', 'grizzlies', 'thunder', 'clippers', 'timberwolves', 'pelicans', 'rockets', 'spurs', 'jazz', 'kings', 'magic', 'pistons', 'pacers', 'hornets', 'hawks', 'blazers', 'raptors', 'wizards', 'cavaliers'],
   MLB: ['mlb', 'baseball', 'yankees', 'dodgers', 'astros', 'braves', 'mets', 'phillies', 'padres', 'cubs', 'red sox', 'cardinals', 'mariners', 'orioles', 'rangers', 'twins', 'guardians', 'rays', 'brewers', 'marlins', 'giants', 'athletics', 'angels', 'reds', 'royals', 'tigers', 'rockies', 'pirates', 'nationals', 'diamondbacks', 'white sox', 'blue jays'],
   NHL: ['nhl', 'hockey', 'bruins', 'oilers', 'panthers', 'avalanche', 'maple leafs', 'lightning', 'rangers', 'devils', 'hurricanes', 'penguins', 'stars', 'wild', 'jets', 'flames', 'predators', 'golden knights', 'kraken', 'canucks', 'sabres', 'senators', 'red wings', 'blackhawks', 'ducks', 'coyotes', 'kings', 'sharks', 'blues', 'canadiens', 'islanders', 'flyers', 'blue jackets'],
-  'College Football': ['college football', 'ncaa football', 'cfb', 'ncaaf', 'alabama', 'georgia', 'ohio state', 'michigan', 'clemson', 'texas', 'usc', 'notre dame', 'lsu', 'florida', 'tennessee', 'oklahoma', 'penn state', 'oregon', 'washington'],
-  'College Basketball': ['college basketball', 'ncaa basketball', 'cbb', 'ncaab', 'march madness', 'duke', 'north carolina', 'kansas', 'kentucky', 'villanova', 'gonzaga', 'ucla', 'purdue', 'arizona', 'houston', 'baylor', 'uconn'],
+  'College Football': ['college football', 'ncaa football', 'cfb', 'ncaaf', 'alabama', 'georgia', 'ohio state', 'michigan state', 'michigan', 'clemson', 'texas', 'usc', 'notre dame', 'lsu', 'florida', 'tennessee', 'oklahoma', 'penn state', 'oregon', 'washington', 'stanford', 'liberty', 'iowa', 'iowa state', 'auburn', 'arkansas', 'missouri', 'ole miss', 'mississippi state', 'south carolina', 'virginia', 'virginia tech', 'nc state', 'wake forest', 'louisville', 'syracuse', 'boston college', 'pitt', 'miami', 'florida state', 'georgia tech', 'byu', 'boise state', 'colorado', 'utah', 'wisconsin', 'nebraska', 'minnesota', 'illinois', 'northwestern', 'indiana', 'maryland', 'rutgers', 'delaware', 'texas a&m', 'texas tech', 'tcu', 'oklahoma state', 'kansas state', 'west virginia', 'cincinnati', 'ucf', 'memphis'],
+  'College Basketball': ['college basketball', 'ncaa basketball', 'cbb', 'ncaab', 'march madness', 'duke', 'north carolina', 'kansas', 'kentucky', 'villanova', 'gonzaga', 'ucla', 'purdue', 'arizona', 'houston', 'baylor', 'uconn', 'creighton', 'marquette', 'st. johns', 'xavier', 'providence', 'seton hall', 'butler', 'depaul', 'georgetown'],
   Soccer: ['soccer', 'premier league', 'la liga', 'bundesliga', 'serie a', 'ligue 1', 'mls', 'arsenal', 'chelsea', 'liverpool', 'manchester', 'barcelona', 'real madrid', 'bayern', 'psg', 'juventus', 'inter milan'],
   UFC: ['ufc', 'mma', 'fight night', 'octagon']
 };
@@ -80,16 +80,21 @@ export const parseBetSlipText = (ocrText, options = {}) => {
   const format = detectSportsbookFormat(cleanedText);
   console.log('[BetSlipParser] Detected format:', format);
 
+  // Use ESPN-detected sport if provided, otherwise fall back to keyword scan
+  const detectedSport = options.espnDetectedSport || detectDominantSport(cleanedText);
+  console.log('[BetSlipParser] Detected dominant sport:', detectedSport, options.espnDetectedSport ? '(from ESPN)' : '(from keywords)');
+
   // Parse based on detected format
   let picks = [];
+  const parseOptions = { learnedTeams, learnedPlayers, dominantSport: detectedSport };
 
   if (format === 'fanduel') {
-    picks = parseFanDuelFormat(lines, { learnedTeams, learnedPlayers });
+    picks = parseFanDuelFormat(lines, parseOptions);
   } else if (format === 'draftkings') {
-    picks = parseDraftKingsFormat(lines, { learnedTeams, learnedPlayers });
+    picks = parseDraftKingsFormat(lines, parseOptions);
   } else {
     // Generic parsing
-    picks = parseGenericFormat(lines, { learnedTeams, learnedPlayers });
+    picks = parseGenericFormat(lines, parseOptions);
   }
 
   // Post-process picks
@@ -127,6 +132,188 @@ const cleanOCRText = (text) => {
     .replace(/\blllinois\b/gi, 'Illinois') // Common OCR: lowercase L misread
     .replace(/\blndiana\b/gi, 'Indiana') // Common OCR: lowercase L misread
     .trim();
+};
+
+/**
+ * Detect dominant sport from full OCR text using keyword frequency
+ * Scans all lines (including matchup context) to determine the most likely sport
+ */
+const detectDominantSport = (text) => {
+  const lowerText = text.toLowerCase();
+  const sportScores = {};
+
+  for (const [sport, keywords] of Object.entries(SPORT_KEYWORDS)) {
+    sportScores[sport] = keywords.filter(keyword => lowerText.includes(keyword)).length;
+  }
+
+  // Find sport with most keyword matches
+  let bestSport = null;
+  let bestScore = 0;
+  for (const [sport, score] of Object.entries(sportScores)) {
+    if (score > bestScore) {
+      bestScore = score;
+      bestSport = sport;
+    }
+  }
+
+  return bestScore > 0 ? bestSport : null;
+};
+
+/**
+ * ESPN Sport-to-API endpoint mapping (same as useESPN.js)
+ */
+const ESPN_SPORT_MAP = {
+  'NFL': 'football/nfl',
+  'NBA': 'basketball/nba',
+  'MLB': 'baseball/mlb',
+  'NHL': 'hockey/nhl',
+  'College Football': 'football/college-football',
+  'College Basketball': 'basketball/mens-college-basketball',
+  'WNBA': 'basketball/wnba',
+  'Soccer': 'soccer/usa.1',
+};
+
+/**
+ * Detect sport by checking today's ESPN scoreboards for team name matches
+ * Extracts team-like names from OCR text and checks which sport's games they appear in
+ * @param {string} ocrText - Raw or cleaned OCR text
+ * @returns {Promise<string|null>} - Detected sport or null
+ */
+export const detectSportFromESPN = async (ocrText) => {
+  try {
+    const today = new Date();
+    const formattedDate = today.getFullYear().toString() +
+      String(today.getMonth() + 1).padStart(2, '0') +
+      String(today.getDate()).padStart(2, '0');
+
+    // Extract potential team names from OCR text
+    // Look for matchup patterns like "Team A @ Team B" or standalone capitalized words
+    const lowerText = ocrText.toLowerCase();
+    const matchupPattern = /([a-zA-Z\s.'-]+?)\s*[@v]\s*([a-zA-Z\s.'-]+?)(?:\s+\d|$)/gm;
+    const teamCandidates = new Set();
+
+    let match;
+    while ((match = matchupPattern.exec(ocrText)) !== null) {
+      const team1 = match[1].trim();
+      const team2 = match[2].trim();
+      if (team1.length > 2) teamCandidates.add(team1.toLowerCase());
+      if (team2.length > 2) teamCandidates.add(team2.toLowerCase());
+    }
+
+    // Also extract team names from spread lines: "Minnesota +8.5 -115"
+    const spreadPattern = /^([a-zA-Z\s.'-]+?)\s+[+-]\d/gm;
+    while ((match = spreadPattern.exec(ocrText)) !== null) {
+      const team = match[1].trim();
+      if (team.length > 2) teamCandidates.add(team.toLowerCase());
+    }
+
+    if (teamCandidates.size === 0) {
+      console.log('[BetSlipParser] No team candidates found for ESPN lookup');
+      return null;
+    }
+
+    console.log('[BetSlipParser] Team candidates for ESPN lookup:', [...teamCandidates]);
+
+    // Check sports that are likely in-season, prioritizing by current month
+    const month = today.getMonth() + 1; // 1-12
+    const sportsToCheck = getSportsInSeason(month);
+
+    console.log('[BetSlipParser] Checking ESPN scoreboards for:', sportsToCheck);
+
+    for (const sport of sportsToCheck) {
+      const espnEndpoint = ESPN_SPORT_MAP[sport];
+      if (!espnEndpoint) continue;
+
+      const isCollege = sport.startsWith('College');
+      const groupsParam = isCollege ? '&groups=50' : '';
+      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnEndpoint}/scoreboard?dates=${formattedDate}${groupsParam}`;
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) continue;
+        const data = await response.json();
+
+        if (!data.events || data.events.length === 0) continue;
+
+        // Check if any team candidates match teams playing today
+        let matchCount = 0;
+        for (const event of data.events) {
+          const competition = event.competitions?.[0];
+          if (!competition) continue;
+
+          for (const competitor of competition.competitors || []) {
+            const apiTeam = competitor.team;
+            if (!apiTeam) continue;
+
+            const apiNames = [
+              apiTeam.displayName?.toLowerCase(),
+              apiTeam.shortDisplayName?.toLowerCase(),
+              apiTeam.abbreviation?.toLowerCase(),
+              apiTeam.location?.toLowerCase(),
+              apiTeam.nickname?.toLowerCase(),
+            ].filter(Boolean);
+
+            for (const candidate of teamCandidates) {
+              for (const apiName of apiNames) {
+                if (apiName && (apiName.includes(candidate) || candidate.includes(apiName))) {
+                  matchCount++;
+                  if (matchCount >= 2) {
+                    console.log(`[BetSlipParser] ESPN match: "${candidate}" found in ${sport} (${apiTeam.displayName})`);
+                    return sport;
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`[BetSlipParser] ESPN fetch failed for ${sport}:`, err.message);
+        continue;
+      }
+    }
+
+    console.log('[BetSlipParser] No ESPN sport match found');
+    return null;
+  } catch (err) {
+    console.warn('[BetSlipParser] ESPN sport detection failed:', err.message);
+    return null;
+  }
+};
+
+/**
+ * Get sports likely in-season based on the current month
+ * Returns sports ordered by likelihood (most likely first)
+ */
+const getSportsInSeason = (month) => {
+  // month is 1-12
+  switch (month) {
+    case 1: // January
+      return ['NFL', 'NBA', 'College Basketball', 'NHL', 'College Football'];
+    case 2: // February
+      return ['NBA', 'College Basketball', 'NHL', 'College Football'];
+    case 3: // March
+      return ['College Basketball', 'NBA', 'NHL', 'MLB'];
+    case 4: // April
+      return ['NBA', 'MLB', 'NHL', 'College Basketball'];
+    case 5: // May
+      return ['NBA', 'MLB', 'NHL'];
+    case 6: // June
+      return ['MLB', 'NBA', 'NHL', 'WNBA'];
+    case 7: // July
+      return ['MLB', 'WNBA', 'Soccer'];
+    case 8: // August
+      return ['MLB', 'WNBA', 'NFL', 'College Football'];
+    case 9: // September
+      return ['NFL', 'College Football', 'MLB'];
+    case 10: // October
+      return ['NFL', 'College Football', 'NBA', 'MLB', 'NHL'];
+    case 11: // November
+      return ['NFL', 'College Football', 'NBA', 'College Basketball', 'NHL'];
+    case 12: // December
+      return ['NFL', 'NBA', 'College Basketball', 'College Football', 'NHL'];
+    default:
+      return ['NFL', 'NBA', 'MLB', 'NHL', 'College Football', 'College Basketball'];
+  }
 };
 
 /**
@@ -173,21 +360,30 @@ const parseFanDuelFormat = (lines, options) => {
     // Check for bet type in line
     const betType = detectBetType(line);
 
-    // Check for spread pattern: "Team Name -3.5" or "Team Name +7"
-    const spreadMatch = line.match(/^(.+?)\s+([+-]?\d+\.?\d*)\s*$/);
+    // Check for spread pattern: "Team Name +8.5 -115" or "Team Name -3.5" (odds optional)
+    const spreadWithOddsMatch = line.match(/^(.+?)\s+([+-]\d+\.?\d*)\s+([+-]\d{3,})\s*$/);
+    const spreadOnlyMatch = !spreadWithOddsMatch ? line.match(/^(.+?)\s+([+-]?\d+\.?\d*)\s*$/) : null;
+    const spreadMatch = spreadWithOddsMatch || spreadOnlyMatch;
     if (spreadMatch && !lowerLine.includes('over') && !lowerLine.includes('under')) {
       const teamName = spreadMatch[1].trim();
       const spreadValue = spreadMatch[2];
 
+      // Skip if team name looks like numbers or is too short
+      if (teamName.match(/^[+-]?\d+$/) || teamName.length < 2) continue;
+
       currentPick = createBasePick();
-      currentPick.sport = currentSport || detectSportFromTeam(teamName, options);
+      currentPick.sport = currentSport || options.dominantSport || detectSportFromTeam(teamName, options);
       currentPick.betType = 'Spread';
       currentPick.team = resolveTeamName(teamName, currentPick.sport, options);
       currentPick.spread = spreadValue.replace('+', '');
       currentPick.favorite = spreadValue.startsWith('-') ? 'Favorite' : 'Dog';
 
-      // Look ahead for odds
-      if (i + 1 < lines.length) {
+      // Odds from same line (3+ digit number like -115)
+      if (spreadWithOddsMatch && spreadWithOddsMatch[3]) {
+        currentPick.odds = spreadWithOddsMatch[3];
+      }
+      // Otherwise look ahead for odds on next line
+      else if (i + 1 < lines.length) {
         const oddsMatch = lines[i + 1].match(/\(?\s*([+-]\d+)\s*\)?/);
         if (oddsMatch) {
           currentPick.odds = oddsMatch[1];
@@ -204,7 +400,7 @@ const parseFanDuelFormat = (lines, options) => {
     const totalMatch = line.match(/(over|under)\s+(\d+\.?\d*)/i);
     if (totalMatch) {
       currentPick = createBasePick();
-      currentPick.sport = currentSport || 'NFL';
+      currentPick.sport = currentSport || options.dominantSport || 'NFL';
       currentPick.betType = betType || 'Total';
       currentPick.overUnder = totalMatch[1].charAt(0).toUpperCase() + totalMatch[1].slice(1).toLowerCase();
       currentPick.total = totalMatch[2];
@@ -233,7 +429,7 @@ const parseFanDuelFormat = (lines, options) => {
         const teamName = moneylineMatch[1].trim();
 
         currentPick = createBasePick();
-        currentPick.sport = currentSport || detectSportFromTeam(teamName, options);
+        currentPick.sport = currentSport || options.dominantSport || detectSportFromTeam(teamName, options);
         currentPick.betType = 'Moneyline';
         currentPick.team = resolveTeamName(teamName, currentPick.sport, options);
         currentPick.odds = oddsMatch[1];
@@ -292,7 +488,7 @@ const parseDraftKingsFormat = (lines, options) => {
       const odds = allInOneSpread[3];
 
       const pick = createBasePick();
-      pick.sport = currentSport || detectSportFromTeam(teamName, options);
+      pick.sport = currentSport || options.dominantSport || detectSportFromTeam(teamName, options);
       pick.betType = 'Spread';
       pick.team = resolveTeamName(teamName, pick.sport, options);
       pick.spread = spreadValue.replace('+', '');
@@ -307,7 +503,7 @@ const parseDraftKingsFormat = (lines, options) => {
     const allInOneTotal = line.match(/(over|under)\s+(\d+\.?\d*)\s+\(([+-]\d+)\)/i);
     if (allInOneTotal) {
       const pick = createBasePick();
-      pick.sport = currentSport || 'NFL';
+      pick.sport = currentSport || options.dominantSport || 'NFL';
       pick.betType = 'Total';
       pick.overUnder = allInOneTotal[1].charAt(0).toUpperCase() + allInOneTotal[1].slice(1).toLowerCase();
       pick.total = allInOneTotal[2];
@@ -324,7 +520,7 @@ const parseDraftKingsFormat = (lines, options) => {
       const odds = allInOneMl[2];
 
       const pick = createBasePick();
-      pick.sport = currentSport || detectSportFromTeam(teamName, options);
+      pick.sport = currentSport || options.dominantSport || detectSportFromTeam(teamName, options);
       pick.betType = 'Moneyline';
       pick.team = resolveTeamName(teamName, pick.sport, options);
       pick.odds = odds;
@@ -359,8 +555,11 @@ const parseGenericFormat = (lines, options) => {
       currentSport = sportMatch;
     }
 
-    // Try spread pattern with or without odds
-    const spreadWithOdds = line.match(/^(.+?)\s+([+-]?\d+\.?\d*)\s*(?:\(([+-]\d+)\))?$/);
+    // Try spread pattern: "Team +8.5 -115" (odds inline) or "Team -3.5 (-110)" (odds in parens) or "Team -3.5" (no odds)
+    const spreadInlineOdds = line.match(/^(.+?)\s+([+-]\d+\.?\d*)\s+([+-]\d{3,})\s*$/);
+    const spreadParenOdds = !spreadInlineOdds ? line.match(/^(.+?)\s+([+-]?\d+\.?\d*)\s*\(([+-]\d+)\)\s*$/) : null;
+    const spreadNoOdds = !spreadInlineOdds && !spreadParenOdds ? line.match(/^(.+?)\s+([+-]?\d+\.?\d*)\s*$/) : null;
+    const spreadWithOdds = spreadInlineOdds || spreadParenOdds || spreadNoOdds;
     if (spreadWithOdds && !line.toLowerCase().includes('over') && !line.toLowerCase().includes('under')) {
       const teamName = spreadWithOdds[1].trim();
 
@@ -368,7 +567,7 @@ const parseGenericFormat = (lines, options) => {
       if (teamName.match(/^[+-]?\d+$/) || teamName.length < 2) continue;
 
       const pick = createBasePick();
-      pick.sport = currentSport || detectSportFromTeam(teamName, options);
+      pick.sport = currentSport || options.dominantSport || detectSportFromTeam(teamName, options);
       pick.betType = 'Spread';
       pick.team = resolveTeamName(teamName, pick.sport, options);
       pick.spread = spreadWithOdds[2].replace('+', '');
@@ -385,7 +584,7 @@ const parseGenericFormat = (lines, options) => {
     const totalMatch = line.match(/(over|under)\s+(\d+\.?\d*)\s*(?:\(([+-]\d+)\))?/i);
     if (totalMatch) {
       const pick = createBasePick();
-      pick.sport = currentSport || 'NFL';
+      pick.sport = currentSport || options.dominantSport || 'NFL';
       pick.betType = 'Total';
       pick.overUnder = totalMatch[1].charAt(0).toUpperCase() + totalMatch[1].slice(1).toLowerCase();
       pick.total = totalMatch[2];

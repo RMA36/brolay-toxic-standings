@@ -6,7 +6,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import Tesseract from 'tesseract.js';
 import { processImageForOCR, validateImageFile } from '../utils/imageProcessing';
-import { parseBetSlipText } from '../utils/betSlipParser';
+import { parseBetSlipText, detectSportFromESPN } from '../utils/betSlipParser';
 
 /**
  * Hook for parsing bet slip images using OCR
@@ -135,11 +135,27 @@ export const useBetSlipParser = (options = {}) => {
 
       console.log('[useBetSlipParser] OCR Result:', text);
 
+      setProgress(85);
+      setProgressMessage('Detecting sport from today\'s games...');
+
+      // Try to detect sport by checking today's ESPN scoreboards
+      let espnDetectedSport = null;
+      try {
+        espnDetectedSport = await detectSportFromESPN(text);
+        console.log('[useBetSlipParser] ESPN detected sport:', espnDetectedSport);
+      } catch (err) {
+        console.warn('[useBetSlipParser] ESPN sport detection failed, falling back to keywords:', err.message);
+      }
+
+      if (abortRef.current) {
+        return { success: false, picks: [], ocrText: '', error: 'Cancelled' };
+      }
+
       setProgress(90);
       setProgressMessage('Parsing picks...');
 
-      // Parse the OCR text
-      const picks = parseBetSlipText(text, { learnedTeams, learnedPlayers });
+      // Parse the OCR text, passing ESPN-detected sport if available
+      const picks = parseBetSlipText(text, { learnedTeams, learnedPlayers, espnDetectedSport });
 
       setProgress(100);
       setProgressMessage('Complete!');
