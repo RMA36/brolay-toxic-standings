@@ -109,8 +109,23 @@ const cleanOCRText = (text) => {
   return text
     .replace(/\r\n/g, '\n')
     .replace(/\t/g, ' ')
-    .replace(/\s+/g, ' ')
-    .replace(/[^\x00-\x7F]/g, '') // Remove non-ASCII characters
+    .replace(/[^\S\n]+/g, ' ')  // Collapse spaces/tabs but PRESERVE newlines
+    .replace(/\n{3,}/g, '\n\n') // Collapse excessive blank lines to max 2
+    .replace(/[^\x00-\x7F\n]/g, '') // Remove non-ASCII but keep newlines
+    // OCR corrections
+    .replace(/([a-zA-Z])(-?\d)/g, '$1 $2') // Add space between letters and numbers (e.g., "lowa-25" → "lowa -25")
+    .replace(/\b([+-]?)(\d{1,2})(5)\b/g, (match, sign, whole, five, offset, str) => {
+      // Fix missing decimal in common spread values (e.g., "-25" → "-2.5", "35" → "3.5")
+      // Only apply when the number looks like a spread (1-2 digits ending in 5)
+      const prevContext = str.slice(Math.max(0, offset - 20), offset).toLowerCase();
+      if (prevContext.match(/spread|[+-]/) || sign) {
+        return `${sign}${whole}.${five}`;
+      }
+      return match;
+    })
+    .replace(/\blowa\b/gi, 'Iowa') // Common OCR: lowercase L misread for uppercase I
+    .replace(/\blllinois\b/gi, 'Illinois') // Common OCR: lowercase L misread
+    .replace(/\blndiana\b/gi, 'Indiana') // Common OCR: lowercase L misread
     .trim();
 };
 
