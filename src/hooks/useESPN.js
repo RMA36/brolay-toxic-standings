@@ -918,38 +918,38 @@ export const useESPN = () => {
   
   // Check first half/quarter results
   const checkFirstHalfResult = async (participant, gameDate) => {
-    const { sport, betType, team, awayTeam, homeTeam, overUnder, total } = participant;
-    
+    const { sport, betType, team, awayTeam, homeTeam, overUnder, total, favorite, spread } = participant;
+
     const espnSport = getESPNSport(sport);
     if (!espnSport) {
       return { result: 'pending', stats: null };
     }
-    
+
     try {
       const formattedDate = gameDate.replace(/-/g, '');
       const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
-      
+
       const response = await fetch(url);
       const data = await response.json();
-      
+
       if (!data.events || data.events.length === 0) {
         return { result: 'pending', stats: null };
       }
-      
+
       let relevantGame = null;
-      
+
       // IMPROVED: More strict game matching to avoid wrong games
       for (const event of data.events) {
         const competition = event.competitions[0];
         const competitors = competition.competitors;
-        
+
         if (competition.status.type.completed !== true) {
           continue;
         }
-        
+
         const homeTeamName = competitors.find(c => c.homeAway === 'home')?.team.displayName || '';
         const awayTeamName = competitors.find(c => c.homeAway === 'away')?.team.displayName || '';
-        
+
         // For first half bets, match BOTH teams to ensure correct game
         if (betType === 'First Half Total' || betType === 'First Inning Runs') {
           if (matchTeamName(awayTeam, awayTeamName) && matchTeamName(homeTeam, homeTeamName)) {
@@ -958,7 +958,11 @@ export const useESPN = () => {
           }
         } else if (betType === 'First Half Team Total') {
           if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
-            // Additional check: verify this is the right matchup
+            relevantGame = { competition, event };
+            break;
+          }
+        } else if (betType === 'First Half Spread' || betType === 'First Half Moneyline') {
+          if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
             relevantGame = { competition, event };
             break;
           }
@@ -1024,8 +1028,28 @@ export const useESPN = () => {
           result,
           stats: `1H Team Total: ${teamTotal}`
         };
+      } else if (betType === 'First Half Spread') {
+        const homeDisplay = homeLineScore.team.displayName;
+        const awayDisplay = awayLineScore.team.displayName;
+        const result = determineSpreadResult(team, favorite, spread,
+          { team: { displayName: homeDisplay } }, { team: { displayName: awayDisplay } },
+          firstHalfHomeScore, firstHalfAwayScore);
+        return {
+          result,
+          stats: `1H: ${awayDisplay} ${firstHalfAwayScore} @ ${homeDisplay} ${firstHalfHomeScore}`
+        };
+      } else if (betType === 'First Half Moneyline') {
+        const homeDisplay = homeLineScore.team.displayName;
+        const awayDisplay = awayLineScore.team.displayName;
+        const result = determineMoneylineResult(team,
+          { team: { displayName: homeDisplay }, score: firstHalfHomeScore },
+          { team: { displayName: awayDisplay }, score: firstHalfAwayScore });
+        return {
+          result,
+          stats: `1H: ${awayDisplay} ${firstHalfAwayScore} @ ${homeDisplay} ${firstHalfHomeScore}`
+        };
       }
-      
+
       return { result: 'pending', stats: null };
       
     } catch (error) {
@@ -1196,7 +1220,7 @@ export const useESPN = () => {
       return await checkQuarterResult(participant, gameDate);
     }
     
-    if (['First Half Moneyline', 'First Half Total', 'First Half Team Total', 'First Inning Runs'].includes(betType)) {
+    if (['First Half Moneyline', 'First Half Spread', 'First Half Total', 'First Half Team Total', 'First Inning Runs'].includes(betType)) {
       return await checkFirstHalfResult(participant, gameDate);
     }
     
@@ -1302,6 +1326,14 @@ export const useESPN = () => {
         return {
           result,
           stats: `Total: ${homeScore + awayScore}`
+        };
+      } else if (betType === 'Team Total') {
+        const isHome = matchTeamName(team, homeComp.team.displayName);
+        const teamScore = isHome ? homeScore : awayScore;
+        const result = determineTotalResult(overUnder, total, teamScore);
+        return {
+          result,
+          stats: `${team} scored ${teamScore}`
         };
       }
       
