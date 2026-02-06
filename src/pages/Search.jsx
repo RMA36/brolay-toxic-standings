@@ -2,10 +2,189 @@ import React from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
-import { formatDateForDisplay, formatBetDescription, getPicksArray, getPickBigGuy, getPickResult, getPickActualStats, getPickPropType, getPickPlayerPosition, getPickPlayerTeam } from '../utils/formatters';
+import { formatDateForDisplay, formatBetDescription, extractPickInfo, getPicksArray, getPickBigGuy, getPickResult, getPickActualStats, getPickPropType, getPickPlayerPosition, getPickPlayerTeam } from '../utils/formatters';
 import { tokenizeQuery, findBestTeamMatch, filterByRelevance } from '../searchUtils';
 import { SPORTS, PLAYERS, PICK_TYPES, PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
 import { formatComboDescription } from '../insightsHelper';
+
+// --- Contextual Stats Helper Functions ---
+
+/** Compute win% from a record object { wins, losses, pushes, total } */
+const winPct = (rec) => {
+  if (!rec || rec.total === 0) return 0;
+  return (((rec.wins + (rec.pushes || 0) * 0.5) / rec.total) * 100).toFixed(1);
+};
+
+/** Format a record as "W-L" or "W-L-P" */
+const formatRecord = (rec) => {
+  if (!rec) return '0-0';
+  return rec.pushes > 0 ? `${rec.wins}-${rec.losses}-${rec.pushes}` : `${rec.wins}-${rec.losses}`;
+};
+
+/** Find best entry from a breakdown object (e.g. byPlayer, bySport) with minimum picks */
+const findBest = (breakdown, minPicks = 3) => {
+  let best = null;
+  let bestPct = -1;
+  Object.entries(breakdown).forEach(([key, rec]) => {
+    if (rec.total >= minPicks) {
+      const pct = parseFloat(winPct(rec));
+      if (pct > bestPct) {
+        bestPct = pct;
+        best = { name: key, ...rec, winPct: pct };
+      }
+    }
+  });
+  return best;
+};
+
+/** Find worst entry from a breakdown object */
+const findWorst = (breakdown, minPicks = 3) => {
+  let worst = null;
+  let worstPct = 101;
+  Object.entries(breakdown).forEach(([key, rec]) => {
+    if (rec.total >= minPicks) {
+      const pct = parseFloat(winPct(rec));
+      if (pct < worstPct) {
+        worstPct = pct;
+        worst = { name: key, ...rec, winPct: pct };
+      }
+    }
+  });
+  return worst;
+};
+
+/** Compute bet-type splits: ATS record, ML record, O/U record, fav/dog splits */
+const computeBetTypeSplits = (filteredPicks) => {
+  const splits = {
+    ats: { wins: 0, losses: 0, pushes: 0, total: 0 },
+    ml: { wins: 0, losses: 0, pushes: 0, total: 0 },
+    ou: { wins: 0, losses: 0, pushes: 0, total: 0 },
+    fav: { wins: 0, losses: 0, pushes: 0, total: 0 },
+    dog: { wins: 0, losses: 0, pushes: 0, total: 0 },
+    over: { wins: 0, losses: 0, pushes: 0, total: 0 },
+    under: { wins: 0, losses: 0, pushes: 0, total: 0 }
+  };
+
+  filteredPicks.forEach(pick => {
+    const result = pick.result || getPickResult(pick);
+    const info = extractPickInfo(pick);
+    const bt = pick.betType || '';
+
+    const addResult = (rec) => {
+      if (result === 'win') rec.wins++;
+      else if (result === 'loss') rec.losses++;
+      else if (result === 'push') rec.pushes++;
+      rec.total++;
+    };
+
+    // Spread types
+    if (bt.includes('Spread')) {
+      addResult(splits.ats);
+      if (info.favorite === 'Favorite') addResult(splits.fav);
+      else if (info.favorite === 'Dog') addResult(splits.dog);
+    }
+    // Moneyline types
+    if (bt.includes('Moneyline')) {
+      addResult(splits.ml);
+    }
+    // Total types
+    if (bt.includes('Total') || bt === 'First Inning Runs') {
+      addResult(splits.ou);
+      if (info.overUnder === 'Over') addResult(splits.over);
+      else if (info.overUnder === 'Under') addResult(splits.under);
+    }
+  });
+
+  return splits;
+};
+
+/** Compute current streak and last 10 record from date-sorted picks */
+const computeStreakAndLast10 = (filteredPicks) => {
+  const sorted = [...filteredPicks].sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate));
+
+  // Current streak
+  let streak = { type: null, count: 0 };
+  for (const pick of sorted) {
+    const r = pick.result || getPickResult(pick);
+    if (r === 'push') continue;
+    if (streak.type === null) {
+      streak.type = r;
+      streak.count = 1;
+    } else if (r === streak.type) {
+      streak.count++;
+    } else {
+      break;
+    }
+  }
+
+  // Last 10
+  const last10Picks = sorted.slice(0, 10);
+  const last10 = {
+    wins: last10Picks.filter(p => (p.result || getPickResult(p)) === 'win').length,
+    losses: last10Picks.filter(p => (p.result || getPickResult(p)) === 'loss').length,
+    pushes: last10Picks.filter(p => (p.result || getPickResult(p)) === 'push').length,
+    total: last10Picks.length
+  };
+
+  return { streak, last10 };
+};
+
+/** Compute best/worst sport+betType combos for a player */
+const computeCombos = (filteredPicks) => {
+  const combos = {};
+  filteredPicks.forEach(pick => {
+    const r = pick.result || getPickResult(pick);
+    const key = `${pick.sport} ${pick.betType}`;
+    if (!combos[key]) combos[key] = { wins: 0, losses: 0, pushes: 0, total: 0 };
+    if (r === 'win') combos[key].wins++;
+    else if (r === 'loss') combos[key].losses++;
+    else if (r === 'push') combos[key].pushes++;
+    combos[key].total++;
+  });
+  return { best: findBest(combos, 3), worst: findWorst(combos, 3) };
+};
+
+/** Compute parlay hit rate for a player */
+const computeParlayRecord = (parlays, playerName) => {
+  let hits = 0;
+  let misses = 0;
+  let pending = 0;
+  parlays.forEach(parlay => {
+    const picks = getPicksArray(parlay);
+    const playerPicks = picks.filter(p => getPickBigGuy(p) === playerName);
+    if (playerPicks.length === 0) return;
+    const allWin = playerPicks.every(p => getPickResult(p) === 'win');
+    const anyPending = playerPicks.some(p => getPickResult(p) === 'pending');
+    if (anyPending) { pending++; return; }
+    if (allWin) hits++;
+    else misses++;
+  });
+  return { hits, misses, pending, total: hits + misses };
+};
+
+/** Compute over/under split for prop picks */
+const computeOverUnderSplit = (filteredPicks) => {
+  const overRec = { wins: 0, losses: 0, pushes: 0, total: 0 };
+  const underRec = { wins: 0, losses: 0, pushes: 0, total: 0 };
+  filteredPicks.forEach(pick => {
+    const r = pick.result || getPickResult(pick);
+    const info = extractPickInfo(pick);
+    const rec = info.overUnder === 'Over' ? overRec : info.overUnder === 'Under' ? underRec : null;
+    if (!rec) return;
+    if (r === 'win') rec.wins++;
+    else if (r === 'loss') rec.losses++;
+    else if (r === 'push') rec.pushes++;
+    rec.total++;
+  });
+  return { over: overRec, under: underRec };
+};
+
+/** Sort a breakdown object by win% descending, return as sorted entries */
+const sortedEntries = (breakdown) => {
+  return Object.entries(breakdown).sort(([, a], [, b]) => {
+    return parseFloat(winPct(b)) - parseFloat(winPct(a));
+  });
+};
 
 /**
  * Search - Search page component for deep insights and analysis
@@ -191,6 +370,11 @@ const Search = () => {
         stats.byBetType[pick.betType].total++;
       });
 
+      // Day-specific contextual stats
+      stats.bestSport = findBest(stats.bySport, 3);
+      stats.bestPlayer = findBest(stats.byPlayer, 3);
+      stats.bestBetType = findBest(stats.byBetType, 3);
+
       stats.recentPicks = filteredPicks
         .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
         .slice(0, 10);
@@ -298,6 +482,28 @@ const Search = () => {
         stats.byPlayer[bigGuy].total++;
       });
 
+      // Prop-specific contextual stats
+      stats.overUnderSplit = computeOverUnderSplit(filteredPicks);
+      // Top players picked for this prop
+      const playerCounts = {};
+      filteredPicks.forEach(pick => {
+        const info = extractPickInfo(pick);
+        const playerName = info.team; // Player name stored in team field for player props
+        if (playerName && (pick.betType === 'Player Prop' || pick.betType === 'Prop Bet')) {
+          if (!playerCounts[playerName]) playerCounts[playerName] = { count: 0, wins: 0, losses: 0, pushes: 0, total: 0 };
+          playerCounts[playerName].count++;
+          playerCounts[playerName].total++;
+          const r = pick.result || getPickResult(pick);
+          if (r === 'win') playerCounts[playerName].wins++;
+          else if (r === 'loss') playerCounts[playerName].losses++;
+          else if (r === 'push') playerCounts[playerName].pushes++;
+        }
+      });
+      stats.topPlayers = Object.entries(playerCounts)
+        .sort(([, a], [, b]) => b.count - a.count)
+        .slice(0, 5)
+        .map(([name, data]) => ({ player: name, ...data }));
+
       stats.recentPicks = filteredPicks
         .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
         .slice(0, 10);
@@ -386,6 +592,10 @@ const Search = () => {
         stats.byBetType[pick.betType].total++;
       });
 
+      // Team-specific contextual stats
+      stats.splits = computeBetTypeSplits(filteredPicks);
+      stats.bestBetType = findBest(stats.byBetType, 3);
+
       stats.recentPicks = filteredPicks
         .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
         .slice(0, 10);
@@ -463,6 +673,11 @@ const Search = () => {
         stats.byPlayer[pick.player].total++;
         if (pick.sport) stats.bySport[pick.sport].total++;
       });
+
+      // Bet-type-specific contextual stats
+      stats.splits = computeBetTypeSplits(filteredPicks);
+      stats.bestSport = findBest(stats.bySport, 3);
+      stats.bestPlayer = findBest(stats.byPlayer, 3);
 
       stats.recentPicks = filteredPicks
         .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
@@ -542,6 +757,10 @@ const Search = () => {
         stats.byBetType[pick.betType].total++;
       });
 
+      // Sport-specific contextual stats
+      stats.splits = computeBetTypeSplits(filteredPicks);
+      stats.bestPlayer = findBest(stats.byPlayer, 3);
+
       stats.recentPicks = filteredPicks
         .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
         .slice(0, 10);
@@ -617,6 +836,13 @@ const Search = () => {
         stats.bySport[pick.sport].total++;
         stats.byBetType[pick.betType].total++;
       });
+
+      // Player-specific contextual stats
+      const { streak, last10 } = computeStreakAndLast10(filteredPicks);
+      stats.streak = streak;
+      stats.last10 = last10;
+      stats.combos = computeCombos(filteredPicks);
+      stats.parlayRecord = computeParlayRecord(parlays, targetPlayer);
 
       stats.recentPicks = filteredPicks
         .sort((a, b) => new Date(b.parlayDate) - new Date(a.parlayDate))
@@ -1033,6 +1259,7 @@ const Search = () => {
             ) : null;
           })()}
 
+          {/* --- PROP TYPE RESULTS --- */}
           {searchResults.matchedCategory === 'propType' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -1054,36 +1281,42 @@ const Search = () => {
                 </div>
               </div>
 
-              <div className="mb-6">
-                <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Big Guy</h4>
-                <div className="space-y-2">
-                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => {
-                    const adjustedWins = stats.wins + (stats.pushes * 0.5);
-                    const winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
-                    const recordDisplay = stats.pushes > 0
-                      ? `${stats.wins}-${stats.losses}-${stats.pushes}`
-                      : `${stats.wins}-${stats.losses}`;
+              {/* Over/Under Split */}
+              {searchResults.data.overUnderSplit && (searchResults.data.overUnderSplit.over.total > 0 || searchResults.data.overUnderSplit.under.total > 0) && (
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="p-4 rounded-lg border border-green-500/20 bg-green-900/20">
+                    <div className="text-sm text-green-300 mb-1">Overs</div>
+                    <div className="text-lg font-bold text-green-400">{formatRecord(searchResults.data.overUnderSplit.over)}</div>
+                    <div className="text-sm text-gray-400">{winPct(searchResults.data.overUnderSplit.over)}%</div>
+                  </div>
+                  <div className="p-4 rounded-lg border border-red-500/20 bg-red-900/20">
+                    <div className="text-sm text-red-300 mb-1">Unders</div>
+                    <div className="text-lg font-bold text-red-400">{formatRecord(searchResults.data.overUnderSplit.under)}</div>
+                    <div className="text-sm text-gray-400">{winPct(searchResults.data.overUnderSplit.under)}%</div>
+                  </div>
+                </div>
+              )}
 
-                    return (
-                      <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                        <span className="font-semibold text-white">{player}</span>
-                        <span className="text-sm text-gray-300">
-                          {recordDisplay} ({winPct}%)
-                        </span>
-                      </div>
-                    );
-                  })}
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Big Guy</h4>
+                <div className="space-y-2">
+                  {sortedEntries(searchResults.data.byPlayer).map(([player, rec]) => (
+                    <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{player}</span>
+                      <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               {searchResults.data.topPlayers?.length > 0 && (
                 <div className="mb-6">
-                  <h4 className="font-semibold text-lg mb-3">🎯 Most Common Players Picked</h4>
+                  <h4 className="font-semibold text-lg mb-3 text-yellow-400">Most Picked Players</h4>
                   <div className="space-y-2">
                     {searchResults.data.topPlayers.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center p-3 bg-gray-50 rounded">
-                        <span className="font-semibold">{item.player}</span>
-                        <span className="text-sm">{item.count} picks</span>
+                      <div key={idx} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                        <span className="font-semibold text-white">{item.player}</span>
+                        <span className="text-sm text-gray-300">{formatRecord(item)} ({winPct(item)}%) - {item.count} picks</span>
                       </div>
                     ))}
                   </div>
@@ -1092,7 +1325,8 @@ const Search = () => {
             </>
           )}
 
-          {(searchResults.matchedCategory === 'betType' || searchResults.matchedCategory === 'sport') && (
+          {/* --- BET TYPE RESULTS --- */}
+          {searchResults.matchedCategory === 'betType' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-blue-900/40 p-4 rounded-lg border border-blue-500/30">
@@ -1113,56 +1347,92 @@ const Search = () => {
                 </div>
               </div>
 
-              <div className="mb-6">
-                <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Big Guy</h4>
-                <div className="space-y-2">
-                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => {
-                    const adjustedWins = stats.wins + (stats.pushes * 0.5);
-                    const winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
-                    const recordDisplay = stats.pushes > 0
-                      ? `${stats.wins}-${stats.losses}-${stats.pushes}`
-                      : `${stats.wins}-${stats.losses}`;
-
-                    return (
-                      <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                        <span className="font-semibold text-white">{player}</span>
-                        <span className="text-sm text-gray-300">
-                          {recordDisplay} ({winPct}%)
-                        </span>
+              {/* Contextual splits for bet type */}
+              {searchResults.data.splits && (
+                <div className="mb-6">
+                  {/* Fav/Dog for Spread searches */}
+                  {searchResults.data.betType?.includes('Spread') && (searchResults.data.splits.fav.total > 0 || searchResults.data.splits.dog.total > 0) && (
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="p-4 rounded-lg border border-yellow-500/20 bg-yellow-900/20">
+                        <div className="text-sm text-yellow-300 mb-1">As Favorite</div>
+                        <div className="text-lg font-bold text-yellow-400">{formatRecord(searchResults.data.splits.fav)}</div>
+                        <div className="text-sm text-gray-400">{winPct(searchResults.data.splits.fav)}%</div>
                       </div>
-                    );
-                  })}
+                      <div className="p-4 rounded-lg border border-cyan-500/20 bg-cyan-900/20">
+                        <div className="text-sm text-cyan-300 mb-1">As Dog</div>
+                        <div className="text-lg font-bold text-cyan-400">{formatRecord(searchResults.data.splits.dog)}</div>
+                        <div className="text-sm text-gray-400">{winPct(searchResults.data.splits.dog)}%</div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Over/Under for Total searches */}
+                  {searchResults.data.betType?.includes('Total') && (searchResults.data.splits.over.total > 0 || searchResults.data.splits.under.total > 0) && (
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="p-4 rounded-lg border border-green-500/20 bg-green-900/20">
+                        <div className="text-sm text-green-300 mb-1">Overs</div>
+                        <div className="text-lg font-bold text-green-400">{formatRecord(searchResults.data.splits.over)}</div>
+                        <div className="text-sm text-gray-400">{winPct(searchResults.data.splits.over)}%</div>
+                      </div>
+                      <div className="p-4 rounded-lg border border-red-500/20 bg-red-900/20">
+                        <div className="text-sm text-red-300 mb-1">Unders</div>
+                        <div className="text-lg font-bold text-red-400">{formatRecord(searchResults.data.splits.under)}</div>
+                        <div className="text-sm text-gray-400">{winPct(searchResults.data.splits.under)}%</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Best callouts */}
+              {(searchResults.data.bestSport || searchResults.data.bestPlayer) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {searchResults.data.bestPlayer && (
+                    <div className="p-4 rounded-lg border border-green-500/30 bg-green-900/20">
+                      <div className="text-sm text-green-300">Best Big Guy</div>
+                      <div className="text-lg font-bold text-white">{searchResults.data.bestPlayer.name}</div>
+                      <div className="text-sm text-gray-400">{formatRecord(searchResults.data.bestPlayer)} ({searchResults.data.bestPlayer.winPct}%)</div>
+                    </div>
+                  )}
+                  {searchResults.data.bestSport && (
+                    <div className="p-4 rounded-lg border border-blue-500/30 bg-blue-900/20">
+                      <div className="text-sm text-blue-300">Best Sport</div>
+                      <div className="text-lg font-bold text-white">{searchResults.data.bestSport.name}</div>
+                      <div className="text-sm text-gray-400">{formatRecord(searchResults.data.bestSport)} ({searchResults.data.bestSport.winPct}%)</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Big Guy</h4>
+                <div className="space-y-2">
+                  {sortedEntries(searchResults.data.byPlayer).map(([player, rec]) => (
+                    <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{player}</span>
+                      <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Show sport breakdown for bet type searches */}
-              {searchResults.matchedCategory === 'betType' && searchResults.data.bySport && Object.keys(searchResults.data.bySport).length > 0 && (
+              {searchResults.data.bySport && Object.keys(searchResults.data.bySport).length > 0 && (
                 <div className="mb-6">
-                  <h4 className="font-semibold text-lg mb-3 text-yellow-400">🏈 By Sport</h4>
+                  <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Sport</h4>
                   <div className="space-y-2">
-                    {Object.entries(searchResults.data.bySport).map(([sport, stats]) => {
-                      const adjustedWins = stats.wins + (stats.pushes * 0.5);
-                      const winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
-                      const recordDisplay = stats.pushes > 0
-                        ? `${stats.wins}-${stats.losses}-${stats.pushes}`
-                        : `${stats.wins}-${stats.losses}`;
-
-                      return (
-                        <div key={sport} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                          <span className="font-semibold text-white">{sport}</span>
-                          <span className="text-sm text-gray-300">
-                            {recordDisplay} ({winPct}%)
-                          </span>
-                        </div>
-                      );
-                    })}
+                    {sortedEntries(searchResults.data.bySport).map(([sport, rec]) => (
+                      <div key={sport} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                        <span className="font-semibold text-white">{sport}</span>
+                        <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
             </>
           )}
 
-          {searchResults.matchedCategory === 'team' && (
+          {/* --- SPORT RESULTS --- */}
+          {searchResults.matchedCategory === 'sport' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-blue-900/40 p-4 rounded-lg border border-blue-500/30">
@@ -1183,30 +1453,156 @@ const Search = () => {
                 </div>
               </div>
 
-              <div className="mb-6">
-                <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 Who Picks {searchResults.data.team}?</h4>
-                <div className="space-y-2">
-                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => {
-                    const adjustedWins = stats.wins + (stats.pushes * 0.5);
-                    const winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
-                    const recordDisplay = stats.pushes > 0
-                      ? `${stats.wins}-${stats.losses}-${stats.pushes}`
-                      : `${stats.wins}-${stats.losses}`;
+              {/* ATS / ML / O/U splits */}
+              {searchResults.data.splits && (
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  {searchResults.data.splits.ats.total > 0 && (
+                    <div className="p-3 rounded-lg border border-yellow-500/20 bg-yellow-900/20 text-center">
+                      <div className="text-xs text-yellow-300 mb-1">ATS</div>
+                      <div className="text-lg font-bold text-yellow-400">{formatRecord(searchResults.data.splits.ats)}</div>
+                      <div className="text-xs text-gray-400">{winPct(searchResults.data.splits.ats)}%</div>
+                    </div>
+                  )}
+                  {searchResults.data.splits.ml.total > 0 && (
+                    <div className="p-3 rounded-lg border border-blue-500/20 bg-blue-900/20 text-center">
+                      <div className="text-xs text-blue-300 mb-1">ML</div>
+                      <div className="text-lg font-bold text-blue-400">{formatRecord(searchResults.data.splits.ml)}</div>
+                      <div className="text-xs text-gray-400">{winPct(searchResults.data.splits.ml)}%</div>
+                    </div>
+                  )}
+                  {searchResults.data.splits.ou.total > 0 && (
+                    <div className="p-3 rounded-lg border border-purple-500/20 bg-purple-900/20 text-center">
+                      <div className="text-xs text-purple-300 mb-1">O/U</div>
+                      <div className="text-lg font-bold text-purple-400">{formatRecord(searchResults.data.splits.ou)}</div>
+                      <div className="text-xs text-gray-400">{winPct(searchResults.data.splits.ou)}%</div>
+                    </div>
+                  )}
+                </div>
+              )}
 
-                    return (
-                      <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                        <span className="font-semibold text-white">{player}</span>
-                        <span className="text-sm text-gray-300">
-                          {recordDisplay} ({winPct}%)
-                        </span>
-                      </div>
-                    );
-                  })}
+              {/* Best Big Guy callout */}
+              {searchResults.data.bestPlayer && (
+                <div className="p-4 rounded-lg border border-green-500/30 bg-green-900/20 mb-6">
+                  <div className="text-sm text-green-300">Best Big Guy in {searchResults.data.sport}</div>
+                  <div className="text-lg font-bold text-white">{searchResults.data.bestPlayer.name}</div>
+                  <div className="text-sm text-gray-400">{formatRecord(searchResults.data.bestPlayer)} ({searchResults.data.bestPlayer.winPct}%)</div>
+                </div>
+              )}
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Big Guy</h4>
+                <div className="space-y-2">
+                  {sortedEntries(searchResults.data.byPlayer).map(([player, rec]) => (
+                    <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{player}</span>
+                      <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
+                    </div>
+                  ))}
                 </div>
               </div>
+
+              {searchResults.data.byBetType && Object.keys(searchResults.data.byBetType).length > 0 && (
+                <div className="mb-6">
+                  <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Bet Type</h4>
+                  <div className="space-y-2">
+                    {sortedEntries(searchResults.data.byBetType).map(([bt, rec]) => (
+                      <div key={bt} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                        <span className="font-semibold text-white">{bt}</span>
+                        <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
 
+          {/* --- TEAM RESULTS --- */}
+          {searchResults.matchedCategory === 'team' && (
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-900/40 p-4 rounded-lg border border-blue-500/30">
+                  <div className="text-sm text-blue-300">Overall</div>
+                  <div className="text-2xl font-bold text-blue-400">{formatRecord(searchResults.data)}</div>
+                  <div className="text-sm text-gray-400">{searchResults.data.winPct}%</div>
+                </div>
+                {searchResults.data.splits?.ats.total > 0 && (
+                  <div className="bg-yellow-900/40 p-4 rounded-lg border border-yellow-500/30">
+                    <div className="text-sm text-yellow-300">ATS</div>
+                    <div className="text-2xl font-bold text-yellow-400">{formatRecord(searchResults.data.splits.ats)}</div>
+                    <div className="text-sm text-gray-400">{winPct(searchResults.data.splits.ats)}%</div>
+                  </div>
+                )}
+                {searchResults.data.splits?.ml.total > 0 && (
+                  <div className="bg-green-900/40 p-4 rounded-lg border border-green-500/30">
+                    <div className="text-sm text-green-300">ML</div>
+                    <div className="text-2xl font-bold text-green-400">{formatRecord(searchResults.data.splits.ml)}</div>
+                    <div className="text-sm text-gray-400">{winPct(searchResults.data.splits.ml)}%</div>
+                  </div>
+                )}
+                {searchResults.data.splits?.ou.total > 0 && (
+                  <div className="bg-purple-900/40 p-4 rounded-lg border border-purple-500/30">
+                    <div className="text-sm text-purple-300">O/U</div>
+                    <div className="text-2xl font-bold text-purple-400">{formatRecord(searchResults.data.splits.ou)}</div>
+                    <div className="text-sm text-gray-400">{winPct(searchResults.data.splits.ou)}%</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Fav/Dog split */}
+              {searchResults.data.splits && (searchResults.data.splits.fav.total > 0 || searchResults.data.splits.dog.total > 0) && (
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="p-4 rounded-lg border border-yellow-500/20 bg-yellow-900/20">
+                    <div className="text-sm text-yellow-300 mb-1">As Favorite</div>
+                    <div className="text-lg font-bold text-yellow-400">{formatRecord(searchResults.data.splits.fav)}</div>
+                    <div className="text-sm text-gray-400">{winPct(searchResults.data.splits.fav)}%</div>
+                  </div>
+                  <div className="p-4 rounded-lg border border-cyan-500/20 bg-cyan-900/20">
+                    <div className="text-sm text-cyan-300 mb-1">As Dog</div>
+                    <div className="text-lg font-bold text-cyan-400">{formatRecord(searchResults.data.splits.dog)}</div>
+                    <div className="text-sm text-gray-400">{winPct(searchResults.data.splits.dog)}%</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Best bet type callout */}
+              {searchResults.data.bestBetType && (
+                <div className="p-4 rounded-lg border border-green-500/30 bg-green-900/20 mb-6">
+                  <div className="text-sm text-green-300">Best Bet Type for {searchResults.data.team}</div>
+                  <div className="text-lg font-bold text-white">{searchResults.data.bestBetType.name}</div>
+                  <div className="text-sm text-gray-400">{formatRecord(searchResults.data.bestBetType)} ({searchResults.data.bestBetType.winPct}%)</div>
+                </div>
+              )}
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">Who Picks {searchResults.data.team}?</h4>
+                <div className="space-y-2">
+                  {sortedEntries(searchResults.data.byPlayer).map(([player, rec]) => (
+                    <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{player}</span>
+                      <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {searchResults.data.byBetType && Object.keys(searchResults.data.byBetType).length > 0 && (
+                <div className="mb-6">
+                  <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Bet Type</h4>
+                  <div className="space-y-2">
+                    {sortedEntries(searchResults.data.byBetType).map(([bt, rec]) => (
+                      <div key={bt} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                        <span className="font-semibold text-white">{bt}</span>
+                        <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* --- DAY OF WEEK RESULTS --- */}
           {searchResults.matchedCategory === 'dayOfWeek' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -1228,51 +1624,64 @@ const Search = () => {
                 </div>
               </div>
 
-              <div className="mb-6">
-                <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Big Guy</h4>
-                <div className="space-y-2">
-                  {Object.entries(searchResults.data.byPlayer).map(([player, stats]) => {
-                    const adjustedWins = stats.wins + (stats.pushes * 0.5);
-                    const winPct = stats.total > 0 ? ((adjustedWins / stats.total) * 100).toFixed(1) : 0;
-                    const recordDisplay = stats.pushes > 0
-                      ? `${stats.wins}-${stats.losses}-${stats.pushes}`
-                      : `${stats.wins}-${stats.losses}`;
-
-                    return (
-                      <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                        <span className="font-semibold text-white">{player}</span>
-                        <span className="text-sm text-gray-300">
-                          {recordDisplay} ({winPct}%)
-                        </span>
-                      </div>
-                    );
-                  })}
+              {/* Best bets callout */}
+              {(searchResults.data.bestSport || searchResults.data.bestPlayer || searchResults.data.bestBetType) && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  {searchResults.data.bestPlayer && (
+                    <div className="p-4 rounded-lg border border-green-500/30 bg-green-900/20">
+                      <div className="text-sm text-green-300">Best Big Guy</div>
+                      <div className="text-lg font-bold text-white">{searchResults.data.bestPlayer.name}</div>
+                      <div className="text-sm text-gray-400">{formatRecord(searchResults.data.bestPlayer)} ({searchResults.data.bestPlayer.winPct}%)</div>
+                    </div>
+                  )}
+                  {searchResults.data.bestSport && (
+                    <div className="p-4 rounded-lg border border-blue-500/30 bg-blue-900/20">
+                      <div className="text-sm text-blue-300">Best Sport</div>
+                      <div className="text-lg font-bold text-white">{searchResults.data.bestSport.name}</div>
+                      <div className="text-sm text-gray-400">{formatRecord(searchResults.data.bestSport)} ({searchResults.data.bestSport.winPct}%)</div>
+                    </div>
+                  )}
+                  {searchResults.data.bestBetType && (
+                    <div className="p-4 rounded-lg border border-purple-500/30 bg-purple-900/20">
+                      <div className="text-sm text-purple-300">Best Bet Type</div>
+                      <div className="text-lg font-bold text-white">{searchResults.data.bestBetType.name}</div>
+                      <div className="text-sm text-gray-400">{formatRecord(searchResults.data.bestBetType)} ({searchResults.data.bestBetType.winPct}%)</div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
 
               <div className="mb-6">
-                <h4 className="font-semibold text-lg mb-3 text-yellow-400">🏈 By Sport</h4>
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Big Guy</h4>
                 <div className="space-y-2">
-                  {Object.entries(searchResults.data.bySport).map(([sport, stats]) => (
-                    <div key={sport} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                      <span className="font-semibold text-white">{sport}</span>
-                      <span className="text-sm text-gray-300">
-                        {stats.pushes > 0 ? `${stats.wins}-${stats.losses}-${stats.pushes}` : `${stats.wins}-${stats.losses}`} ({stats.total > 0 ? (((stats.wins + stats.pushes * 0.5) / stats.total) * 100).toFixed(1) : 0}%)
-                      </span>
+                  {sortedEntries(searchResults.data.byPlayer).map(([player, rec]) => (
+                    <div key={player} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{player}</span>
+                      <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               <div className="mb-6">
-                <h4 className="font-semibold text-lg mb-3 text-yellow-400">🎲 By Bet Type</h4>
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Sport</h4>
                 <div className="space-y-2">
-                  {Object.entries(searchResults.data.byBetType).map(([betType, stats]) => (
-                    <div key={betType} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                      <span className="font-semibold text-white">{betType}</span>
-                      <span className="text-sm text-gray-300">
-                        {stats.pushes > 0 ? `${stats.wins}-${stats.losses}-${stats.pushes}` : `${stats.wins}-${stats.losses}`} ({stats.total > 0 ? (((stats.wins + stats.pushes * 0.5) / stats.total) * 100).toFixed(1) : 0}%)
-                      </span>
+                  {sortedEntries(searchResults.data.bySport).map(([sport, rec]) => (
+                    <div key={sport} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{sport}</span>
+                      <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Bet Type</h4>
+                <div className="space-y-2">
+                  {sortedEntries(searchResults.data.byBetType).map(([bt, rec]) => (
+                    <div key={bt} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{bt}</span>
+                      <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
                     </div>
                   ))}
                 </div>
@@ -1280,37 +1689,78 @@ const Search = () => {
             </>
           )}
 
+          {/* --- PLAYER RESULTS --- */}
           {searchResults.matchedCategory === 'player' && (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-blue-900/40 p-4 rounded-lg border border-blue-500/30">
-                  <div className="text-sm text-blue-300">Total Picks</div>
-                  <div className="text-2xl font-bold text-blue-400">{searchResults.data.total}</div>
+                  <div className="text-sm text-blue-300">Overall</div>
+                  <div className="text-2xl font-bold text-blue-400">{formatRecord(searchResults.data)}</div>
+                  <div className="text-sm text-gray-400">{searchResults.data.winPct}%</div>
                 </div>
-                <div className="bg-green-900/40 p-4 rounded-lg border border-green-500/30">
-                  <div className="text-sm text-green-300">Wins</div>
-                  <div className="text-2xl font-bold text-green-400">{searchResults.data.wins}</div>
+                {searchResults.data.streak && searchResults.data.streak.type && (
+                  <div className={`p-4 rounded-lg border ${searchResults.data.streak.type === 'win' ? 'border-green-500/30 bg-green-900/40' : 'border-red-500/30 bg-red-900/40'}`}>
+                    <div className="text-sm text-gray-300">Current Streak</div>
+                    <div className={`text-2xl font-bold ${searchResults.data.streak.type === 'win' ? 'text-green-400' : 'text-red-400'}`}>
+                      {searchResults.data.streak.type === 'win' ? 'W' : 'L'}{searchResults.data.streak.count}
+                    </div>
+                  </div>
+                )}
+                {searchResults.data.last10 && (
+                  <div className="bg-purple-900/40 p-4 rounded-lg border border-purple-500/30">
+                    <div className="text-sm text-purple-300">Last 10</div>
+                    <div className="text-2xl font-bold text-purple-400">{formatRecord(searchResults.data.last10)}</div>
+                    <div className="text-sm text-gray-400">{winPct(searchResults.data.last10)}%</div>
+                  </div>
+                )}
+                {searchResults.data.parlayRecord && searchResults.data.parlayRecord.total > 0 && (
+                  <div className="bg-yellow-900/40 p-4 rounded-lg border border-yellow-500/30">
+                    <div className="text-sm text-yellow-300">Parlay Hit Rate</div>
+                    <div className="text-2xl font-bold text-yellow-400">{searchResults.data.parlayRecord.hits}-{searchResults.data.parlayRecord.misses}</div>
+                    <div className="text-sm text-gray-400">{searchResults.data.parlayRecord.total > 0 ? ((searchResults.data.parlayRecord.hits / searchResults.data.parlayRecord.total) * 100).toFixed(1) : 0}%</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Best/Worst combos */}
+              {searchResults.data.combos && (searchResults.data.combos.best || searchResults.data.combos.worst) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {searchResults.data.combos.best && (
+                    <div className="p-4 rounded-lg border border-green-500/30 bg-green-900/20">
+                      <div className="text-sm text-green-300">Best Combo</div>
+                      <div className="text-lg font-bold text-white">{searchResults.data.combos.best.name}</div>
+                      <div className="text-sm text-gray-400">{formatRecord(searchResults.data.combos.best)} ({searchResults.data.combos.best.winPct}%)</div>
+                    </div>
+                  )}
+                  {searchResults.data.combos.worst && (
+                    <div className="p-4 rounded-lg border border-red-500/30 bg-red-900/20">
+                      <div className="text-sm text-red-300">Worst Combo</div>
+                      <div className="text-lg font-bold text-white">{searchResults.data.combos.worst.name}</div>
+                      <div className="text-sm text-gray-400">{formatRecord(searchResults.data.combos.worst)} ({searchResults.data.combos.worst.winPct}%)</div>
+                    </div>
+                  )}
                 </div>
-                <div className="bg-red-900/40 p-4 rounded-lg border border-red-500/30">
-                  <div className="text-sm text-red-300">Losses</div>
-                  <div className="text-2xl font-bold text-red-400">{searchResults.data.losses}</div>
-                </div>
-                <div className="bg-purple-900/40 p-4 rounded-lg border border-purple-500/30">
-                  <div className="text-sm text-purple-300">Win %</div>
-                  <div className="text-2xl font-bold text-purple-400">{searchResults.data.winPct}%</div>
+              )}
+
+              <div className="mb-6">
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Sport</h4>
+                <div className="space-y-2">
+                  {sortedEntries(searchResults.data.bySport).map(([sport, rec]) => (
+                    <div key={sport} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{sport}</span>
+                      <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
               <div className="mb-6">
-                <h4 className="font-semibold text-lg mb-3 text-yellow-400">📊 By Sport</h4>
+                <h4 className="font-semibold text-lg mb-3 text-yellow-400">By Bet Type</h4>
                 <div className="space-y-2">
-                  {Object.entries(searchResults.data.bySport).map(([sport, stats]) => (
-                    <div key={sport} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
-                      <span className="font-semibold text-white">{sport}</span>
-                      <span className="text-sm text-gray-300">
-                        {stats.pushes > 0 ? `${stats.wins}-${stats.losses}-${stats.pushes}` : `${stats.wins}-${stats.losses}`} ({stats.total > 0 ?
-                        (((stats.wins + stats.pushes * 0.5) / stats.total) * 100).toFixed(1) : 0}%)
-                      </span>
+                  {sortedEntries(searchResults.data.byBetType).map(([bt, rec]) => (
+                    <div key={bt} className="flex justify-between items-center p-3 bg-gray-900/50 rounded border border-gray-700">
+                      <span className="font-semibold text-white">{bt}</span>
+                      <span className="text-sm text-gray-300">{formatRecord(rec)} ({winPct(rec)}%)</span>
                     </div>
                   ))}
                 </div>

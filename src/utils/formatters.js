@@ -33,7 +33,7 @@ export const formatCalendarDate = (year, month, day) => {
  * @param {Object} pick - Pick object (old or new schema)
  * @returns {Object} Normalized pick info
  */
-const extractPickInfo = (pick) => {
+export const extractPickInfo = (pick) => {
   // Start with direct field access (works for old schema)
   const info = {
     betType: pick.betType,
