@@ -2,7 +2,7 @@ import React from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
-import { formatDateForDisplay, getPicksArray, getPickBigGuy, getPickResult, getPickPropType, getPickPlayerPosition, getPickPlayerTeam } from '../utils/formatters';
+import { formatDateForDisplay, formatBetDescription, getPicksArray, getPickBigGuy, getPickResult, getPickActualStats, getPickPropType, getPickPlayerPosition, getPickPlayerTeam } from '../utils/formatters';
 import { tokenizeQuery, findBestTeamMatch, filterByRelevance } from '../searchUtils';
 import { SPORTS, PLAYERS, PICK_TYPES, PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
 import { formatComboDescription } from '../insightsHelper';
@@ -1325,6 +1325,21 @@ const Search = () => {
                 {searchResults.data.recentPicks.map((pick, idx) => {
                   const result = getPickResult(pick);
                   const bigGuy = getPickBigGuy(pick);
+                  const actualStats = getPickActualStats(pick);
+                  const betDetails = formatBetDescription(pick);
+
+                  let teamDisplay = '';
+                  if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(pick.betType)) {
+                    const away = pick.game?.awayTeam || pick.awayTeam;
+                    const home = pick.game?.homeTeam || pick.homeTeam;
+                    teamDisplay = `${away} @ ${home}`;
+                  } else if (pick.entities && pick.entities.length > 0) {
+                    const primary = pick.entities.find(e => e.role === 'primary') || pick.entities[0];
+                    teamDisplay = primary?.name || pick.team;
+                  } else {
+                    teamDisplay = pick.team;
+                  }
+
                   return (
                   <div key={idx} className="p-3 bg-gray-900/50 rounded text-sm border border-gray-700">
                     <div className="flex justify-between items-start mb-1">
@@ -1339,11 +1354,10 @@ const Search = () => {
                       </span>
                     </div>
                     <div className="text-gray-300">
-                      {bigGuy} - {pick.sport} - {pick.team || `${pick.awayTeam} @ ${pick.homeTeam}`}
-                      {pick.betType === 'Prop Bet' && ` - ${pick.propType} ${pick.overUnder} ${pick.line}`}
+                      {bigGuy} - {pick.sport} - {teamDisplay} {betDetails}
                     </div>
-                    {pick.actualStats && (
-                      <div className="text-blue-400 mt-1">[{pick.actualStats}]</div>
+                    {actualStats && (
+                      <div className="text-blue-400 mt-1">[{actualStats}]</div>
                     )}
                   </div>
                   );
