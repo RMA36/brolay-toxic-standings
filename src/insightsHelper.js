@@ -1,4 +1,5 @@
 // insightsHelper.js - Dynamic insights based on current date and season
+import { PICK_TYPES } from './constants/sports';
 
 /**
  * Helper functions for dual-schema support
@@ -182,7 +183,7 @@ export const findMoneyMaker = (parlays, players) => {
       }
       
       // Try specific bet types
-      ['Spread', 'Moneyline', 'Total', 'Prop Bet'].forEach(betType => {
+      PICK_TYPES.forEach(betType => {
         const betCombo = analyzeCombo(parlays, player, sport, null, betType);
         if (betCombo && betCombo.winRate > bestWinRate && betCombo.winRate >= 70) {
           bestCombo = betCombo;
@@ -223,7 +224,7 @@ export const findDangerZone = (parlays, players) => {
       }
       
       // Try specific bet types
-      ['Spread', 'Moneyline', 'Total', 'Prop Bet'].forEach(betType => {
+      PICK_TYPES.forEach(betType => {
         const betCombo = analyzeCombo(parlays, player, sport, null, betType);
         if (betCombo && betCombo.winRate < worstWinRate && betCombo.winRate <= 40) {
           worstCombo = betCombo;

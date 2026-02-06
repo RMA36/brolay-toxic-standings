@@ -1,4 +1,5 @@
 import { normalizePlayerName } from '../utils/formatters';
+import { INDIVIDUAL_SPORTS } from '../constants/sports';
 
 /**
  * Custom hook for ESPN player roster lookups
@@ -35,7 +36,7 @@ export const useESPNPlayers = () => {
     if (!playerName || playerName.length < 3) return null;
 
     // Individual sports - skip team lookup
-    if (['Tennis', 'Tennis (Women\'s)', 'Golf', 'UFC'].includes(sport)) {
+    if (INDIVIDUAL_SPORTS.includes(sport)) {
       return null;
     }
 

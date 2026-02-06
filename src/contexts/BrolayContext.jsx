@@ -7,7 +7,7 @@ import { useStats } from '../hooks/useStats';
 import { useOdds } from '../hooks/useOdds';
 import { getCurrentETDate } from '../utils/formatters';
 import { findMoneyMaker, findDangerZone, getCurrentDayOfWeek, getCurrentSportsInSeason, getSeasonalTip } from '../insightsHelper';
-import { PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
+import { PLAYERS, PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
 import { extractTeamsFromParlays, saveLearnedData } from '../utils/actionHandlers';
 import { useUIContext } from './UIContext';
 import { useFilterContext } from './FilterContext';
@@ -82,7 +82,7 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   } = filterContext;
 
   // Players configuration
-  const [players] = useState(['Management', 'CD', '914', 'Junior', 'Jacoby']);
+  const [players] = useState(PLAYERS);
 
   // Brolay data management
   const {

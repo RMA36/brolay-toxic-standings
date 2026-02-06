@@ -3,6 +3,7 @@ import Button from '../common/Button';
 
 import { colors } from '../../constants/theme';
 import { inputClasses } from '../../constants/theme';
+import { INDIVIDUAL_SPORTS } from '../../constants/sports';
 import { useESPNPlayers } from '../../hooks/useESPNPlayers';
 
 /**
@@ -1187,9 +1188,8 @@ const PickEntry = ({
       <div className={`grid gap-2 md:gap-3 mb-3 ${participant.betType === 'Player Prop' ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2'}`}>
         {/* Player field for Player Props and individual sports */}
         {(() => {
-          const individualSports = ['Tennis', 'Tennis (Women\'s)', 'Golf', 'UFC'];
-          const showPlayerField = individualSports.includes(participant.sport) || participant.betType === 'Player Prop';
-          const showTeamField = !individualSports.includes(participant.sport) &&
+          const showPlayerField = INDIVIDUAL_SPORTS.includes(participant.sport) || participant.betType === 'Player Prop';
+          const showTeamField = !INDIVIDUAL_SPORTS.includes(participant.sport) &&
             ['Spread', 'Moneyline', 'First Half Spread', 'First Half Moneyline',
              'Team Total', 'First Half Team Total', 'Quarter Moneyline',
              'Quarter Team Total', 'Team Prop'].includes(participant.betType);

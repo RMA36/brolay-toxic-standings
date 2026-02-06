@@ -7,6 +7,8 @@ export const SPORTS = [
 
 export const PLAYERS = ['Management', 'CD', '914', 'Junior', 'Jacoby'];
 
+export const INDIVIDUAL_SPORTS = ['Tennis', "Tennis (Women's)", 'Golf', 'UFC'];
+
 export const PICK_TYPES = [
   'Spread',
   'Moneyline',
