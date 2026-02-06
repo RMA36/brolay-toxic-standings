@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useBrolayContext } from '../contexts/BrolayContext';
-import { PLAYERS, SPORTS, PRELOADED_TEAMS } from '../constants/sports';
+import { PLAYERS, SPORTS, PICK_TYPES, PRELOADED_TEAMS } from '../constants/sports';
 import { formatBetDescription, formatCalendarDate, formatDateForDisplay, getPickBigGuy, getPickResult, getPicksArray, getSubmittedBy, getPickActualStats } from '../utils/formatters';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
@@ -664,7 +664,7 @@ const AllBrolays = () => {
           onDelete={handleDeleteParlay}
           players={players}
           sports={sports}
-          betTypes={['Spread', 'Moneyline', 'Total', 'Prop Bet', 'H2H Prop', 'Either Prop', 'Combined Prop', 'First Half Moneyline', 'First Half Total', 'First Inning Runs', 'Quarter Moneyline', 'Quarter Total']}
+          betTypes={PICK_TYPES}
           suggestions={suggestions}
           showSuggestions={showSuggestions}
           onTeamInput={handleTeamInput}
