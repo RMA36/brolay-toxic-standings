@@ -286,7 +286,7 @@ const EditParlayModal = ({
               <label className="block text-sm font-medium mb-1 text-white">Net Profit</label>
               <input
                 type="number"
-                value={Math.max(0, (editedParlay.totalPayout || 0) - (editedParlay.betAmount * Object.keys(picksObj).length))}
+                value={parseFloat(Math.max(0, (editedParlay.totalPayout || 0) - (editedParlay.betAmount * Object.keys(picksObj).length)).toFixed(2))}
                 onChange={(e) => {
                   const netProfit = Number(e.target.value) || 0;
                   const totalRisk = editedParlay.betAmount * Object.keys(picksObj).length;

@@ -405,7 +405,7 @@ const AllPicks = () => {
               const actualStats = getPickActualStats(pick);
 
               let teamDisplay = '';
-              if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(pick.betType)) {
+              if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', '3-Way Moneyline'].includes(pick.betType)) {
                 // Support both direct fields and nested game object
                 const awayTeam = pick.awayTeam || pick.game?.awayTeam || '';
                 const homeTeam = pick.homeTeam || pick.game?.homeTeam || '';
@@ -566,7 +566,7 @@ const AllPicks = () => {
                 </div>
               </div>
 
-              {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(editingPick.betType) && (
+              {!['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', '3-Way Moneyline'].includes(editingPick.betType) && (
                 <div className="mb-3">
                   <label className="block text-sm font-medium mb-1 text-gray-300">Team/Player</label>
                   <input
@@ -579,7 +579,7 @@ const AllPicks = () => {
                 </div>
               )}
 
-              {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(editingPick.betType) && (
+              {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', '3-Way Moneyline'].includes(editingPick.betType) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
                   <div>
                     <label className="block text-sm font-medium mb-1 text-gray-300">Away Team</label>

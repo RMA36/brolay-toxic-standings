@@ -12,6 +12,49 @@ export const INDIVIDUAL_SPORTS = ['Tennis', "Tennis (Women's)", 'Golf', 'UFC'];
 export const PICK_TYPES = [
   'Spread',
   'Moneyline',
+  '3-Way Moneyline',
+  'Total',
+  'Player Prop',
+  'Team Prop',
+  'Game Prop',
+  'H2H Prop',
+  'Either Prop',
+  'Combined Prop',
+  'First Half Bet',
+  'Quarter/Period Bet',
+  'Prop Bet'  // Legacy - kept for backwards compatibility with existing data
+];
+
+// Sub-types for consolidated bet type categories
+export const FIRST_HALF_BET_TYPES = [
+  'First Half Spread',
+  'First Half Moneyline',
+  'First Half Total',
+  'First Half Team Total'
+];
+
+export const QUARTER_PERIOD_BET_TYPES = [
+  'Quarter Spread',
+  'Quarter Moneyline',
+  'Quarter Total',
+  'Quarter Team Total'
+];
+
+export const TEAM_PROP_TYPES = [
+  'Team Prop',
+  'Team Total'
+];
+
+export const GAME_PROP_TYPES = [
+  'Game Prop',
+  'First Inning Runs'
+];
+
+// All valid bet types (includes sub-types for backward compatibility and storage)
+export const ALL_BET_TYPES = [
+  'Spread',
+  'Moneyline',
+  '3-Way Moneyline',
   'Total',
   'Player Prop',
   'Team Prop',
@@ -28,7 +71,10 @@ export const PICK_TYPES = [
   'Quarter Moneyline',
   'Quarter Total',
   'Quarter Team Total',
-  'Prop Bet'  // Legacy - kept for backwards compatibility with existing data
+  'Quarter Spread',
+  'First Half Bet',
+  'Quarter/Period Bet',
+  'Prop Bet'  // Legacy
 ];
 
 // Pre-loaded teams by sport (these are the base teams, app will learn more via localStorage)

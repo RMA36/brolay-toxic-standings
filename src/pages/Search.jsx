@@ -1779,7 +1779,7 @@ const Search = () => {
                   const betDetails = formatBetDescription(pick);
 
                   let teamDisplay = '';
-                  if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(pick.betType)) {
+                  if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', '3-Way Moneyline'].includes(pick.betType)) {
                     const away = pick.game?.awayTeam || pick.awayTeam;
                     const home = pick.game?.homeTeam || pick.homeTeam;
                     teamDisplay = `${away} @ ${home}`;

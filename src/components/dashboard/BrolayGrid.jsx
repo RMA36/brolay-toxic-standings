@@ -25,7 +25,7 @@ const BrolayGrid = ({ parlays, players }) => {
    * Get team display string from a pick (supports both schemas)
    */
   const getTeamDisplay = (pick) => {
-    if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(pick.betType)) {
+    if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', '3-Way Moneyline'].includes(pick.betType)) {
       // New schema: game object
       if (pick.game) {
         return `${pick.game.awayTeam} @ ${pick.game.homeTeam}`;

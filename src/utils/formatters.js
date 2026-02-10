@@ -51,7 +51,8 @@ export const extractPickInfo = (pick) => {
     playerTeam: pick.playerTeam,
     playerPosition: pick.playerPosition,
     favorite: pick.favorite,
-    total: pick.total
+    total: pick.total,
+    threeWayPick: pick.threeWayPick
   };
 
   // New schema: extract from entities array
@@ -133,6 +134,9 @@ export const formatBetDescription = (participant) => {
     const isFavorite = favorite === 'Favorite';
     const displaySpread = isFavorite ? -Math.abs(numSpread) : Math.abs(numSpread);
     return `${displaySpread > 0 ? '+' : ''}${displaySpread}`;
+  } else if (betType === '3-Way Moneyline') {
+    const pick = participant.threeWayPick || 'Home';
+    return `3-Way ML (${pick})`;
   } else if (betType === 'Moneyline' || betType === 'First Half Moneyline' || betType === 'Quarter Moneyline') {
     return `ML`;
   } else if (betType === 'First Half Spread') {
@@ -144,6 +148,15 @@ export const formatBetDescription = (participant) => {
     const isFavorite = favorite === 'Favorite';
     const displaySpread = isFavorite ? -Math.abs(numSpread) : Math.abs(numSpread);
     return `1H ${displaySpread > 0 ? '+' : ''}${displaySpread}`;
+  } else if (betType === 'Quarter Spread') {
+    const spreadValue = spread !== undefined && spread !== '' ? spread : line;
+    if (spreadValue === '' || spreadValue === undefined || spreadValue === null) {
+      return `(No Spread)`;
+    }
+    const numSpread = parseFloat(spreadValue);
+    const isFavorite = favorite === 'Favorite';
+    const displaySpread = isFavorite ? -Math.abs(numSpread) : Math.abs(numSpread);
+    return `Q ${displaySpread > 0 ? '+' : ''}${displaySpread}`;
   } else if (betType === 'Total' || betType === 'First Half Total' || betType === 'First Inning Runs' || betType === 'Quarter Total' || betType === 'Team Total' || betType === 'First Half Team Total' || betType === 'Quarter Team Total') {
     // Don't duplicate team names - they're displayed separately
     // Use total field for totals, line field for other bet types

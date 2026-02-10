@@ -333,7 +333,7 @@ const Payments = () => {
                         ${netProfit.toFixed(2)} profit
                       </div>
                       <div className="text-xs text-gray-500">
-                        (${parlay.totalPayout || 0} payout)
+                        (${(parlay.totalPayout || 0).toFixed(2)} payout)
                       </div>
                     </div>
                   </div>

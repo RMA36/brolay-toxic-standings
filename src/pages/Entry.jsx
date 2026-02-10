@@ -537,7 +537,7 @@ const Entry = () => {
             <label className="block text-sm font-medium mb-1 text-white">Net Profit</label>
             <input
               type="number"
-              value={Math.max(0, (newParlay.totalPayout || 0) - (newParlay.betAmount * Object.keys(newParlay.participants).length))}
+              value={parseFloat(Math.max(0, (newParlay.totalPayout || 0) - (newParlay.betAmount * Object.keys(newParlay.participants).length)).toFixed(2))}
               onChange={(e) => {
                 const netProfit = Number(e.target.value) || 0;
                 const totalRisk = newParlay.betAmount * Object.keys(newParlay.participants).length;

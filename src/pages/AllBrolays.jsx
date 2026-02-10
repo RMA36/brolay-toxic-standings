@@ -354,9 +354,9 @@ const AllBrolays = () => {
                         <div>
                           <div className="text-white font-semibold">{parlayType} • {picks.length} picks</div>
                           <div className="text-gray-400 text-sm">
-                            ${parlay.betAmount * picks.length} Risked •
-                            ${parlay.totalPayout || 0} Total Payout •
-                            ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * picks.length))} Net Profit
+                            ${(parlay.betAmount * picks.length).toFixed(2)} Risked •
+                            ${(parlay.totalPayout || 0).toFixed(2)} Total Payout •
+                            ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * picks.length)).toFixed(2)} Net Profit
                             {submittedBy && ` • Submitted by ${submittedBy}`}
                           </div>
                         </div>
@@ -394,7 +394,7 @@ const AllBrolays = () => {
                           const autoUpdatedAt = pick.outcome?.settledAt || pick.autoUpdatedAt;
 
                           let teamDisplay = '';
-                          if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total'].includes(pick.betType)) {
+                          if (['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', '3-Way Moneyline'].includes(pick.betType)) {
                             const awayTeam = pick.game?.awayTeam || pick.awayTeam;
                             const homeTeam = pick.game?.homeTeam || pick.homeTeam;
                             teamDisplay = `${awayTeam} @ ${homeTeam}`;
@@ -520,9 +520,9 @@ const AllBrolays = () => {
                           })()} • {parlayType} • {picks.length} picks
                         </div>
                         <div className="text-gray-400 text-xs md:text-sm mt-1">
-                          ${parlay.betAmount * picks.length} Risked •
-                          ${parlay.totalPayout || 0} Total Payout •
-                          ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * picks.length))} Net Profit
+                          ${(parlay.betAmount * picks.length).toFixed(2)} Risked •
+                          ${(parlay.totalPayout || 0).toFixed(2)} Total Payout •
+                          ${Math.max(0, (parlay.totalPayout || 0) - (parlay.betAmount * picks.length)).toFixed(2)} Net Profit
                           {submittedBy && ` • Submitted by ${submittedBy}`}
                         </div>
                       </div>

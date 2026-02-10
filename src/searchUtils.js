@@ -277,8 +277,8 @@ export function calculateRelevanceScore(pick, searchContext) {
   }
   
   // Bet type match
-  if (searchContext.hasMoneyline && ['Moneyline', 'First Half Moneyline', 'Quarter Moneyline'].includes(pick.betType)) score += 5;
-  if (searchContext.hasSpread && ['Spread', 'First Half Spread'].includes(pick.betType)) score += 5;
+  if (searchContext.hasMoneyline && ['Moneyline', '3-Way Moneyline', 'First Half Moneyline', 'Quarter Moneyline'].includes(pick.betType)) score += 5;
+  if (searchContext.hasSpread && ['Spread', 'First Half Spread', 'Quarter Spread'].includes(pick.betType)) score += 5;
   if (searchContext.hasTotal && ['Total', 'Team Total', 'First Half Total', 'First Half Team Total', 'Quarter Total', 'Quarter Team Total'].includes(pick.betType)) score += 5;
   if (searchContext.hasProp && ['Prop Bet', 'Player Prop', 'Team Prop', 'Game Prop', 'H2H Prop', 'Either Prop', 'Combined Prop'].includes(pick.betType)) score += 5;
   

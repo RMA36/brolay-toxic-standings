@@ -3,7 +3,7 @@ import Button from '../common/Button';
 
 import { colors } from '../../constants/theme';
 import { inputClasses } from '../../constants/theme';
-import { INDIVIDUAL_SPORTS } from '../../constants/sports';
+import { INDIVIDUAL_SPORTS, FIRST_HALF_BET_TYPES, QUARTER_PERIOD_BET_TYPES, TEAM_PROP_TYPES, GAME_PROP_TYPES } from '../../constants/sports';
 import { useESPNPlayers } from '../../hooks/useESPNPlayers';
 
 /**
@@ -32,6 +32,41 @@ const PickEntry = ({
 }) => {
   const inputStyle = { fontSize: isMobile ? '16px' : '14px' };
   const inputClassName = inputClasses.base;
+
+  // Map stored betType to display category for the main dropdown
+  const getDisplayCategory = (betType) => {
+    if (FIRST_HALF_BET_TYPES.includes(betType)) return 'First Half Bet';
+    if (QUARTER_PERIOD_BET_TYPES.includes(betType)) return 'Quarter/Period Bet';
+    if (betType === 'Team Total') return 'Team Prop';
+    if (betType === 'First Inning Runs') return 'Game Prop';
+    return betType;
+  };
+
+  // Get the sub-type for consolidated categories
+  const getSubType = (betType) => {
+    if (FIRST_HALF_BET_TYPES.includes(betType)) return betType;
+    if (QUARTER_PERIOD_BET_TYPES.includes(betType)) return betType;
+    if (betType === 'Team Total') return 'Team Total';
+    if (betType === 'First Inning Runs') return 'First Inning Runs';
+    return null;
+  };
+
+  const displayCategory = getDisplayCategory(participant.betType);
+
+  // Handle main category change
+  const handleCategoryChange = (category) => {
+    if (category === 'First Half Bet') {
+      updateField('betType', 'First Half Spread'); // Default sub-type
+    } else if (category === 'Quarter/Period Bet') {
+      updateField('betType', 'Quarter Spread'); // Default sub-type
+    } else if (category === 'Team Prop') {
+      updateField('betType', 'Team Prop');
+    } else if (category === 'Game Prop') {
+      updateField('betType', 'Game Prop');
+    } else {
+      updateField('betType', category);
+    }
+  };
 
   // Player lookup state
   const [playerSuggestions, setPlayerSuggestions] = useState([]);
@@ -190,6 +225,23 @@ const PickEntry = ({
           </>
         );
 
+      case '3-Way Moneyline':
+        return (
+          <div>
+            <label className="block text-xs font-medium mb-1 text-white">Pick</label>
+            <select
+              value={participant.threeWayPick || 'Home'}
+              onChange={(e) => updateField('threeWayPick', e.target.value)}
+              className={inputClassName}
+              style={inputStyle}
+            >
+              <option value="Home">Home</option>
+              <option value="Away">Away</option>
+              <option value="Draw">Draw</option>
+            </select>
+          </div>
+        );
+
       case 'Total':
         return (
           <>
@@ -251,6 +303,7 @@ const PickEntry = ({
 
       case 'Team Total':
       case 'Half Team Total':
+      case 'First Half Team Total':
         return (
           <>
             <div>
@@ -1026,22 +1079,6 @@ const PickEntry = ({
       case 'Half Spread':
         return (
           <>
-            {participant.betType.includes('Quarter') && (
-              <div>
-                <label className="block text-xs font-medium mb-1 text-white">Quarter</label>
-                <select
-                  value={participant.quarter || '1Q'}
-                  onChange={(e) => updateField('quarter', e.target.value)}
-                  className={inputClassName}
-                  style={inputStyle}
-                >
-                  <option value="1Q">1Q</option>
-                  <option value="2Q">2Q</option>
-                  <option value="3Q">3Q</option>
-                  <option value="4Q">4Q</option>
-                </select>
-              </div>
-            )}
             <div>
               <label className="block text-xs font-medium mb-1 text-white">Favorite/Dog</label>
               <select
@@ -1073,20 +1110,6 @@ const PickEntry = ({
         return (
           <>
             <div>
-              <label className="block text-xs font-medium mb-1 text-white">Quarter</label>
-              <select
-                value={participant.quarter || '1Q'}
-                onChange={(e) => updateField('quarter', e.target.value)}
-                className={inputClassName}
-                style={inputStyle}
-              >
-                <option value="1Q">1Q</option>
-                <option value="2Q">2Q</option>
-                <option value="3Q">3Q</option>
-                <option value="4Q">4Q</option>
-              </select>
-            </div>
-            <div>
               <label className="block text-xs font-medium mb-1 text-white">Over/Under</label>
               <select
                 value={participant.overUnder || 'Over'}
@@ -1114,22 +1137,7 @@ const PickEntry = ({
 
       case 'Quarter Moneyline':
       case 'Half Moneyline':
-        return participant.betType.includes('Quarter') ? (
-          <div>
-            <label className="block text-xs font-medium mb-1 text-white">Quarter</label>
-            <select
-              value={participant.quarter || '1Q'}
-              onChange={(e) => updateField('quarter', e.target.value)}
-              className={inputClassName}
-              style={inputStyle}
-            >
-              <option value="1Q">1Q</option>
-              <option value="2Q">2Q</option>
-              <option value="3Q">3Q</option>
-              <option value="4Q">4Q</option>
-            </select>
-          </div>
-        ) : null;
+        return null; // Quarter/period selection is handled in the sub-type selector above
 
       default:
         return null;
@@ -1174,8 +1182,8 @@ const PickEntry = ({
         <div>
           <label className="block text-xs font-medium mb-1 text-white">Bet Type</label>
           <select
-            value={participant.betType}
-            onChange={(e) => updateField('betType', e.target.value)}
+            value={displayCategory}
+            onChange={(e) => handleCategoryChange(e.target.value)}
             className={inputClassName}
             style={inputStyle}
           >
@@ -1184,15 +1192,94 @@ const PickEntry = ({
         </div>
       </div>
 
+      {/* Sub-type selectors for consolidated bet categories */}
+      {displayCategory === 'First Half Bet' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3 mb-3">
+          <div>
+            <label className="block text-xs font-medium mb-1 text-white">First Half Bet Type</label>
+            <select
+              value={participant.betType}
+              onChange={(e) => updateField('betType', e.target.value)}
+              className={inputClassName}
+              style={inputStyle}
+            >
+              {FIRST_HALF_BET_TYPES.map(bt => <option key={bt} value={bt}>{bt.replace('First Half ', '')}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {displayCategory === 'Quarter/Period Bet' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3 mb-3">
+          <div>
+            <label className="block text-xs font-medium mb-1 text-white">Quarter/Period Bet Type</label>
+            <select
+              value={participant.betType}
+              onChange={(e) => updateField('betType', e.target.value)}
+              className={inputClassName}
+              style={inputStyle}
+            >
+              {QUARTER_PERIOD_BET_TYPES.map(bt => <option key={bt} value={bt}>{bt.replace('Quarter ', '')}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium mb-1 text-white">Quarter/Period</label>
+            <select
+              value={participant.quarter || '1Q'}
+              onChange={(e) => updateField('quarter', e.target.value)}
+              className={inputClassName}
+              style={inputStyle}
+            >
+              <option value="1Q">1st Quarter/Period</option>
+              <option value="2Q">2nd Quarter/Period</option>
+              <option value="3Q">3rd Quarter/Period</option>
+              <option value="4Q">4th Quarter/Period</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {displayCategory === 'Team Prop' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3 mb-3">
+          <div>
+            <label className="block text-xs font-medium mb-1 text-white">Team Prop Type</label>
+            <select
+              value={participant.betType === 'Team Total' ? 'Team Total' : 'Team Prop'}
+              onChange={(e) => updateField('betType', e.target.value)}
+              className={inputClassName}
+              style={inputStyle}
+            >
+              {TEAM_PROP_TYPES.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {displayCategory === 'Game Prop' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-3 mb-3">
+          <div>
+            <label className="block text-xs font-medium mb-1 text-white">Game Prop Type</label>
+            <select
+              value={participant.betType === 'First Inning Runs' ? 'First Inning Runs' : 'Game Prop'}
+              onChange={(e) => updateField('betType', e.target.value)}
+              className={inputClassName}
+              style={inputStyle}
+            >
+              {GAME_PROP_TYPES.map(bt => <option key={bt} value={bt}>{bt}</option>)}
+            </select>
+          </div>
+        </div>
+      )}
+
       {/* Team/Player Fields - Conditional rendering based on bet type */}
       <div className={`grid gap-2 md:gap-3 mb-3 ${participant.betType === 'Player Prop' ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1 md:grid-cols-2'}`}>
         {/* Player field for Player Props and individual sports */}
         {(() => {
           const showPlayerField = INDIVIDUAL_SPORTS.includes(participant.sport) || participant.betType === 'Player Prop';
           const showTeamField = !INDIVIDUAL_SPORTS.includes(participant.sport) &&
-            ['Spread', 'Moneyline', 'First Half Spread', 'First Half Moneyline',
+            ['Spread', 'Moneyline', '3-Way Moneyline', 'First Half Spread', 'First Half Moneyline',
              'Team Total', 'First Half Team Total', 'Quarter Moneyline',
-             'Quarter Team Total', 'Team Prop'].includes(participant.betType);
+             'Quarter Team Total', 'Quarter Spread', 'Team Prop'].includes(participant.betType);
 
           if (!showPlayerField && !showTeamField) return null;
 
@@ -1299,7 +1386,7 @@ const PickEntry = ({
         )}
 
         {/* Away/Home Team fields for Game Prop and Total bets */}
-        {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', 'Game Prop'].includes(participant.betType) && (
+        {['Total', 'First Half Total', 'First Inning Runs', 'Quarter Total', 'Game Prop', '3-Way Moneyline'].includes(participant.betType) && (
           <>
             <div className="relative">
               <label className="block text-xs font-medium mb-1 text-white">Away Team</label>
