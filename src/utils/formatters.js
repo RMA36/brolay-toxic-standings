@@ -29,44 +29,42 @@ export const formatCalendarDate = (year, month, day) => {
 };
 
 /**
- * Extract pick info supporting both old and new schema
- * @param {Object} pick - Pick object (old or new schema)
- * @returns {Object} Normalized pick info
+ * Extract pick info from new schema into flat fields for display/logic
+ * All data is now in the new schema (entities[], line{}, game{}, outcome{})
+ * @param {Object} pick - Pick object (new schema)
+ * @returns {Object} Flat pick info for display
  */
 export const extractPickInfo = (pick) => {
-  // Start with direct field access (works for old schema)
   const info = {
     betType: pick.betType,
-    team: pick.team,
-    line: pick.line,
-    spread: pick.spread,
-    overUnder: pick.overUnder,
-    awayTeam: pick.awayTeam,
-    homeTeam: pick.homeTeam,
-    propType: pick.propType,
-    player1: pick.player1,
-    player2: pick.player2,
-    player1PropType: pick.player1PropType,
-    player2PropType: pick.player2PropType,
-    playerTeam: pick.playerTeam,
-    playerPosition: pick.playerPosition,
-    favorite: pick.favorite,
-    total: pick.total,
-    threeWayPick: pick.threeWayPick
+    team: '',
+    line: '',
+    spread: '',
+    overUnder: '',
+    awayTeam: '',
+    homeTeam: '',
+    propType: '',
+    player1: '',
+    player2: '',
+    player1PropType: '',
+    player2PropType: '',
+    playerTeam: '',
+    playerPosition: '',
+    favorite: '',
+    total: '',
+    threeWayPick: pick.threeWayPick || ''
   };
 
-  // New schema: extract from entities array
+  // Extract from entities array
   if (pick.entities && pick.entities.length > 0) {
     const primary = pick.entities.find(e => e.role === 'primary') || pick.entities[0];
     if (primary) {
+      info.team = primary.name || '';
       if (primary.entityType === 'player') {
-        info.team = info.team || primary.name; // Player name in old schema 'team' field
-        info.playerTeam = info.playerTeam || primary.team;
-        info.playerPosition = info.playerPosition || primary.position;
-        info.player1 = info.player1 || primary.name;
-        info.player1PropType = info.player1PropType || primary.statType;
-      } else {
-        info.team = info.team || primary.name;
+        info.playerTeam = primary.team || '';
+        info.playerPosition = primary.position || '';
+        info.player1 = primary.name || '';
+        info.player1PropType = primary.statType || '';
       }
     }
 
@@ -74,39 +72,43 @@ export const extractPickInfo = (pick) => {
     if (pick.entities.length > 1) {
       const secondary = pick.entities.find(e => e.role === 'opponent' || e.role === 'secondary');
       if (secondary) {
-        info.player2 = info.player2 || secondary.name;
-        info.player2PropType = info.player2PropType || secondary.statType;
+        info.player2 = secondary.name || '';
+        info.player2PropType = secondary.statType || '';
       }
     }
 
     // Home/away team roles for totals
-    const homeTeam = pick.entities.find(e => e.role === 'home');
-    const awayTeam = pick.entities.find(e => e.role === 'away');
-    if (homeTeam) info.homeTeam = info.homeTeam || homeTeam.name;
-    if (awayTeam) info.awayTeam = info.awayTeam || awayTeam.name;
+    const homeEntity = pick.entities.find(e => e.role === 'home');
+    const awayEntity = pick.entities.find(e => e.role === 'away');
+    if (homeEntity) info.homeTeam = homeEntity.name;
+    if (awayEntity) info.awayTeam = awayEntity.name;
   }
 
-  // New schema: extract from game object
+  // Extract from game object
   if (pick.game) {
-    info.awayTeam = info.awayTeam || pick.game.awayTeam;
-    info.homeTeam = info.homeTeam || pick.game.homeTeam;
+    info.awayTeam = info.awayTeam || pick.game.awayTeam || '';
+    info.homeTeam = info.homeTeam || pick.game.homeTeam || '';
   }
 
-  // New schema: extract from line object
+  // Extract from line object
   if (pick.line && typeof pick.line === 'object') {
-    info.propType = info.propType || pick.line.statType;
-    info.player1PropType = info.player1PropType || pick.line.statType;
-    info.player2PropType = info.player2PropType || pick.line.statType;
-    info.overUnder = info.overUnder || (pick.line.direction === 'over' ? 'Over' : pick.line.direction === 'under' ? 'Under' : info.overUnder);
-    // For spreads, direction is 'favorite' or 'underdog'
-    info.favorite = info.favorite || (pick.line.direction === 'underdog' ? 'Dog' : pick.line.direction === 'favorite' ? 'Favorite' : info.favorite);
-    // Line value
+    info.propType = pick.line.statType || '';
+    info.player1PropType = info.player1PropType || pick.line.statType || '';
+    info.player2PropType = info.player2PropType || pick.line.statType || '';
+
+    const dir = (pick.line.direction || '').toLowerCase();
+    if (dir === 'over' || dir === 'under') {
+      info.overUnder = dir.charAt(0).toUpperCase() + dir.slice(1);
+    } else if (dir === 'favorite' || dir === 'underdog') {
+      info.favorite = dir === 'favorite' ? 'Favorite' : 'Dog';
+    }
+
     const lineValue = pick.line.value;
     if (lineValue !== undefined) {
       if (pick.betType?.includes('Spread')) {
-        info.spread = info.spread !== undefined ? info.spread : lineValue;
+        info.spread = lineValue;
       } else if (pick.betType?.includes('Total')) {
-        info.total = info.total !== undefined ? info.total : lineValue;
+        info.total = lineValue;
       } else {
         info.line = lineValue;
       }
@@ -192,45 +194,35 @@ export const formatBetDescription = (participant) => {
 };
 
 /**
- * Get Big Guy from pick (supports both schemas)
+ * Get Big Guy from pick (new schema: pick.bigGuy)
  */
-export const getPickBigGuy = (pick) => pick.bigGuy || pick.player;
+export const getPickBigGuy = (pick) => pick.bigGuy || '';
 
 /**
- * Get result from pick (supports both schemas)
+ * Get result from pick (new schema: pick.outcome.status)
  */
-export const getPickResult = (pick) => pick.outcome?.status || pick.result;
+export const getPickResult = (pick) => pick.outcome?.status || '';
 
 /**
- * Get actual stats from pick (supports both schemas)
+ * Get actual stats from pick (new schema: pick.outcome.actualStats)
  */
-export const getPickActualStats = (pick) => pick.outcome?.actualStats || pick.actualStats;
+export const getPickActualStats = (pick) => pick.outcome?.actualStats || '';
 
 /**
- * Get picks array from parlay (supports both schemas)
- * New schema: parlay.picks is an array
- * Old schema: parlay.participants is an object with keys
+ * Get picks array from parlay (new schema: parlay.picks is an object keyed by pickId)
  */
 export const getPicksArray = (parlay) => {
-  // New schema: picks is already an array
-  if (Array.isArray(parlay.picks)) {
-    return parlay.picks;
-  }
-  // Old schema: participants is an object, convert to array
-  if (parlay.participants && typeof parlay.participants === 'object') {
-    return Object.values(parlay.participants);
-  }
-  // Fallback: check if picks is an object (shouldn't happen but be safe)
-  if (parlay.picks && typeof parlay.picks === 'object') {
+  if (!parlay.picks) return [];
+  if (typeof parlay.picks === 'object') {
     return Object.values(parlay.picks);
   }
   return [];
 };
 
 /**
- * Get submittedBy from parlay (supports both schemas)
+ * Get submittedBy from parlay (new schema: parlay.submittedBy)
  */
-export const getSubmittedBy = (parlay) => parlay.submittedBy || parlay.placedBy;
+export const getSubmittedBy = (parlay) => parlay.submittedBy || '';
 
 /**
  * Normalize player name for consistent matching
@@ -318,54 +310,206 @@ export const getCurrentETDate = () => {
 };
 
 /**
- * Get player position from pick (supports both schemas)
+ * Get player position from pick (new schema: entities[].position)
  */
 export const getPickPlayerPosition = (pick) => {
-  // Old schema: direct field
-  if (pick.playerPosition) return pick.playerPosition;
-
-  // New schema: extract from entities
   if (pick.entities && pick.entities.length > 0) {
     const primary = pick.entities.find(e => e.role === 'primary' && e.entityType === 'player') ||
                     pick.entities.find(e => e.entityType === 'player');
     if (primary && primary.position) return primary.position;
   }
-
   return null;
 };
 
 /**
- * Get player team from pick (supports both schemas)
+ * Get player team from pick (new schema: entities[].team)
  */
 export const getPickPlayerTeam = (pick) => {
-  // Old schema: direct field
-  if (pick.playerTeam) return pick.playerTeam;
-
-  // New schema: extract from entities
   if (pick.entities && pick.entities.length > 0) {
     const primary = pick.entities.find(e => e.role === 'primary' && e.entityType === 'player') ||
                     pick.entities.find(e => e.entityType === 'player');
     if (primary && primary.team) return primary.team;
   }
-
   return null;
 };
 
 /**
- * Get prop type from pick (supports both schemas)
+ * Get prop type from pick (new schema: line.statType)
  */
 export const getPickPropType = (pick) => {
-  // Old schema: direct propType field
-  if (pick.propType) return pick.propType;
-
-  // New schema: extract from line.statType
-  if (pick.line && pick.line.statType) return pick.line.statType;
-
-  // New schema: extract from entities
-  if (pick.entities && pick.entities.length > 0) {
-    const primary = pick.entities.find(e => e.role === 'primary') || pick.entities[0];
-    if (primary && primary.statType) return primary.statType;
-  }
-
+  if (pick.line && typeof pick.line === 'object' && pick.line.statType) return pick.line.statType;
   return null;
 };
+
+// ============================================================
+// Schema Transformation — flat pick → new schema
+// Used by Entry.jsx to write new schema to Firebase
+//
+// TODO: This is a bridge solution. The proper long-term fix is to
+// refactor PickEntry.jsx to natively construct new schema objects
+// (entities[], line{}, outcome{}, game{}) instead of flat fields.
+// That would eliminate this transformation entirely. See:
+// - PickEntry.jsx: build structured picks directly in form state
+// - Entry.jsx: remove transformBrolayToNewSchema call
+// - EditParlayModal: ensure edits write new schema fields
+// ============================================================
+
+/**
+ * Determine bet category from betType string
+ */
+function determineBetCategory(betType) {
+  const map = {
+    'Spread': 'standard', 'Moneyline': 'standard', 'Total': 'standard',
+    'Player Prop': 'playerProp', 'Prop Bet': 'playerProp',
+    'Team Total': 'teamTotal',
+    'First Half Spread': 'firstHalf', 'First Half Moneyline': 'firstHalf', 'First Half Total': 'firstHalf',
+    'First Half Team Total': 'firstHalfTeamTotal',
+    'Quarter Spread': 'quarter', 'Quarter Moneyline': 'quarter', 'Quarter Total': 'quarter',
+    'Quarter Team Total': 'quarterTeamTotal',
+    'First Inning Runs': 'firstInningRuns',
+    'H2H Prop': 'h2hProp', 'Combined Prop': 'combinedProp', 'Either Prop': 'eitherProp',
+    'Team Prop': 'teamProp', 'Game Prop': 'gameProp', '3-Way Moneyline': 'standard',
+  };
+  return map[betType] || 'unknown';
+}
+
+/**
+ * Transform a flat-schema pick (from the entry form) to new structured schema.
+ */
+export function transformPickToNewSchema(flatPick, pickIndex) {
+  const betCategory = determineBetCategory(flatPick.betType);
+
+  // Build entities
+  const entities = [];
+  const isPropType = ['playerProp', 'h2hProp', 'combinedProp', 'eitherProp'].includes(betCategory)
+    || flatPick.betType === 'Prop Bet' || flatPick.betType === 'Player Prop';
+
+  if (isPropType && betCategory !== 'h2hProp' && betCategory !== 'combinedProp' && betCategory !== 'eitherProp') {
+    entities.push({
+      entityType: 'player',
+      name: flatPick.team || flatPick.selectedPlayer || '',
+      team: flatPick.playerTeam || '',
+      position: flatPick.playerPosition || '',
+      role: 'primary'
+    });
+  } else if (betCategory === 'h2hProp') {
+    entities.push({
+      entityType: 'player',
+      name: flatPick.player1 || '',
+      team: flatPick.player1Team || '',
+      position: flatPick.player1Position || '',
+      role: 'primary'
+    });
+    entities.push({
+      entityType: 'player',
+      name: flatPick.player2 || '',
+      team: flatPick.player2Team || '',
+      position: flatPick.player2Position || '',
+      role: 'opponent'
+    });
+  } else if (betCategory === 'combinedProp' || betCategory === 'eitherProp') {
+    entities.push({
+      entityType: 'player',
+      name: flatPick.player1 || '',
+      team: flatPick.player1Team || '',
+      position: flatPick.player1Position || '',
+      role: 'primary'
+    });
+    entities.push({
+      entityType: 'player',
+      name: flatPick.player2 || '',
+      team: flatPick.player2Team || '',
+      position: flatPick.player2Position || '',
+      role: 'secondary'
+    });
+  } else {
+    // Standard, Team Total, First Half, Quarter, etc.
+    entities.push({
+      entityType: 'team',
+      name: flatPick.team || '',
+      role: 'primary'
+    });
+  }
+
+  // Determine line type
+  let lineType = 'spread';
+  if (['Total', 'First Half Total', 'Quarter Total'].includes(flatPick.betType)) lineType = 'total';
+  else if (['Moneyline', 'First Half Moneyline', 'Quarter Moneyline', '3-Way Moneyline'].includes(flatPick.betType)) lineType = 'moneyline';
+  else if (['Team Total', 'First Half Team Total', 'Quarter Team Total'].includes(flatPick.betType)) lineType = 'teamTotal';
+  else if (isPropType) lineType = 'prop';
+  else if (flatPick.betType === 'First Inning Runs') lineType = 'total';
+
+  // Get line value
+  const rawLine = parseFloat(flatPick.spread || flatPick.total || flatPick.line || flatPick.h2hLine || '0');
+
+  // Determine direction
+  let direction = '';
+  if (flatPick.favorite) direction = flatPick.favorite.toLowerCase();
+  if (flatPick.overUnder) direction = flatPick.overUnder.toLowerCase();
+
+  // Build line object
+  const line = {
+    type: lineType,
+    value: Math.abs(rawLine) || 0,
+    direction: direction,
+    odds: flatPick.odds || '',
+    source: flatPick.oddsSource || '',
+  };
+  if (flatPick.propType) line.statType = flatPick.propType;
+
+  // Build outcome
+  const outcome = {
+    status: (flatPick.result || 'pending').toLowerCase(),
+    actualStats: flatPick.actualStats || '',
+    autoUpdated: flatPick.autoUpdated || false,
+    settledAt: flatPick.autoUpdatedAt || '',
+  };
+
+  // Build game
+  const game = {
+    date: flatPick.gameDate || '',
+    awayTeam: flatPick.awayTeam || '',
+    homeTeam: flatPick.homeTeam || '',
+    espnGameId: flatPick.espnGameId || null,
+    league: flatPick.sport || '',
+  };
+
+  return {
+    bigGuy: flatPick.bigGuy || flatPick.player || '',
+    sport: flatPick.sport || '',
+    betCategory,
+    betType: flatPick.betType,
+    entities,
+    line,
+    outcome,
+    game,
+    _originalIndex: pickIndex,
+  };
+}
+
+/**
+ * Transform a full flat-schema brolay (from the entry form) to new structured schema.
+ * Call this before addBrolay() to ensure data is written in the new format.
+ */
+export function transformBrolayToNewSchema(flatBrolay) {
+  const participants = flatBrolay.participants || {};
+  const entries = Object.entries(participants);
+  const picks = {};
+
+  entries.forEach(([key, pick], index) => {
+    const pickId = `pick_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    picks[pickId] = transformPickToNewSchema(pick, index);
+  });
+
+  return {
+    date: flatBrolay.date || '',
+    dayOfWeek: flatBrolay.dayOfWeek || '',
+    submittedBy: flatBrolay.submittedBy || flatBrolay.placedBy || '',
+    betAmount: flatBrolay.betAmount || 0,
+    totalPayout: flatBrolay.totalPayout || 0,
+    totalPicks: entries.length,
+    settled: flatBrolay.settled || false,
+    settledAt: flatBrolay.settledAt || '',
+    picks,
+  };
+}

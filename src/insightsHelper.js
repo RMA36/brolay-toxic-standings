@@ -2,20 +2,16 @@
 import { PICK_TYPES } from './constants/sports';
 
 /**
- * Helper functions for dual-schema support
+ * Helper functions for new schema
  */
 const getPicksArray = (parlay) => {
-  const picksObj = parlay.picks || parlay.participants;
-  if (!picksObj) return [];
-  return Object.values(picksObj);
+  if (!parlay.picks) return [];
+  return Object.values(parlay.picks);
 };
 
-const getPickBigGuy = (pick) => pick.bigGuy || pick.player;
+const getPickBigGuy = (pick) => pick.bigGuy || '';
 
-const getPickResult = (pick) => {
-  if (pick.outcome?.status) return pick.outcome.status;
-  return pick.result;
-};
+const getPickResult = (pick) => pick.outcome?.status || '';
 
 /**
  * Determines which sports are currently in season

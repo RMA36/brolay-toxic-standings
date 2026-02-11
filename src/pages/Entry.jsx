@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { AlertCircle, PlusCircle } from 'lucide-react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS, SPORTS, PICK_TYPES, PRELOADED_TEAMS, COMMON_PROP_TYPES, PRELOADED_PLAYERS } from '../constants/sports';
-import { formatDateForDisplay, getCurrentETDate, getPickResult, getPickBigGuy, getPicksArray } from '../utils/formatters';
+import { formatDateForDisplay, getCurrentETDate, getPickResult, getPickBigGuy, getPicksArray, transformBrolayToNewSchema } from '../utils/formatters';
 import { saveLearnedData, createDefaultParticipant } from '../utils/actionHandlers';
 import Button from '../components/common/Button';
 import PickEntry from '../components/forms/PickEntry';
@@ -403,19 +403,23 @@ const Entry = () => {
       }
     }
 
-    const parlayData = {
+    // Build flat parlay data first (for learning/display), then transform to new schema for Firebase
+    const flatParlayData = {
       ...newParlay,
       participants: participantsWithOdds,
       totalParticipants: participantCount,
       dayOfWeek: getDayOfWeek(newParlay.date)
     };
 
+    // Transform to new structured schema before writing to Firebase
+    const parlayData = transformBrolayToNewSchema(flatParlayData);
+
     // Learn from new entries
     const newTeams = [...learnedTeams];
     const newPropTypes = [...learnedPropTypes];
     const newPlayers = [...learnedPlayers];
 
-    Object.values(parlayData.participants).forEach(p => {
+    Object.values(flatParlayData.participants).forEach(p => {
       if (p.team && !newTeams.includes(p.team)) {
         newTeams.push(p.team);
       }

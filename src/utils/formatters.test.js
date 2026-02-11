@@ -72,21 +72,16 @@ describe('Date Formatting Functions', () => {
   });
 });
 
-describe('Dual-Schema Helper Functions', () => {
+describe('Schema Helper Functions', () => {
   describe('getPickBigGuy', () => {
     it('should return bigGuy from new schema', () => {
       const pick = createMockPick({ bigGuy: 'Management' });
       expect(getPickBigGuy(pick)).toBe('Management');
     });
 
-    it('should return player from old schema', () => {
-      const pick = createMockPickOldSchema({ player: 'Labor' });
-      expect(getPickBigGuy(pick)).toBe('Labor');
-    });
-
-    it('should prefer bigGuy over player if both exist', () => {
-      const pick = { bigGuy: 'Management', player: 'Labor' };
-      expect(getPickBigGuy(pick)).toBe('Management');
+    it('should return empty string if no bigGuy', () => {
+      const pick = {};
+      expect(getPickBigGuy(pick)).toBe('');
     });
   });
 
@@ -98,9 +93,9 @@ describe('Dual-Schema Helper Functions', () => {
       expect(getPickResult(pick)).toBe('win');
     });
 
-    it('should return result from old schema', () => {
-      const pick = createMockPickOldSchema({ result: 'loss' });
-      expect(getPickResult(pick)).toBe('loss');
+    it('should return empty string if no outcome', () => {
+      const pick = {};
+      expect(getPickResult(pick)).toBe('');
     });
 
     it('should handle pending status', () => {
@@ -124,11 +119,9 @@ describe('Dual-Schema Helper Functions', () => {
       expect(getPickActualStats(pick)).toEqual({ passingYards: 327 });
     });
 
-    it('should return actualStats from old schema', () => {
-      const pick = createMockPickOldSchema({
-        actualStats: { passingYards: 250 },
-      });
-      expect(getPickActualStats(pick)).toEqual({ passingYards: 250 });
+    it('should return empty string if no outcome', () => {
+      const pick = {};
+      expect(getPickActualStats(pick)).toBe('');
     });
   });
 
@@ -140,11 +133,11 @@ describe('Dual-Schema Helper Functions', () => {
       expect(picks.length).toBe(2);
     });
 
-    it('should convert participants object to array from old schema', () => {
-      const brolay = createMockBrolayOldSchema();
+    it('should handle picks as object (keyed by pickId)', () => {
+      const brolay = createMockBrolay();
       const picks = getPicksArray(brolay);
       expect(Array.isArray(picks)).toBe(true);
-      expect(picks.length).toBe(2);
+      expect(picks.length).toBeGreaterThan(0);
     });
 
     it('should return empty array if no picks/participants', () => {
@@ -159,9 +152,9 @@ describe('Dual-Schema Helper Functions', () => {
       expect(getSubmittedBy(brolay)).toBe('Management');
     });
 
-    it('should return placedBy from old schema', () => {
-      const brolay = createMockBrolayOldSchema({ placedBy: 'Labor' });
-      expect(getSubmittedBy(brolay)).toBe('Labor');
+    it('should return empty string if no submittedBy', () => {
+      const brolay = {};
+      expect(getSubmittedBy(brolay)).toBe('');
     });
   });
 
@@ -172,9 +165,9 @@ describe('Dual-Schema Helper Functions', () => {
       expect(getPickPlayerPosition(pick)).toBe('QB');
     });
 
-    it('should return playerPosition from old schema', () => {
-      const pick = createMockPickOldSchema({ playerPosition: 'RB' });
-      expect(getPickPlayerPosition(pick)).toBe('RB');
+    it('should return null if no entities with position', () => {
+      const pick = createMockPick();
+      expect(getPickPlayerPosition(pick)).toBeNull();
     });
 
     it('should return null if no position found', () => {
@@ -189,9 +182,9 @@ describe('Dual-Schema Helper Functions', () => {
       expect(getPickPlayerTeam(pick)).toBe('Kansas City Chiefs');
     });
 
-    it('should return playerTeam from old schema', () => {
-      const pick = createMockPickOldSchema({ playerTeam: 'Buffalo Bills' });
-      expect(getPickPlayerTeam(pick)).toBe('Buffalo Bills');
+    it('should return null if no entities with team', () => {
+      const pick = createMockPick();
+      expect(getPickPlayerTeam(pick)).toBeNull();
     });
 
     it('should return null if no team found', () => {
@@ -206,9 +199,9 @@ describe('Dual-Schema Helper Functions', () => {
       expect(getPickPropType(pick)).toBe('Passing Yards');
     });
 
-    it('should return propType from old schema', () => {
-      const pick = createMockPickOldSchema({ propType: 'Rushing Yards' });
-      expect(getPickPropType(pick)).toBe('Rushing Yards');
+    it('should return null if no line.statType', () => {
+      const pick = createMockPick();
+      expect(getPickPropType(pick)).toBeNull();
     });
 
     it('should return null if no prop type found', () => {

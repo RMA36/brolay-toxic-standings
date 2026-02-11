@@ -26,38 +26,51 @@ export const useESPN = () => {
     // Check for exact match first (ideal case with autocomplete)
     if (normalizedBet === normalizedApi) return true;
 
-    // Filter out common filler words
+    // Filter out common filler words AND single-character fragments (e.g., "a" from "A&M")
     const commonWords = ['university', 'college', 'of', 'the'];
-    const filterWords = (str) => str.split(' ').filter(word => !commonWords.includes(word));
+    const filterWords = (str) => str.split(' ').filter(word => word.length > 1 && !commonWords.includes(word));
 
     const betWords = filterWords(normalizedBet);
     const apiWords = filterWords(normalizedApi);
 
-    // CRITICAL: Prevent "Michigan" from matching "Michigan State Spartans"
-    // Strategy: If API contains "X State" and bet is just "X", don't match
-    // This handles legacy data where team might be stored as just "Michigan"
+    // If either side has no meaningful words after filtering, can't match
+    if (betWords.length === 0 || apiWords.length === 0) return false;
 
-    // Check if API team has "State" as part of location (not filtered out)
-    const stateIndex = normalizedApi.split(' ').indexOf('state');
-    if (stateIndex > 0) {
-      // API has "State" in it (e.g., "Michigan State Spartans" or "Iowa State Cyclones")
-      const apiLocationWords = normalizedApi.split(' ').slice(0, stateIndex + 1); // ["michigan", "state"]
+    // For single-word bet names (common in college sports), apply strict disambiguation
+    const apiAllWords = normalizedApi.split(' ').filter(w => w.length > 1);
+    if (betWords.length === 1) {
+      const betWord = betWords[0];
+      const apiIdx = apiAllWords.indexOf(betWord);
 
-      // If bet is a single word and matches the first part of "X State", reject it
-      if (betWords.length === 1) {
-        const betWord = betWords[0];
-        const firstApiWord = normalizedApi.split(' ')[0];
+      // Prevent "Michigan" matching "Michigan State Spartans"
+      if (apiIdx >= 0 && apiIdx + 1 < apiAllWords.length && apiAllWords[apiIdx + 1] === 'state') {
+        return false;
+      }
 
-        if (betWord === firstApiWord) {
-          // Bet is "michigan", API is "michigan state ..." - DON'T MATCH
-          return false;
-        }
+      // Prevent "Alabama" matching "Alabama A&M" (normalized: "alabama am")
+      // Prevent "Illinois" matching "Eastern Illinois"
+      const locationModifiers = ['am', 'state', 'tech'];
+      const qualifiers = ['eastern', 'western', 'northern', 'southern', 'central', 'north', 'south', 'southeast', 'southwest'];
+
+      if (apiIdx === 0 && apiAllWords.length > 1 && locationModifiers.includes(apiAllWords[1])) {
+        return false;
+      }
+      if (apiIdx > 0 && qualifiers.includes(apiAllWords[apiIdx - 1])) {
+        return false;
       }
     }
 
     // All words from bet must be in API (allows partial matching for legacy data)
+    // Use minimum length of 3 for substring matching to avoid false positives
     return betWords.every(word =>
-      apiWords.some(apiWord => apiWord.includes(word) || word.includes(apiWord))
+      apiWords.some(apiWord => {
+        if (apiWord === word) return true; // Exact word match
+        // Substring match only for words >= 3 characters
+        if (word.length >= 3 && apiWord.length >= 3) {
+          return apiWord.includes(word) || word.includes(apiWord);
+        }
+        return false;
+      })
     );
   };
 
@@ -1346,22 +1359,15 @@ export const useESPN = () => {
   };
 
   /**
-   * Helper to get the result/status from a pick (supports both schemas)
+   * Helper to get the result/status from a pick (new schema)
    */
-  const getPickResult = (pick) => {
-    if (pick.outcome?.status) return pick.outcome.status;
-    return pick.result;
-  };
+  const getPickResult = (pick) => pick.outcome?.status || '';
 
   /**
-   * Helper to convert pick to format expected by checkGameResult (old schema format)
-   * The checkGameResult functions expect the old schema format with team, playerTeam, etc.
+   * Helper to convert new-schema pick to flat format expected by checkGameResult
+   * checkGameResult expects flat fields: team, playerTeam, spread, overUnder, etc.
    */
   const pickToParticipant = (pick) => {
-    // If it's already old schema, return as-is
-    if (pick.player && !pick.bigGuy) return pick;
-
-    // Convert new schema to old schema format for checkGameResult
     const participant = { ...pick };
 
     // For player props, entities[0] contains the player info
@@ -1436,55 +1442,37 @@ export const useESPN = () => {
       setAutoUpdating(true);
       let updatedCount = 0;
 
-      // Detect schema: new schema uses 'picks', old uses 'participants'
       const parlaysToUpdate = parlays.filter(parlay => {
-        const picksObj = parlay.picks || parlay.participants;
-        if (!picksObj) return false;
-        const picks = Object.values(picksObj);
+        if (!parlay.picks) return false;
+        const picks = Object.values(parlay.picks);
         return picks.some(p => getPickResult(p) === 'pending');
       });
 
       for (const parlay of parlaysToUpdate) {
         let parlayUpdated = false;
-
-        // Detect which schema this parlay uses
-        const isNewSchema = !!parlay.picks;
-        const picksObj = parlay.picks || parlay.participants;
+        const picksObj = parlay.picks;
         const updatedPicks = { ...picksObj };
 
         for (const [pickId, pick] of Object.entries(picksObj)) {
           if (getPickResult(pick) !== 'pending') continue;
 
           try {
-            // Convert to old schema format for checkGameResult
+            // Convert to flat format for checkGameResult
             const participant = pickToParticipant(pick);
             const resultData = await checkGameResult(participant, parlay.date);
 
             if (resultData && resultData.result && resultData.result !== 'pending') {
-              if (isNewSchema) {
-                // New schema: update outcome object
-                const { outcome: oldOutcome, ...cleanPick } = pick;
-                updatedPicks[pickId] = {
-                  ...cleanPick,
-                  outcome: {
-                    ...(oldOutcome || {}),
-                    status: resultData.result,
-                    actualStats: resultData.stats,
-                    autoUpdated: true,
-                    settledAt: new Date().toISOString()
-                  }
-                };
-              } else {
-                // Old schema: update result field directly
-                const { actualStats: oldStats, ...cleanParticipant } = pick;
-                updatedPicks[pickId] = {
-                  ...cleanParticipant,
-                  result: resultData.result,
+              const { outcome: oldOutcome, ...cleanPick } = pick;
+              updatedPicks[pickId] = {
+                ...cleanPick,
+                outcome: {
+                  ...(oldOutcome || {}),
+                  status: resultData.result,
                   actualStats: resultData.stats,
                   autoUpdated: true,
-                  autoUpdatedAt: new Date().toISOString()
-                };
-              }
+                  settledAt: new Date().toISOString()
+                }
+              };
               parlayUpdated = true;
               updatedCount++;
             }
@@ -1496,13 +1484,10 @@ export const useESPN = () => {
         if (parlayUpdated && parlay.id) {
           try {
             console.log('🔄 Attempting to update parlay:', parlay.id);
-
-            // Use the appropriate field name based on schema
-            const updateField = isNewSchema ? 'picks' : 'participants';
-            console.log('📝 Update data:', { [updateField]: updatedPicks });
+            console.log('📝 Update data:', { picks: updatedPicks });
 
             const result = await updateBrolay(parlay.id, {
-              [updateField]: updatedPicks
+              picks: updatedPicks
             });
 
             console.log('✅ Update result:', result);

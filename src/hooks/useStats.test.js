@@ -335,27 +335,7 @@ describe('useStats hook', () => {
     });
   });
 
-  describe('Dual-Schema Support', () => {
-    it('should work with old schema (participants, player, result)', () => {
-      const brolays = [
-        createMockBrolayOldSchema({
-          participants: {
-            pick1: {
-              player: 'Management',
-              sport: 'NFL',
-              betType: 'Spread',
-              result: 'win',
-            },
-          },
-        }),
-      ];
-
-      const { result } = renderHook(() => useStats(brolays, players));
-
-      expect(result.current.stats.Management.totalPicks).toBe(1);
-      expect(result.current.stats.Management.wins).toBe(1);
-    });
-
+  describe('New Schema Support', () => {
     it('should work with new schema (picks, bigGuy, outcome.status)', () => {
       const brolays = [
         createMockBrolay({

@@ -1,33 +1,22 @@
 import { useMemo } from 'react';
 
 /**
- * Helper to get picks from a parlay (supports both old and new schema)
- * Old schema: parlay.participants
- * New schema: parlay.picks
+ * Helper to get picks from a parlay (new schema: parlay.picks)
  */
 const getPicksArray = (parlay) => {
-  // New schema uses 'picks', old schema uses 'participants'
-  const picksObj = parlay.picks || parlay.participants;
-  if (!picksObj) return [];
-  return Object.values(picksObj);
+  if (!parlay.picks) return [];
+  return Object.values(parlay.picks);
 };
 
 /**
- * Helper to get the Big Guy name from a pick (supports both schemas)
- * Old schema: pick.player
- * New schema: pick.bigGuy
+ * Helper to get the Big Guy name from a pick (new schema: pick.bigGuy)
  */
-const getBigGuy = (pick) => pick.bigGuy || pick.player;
+const getBigGuy = (pick) => pick.bigGuy || '';
 
 /**
- * Helper to get the result/status from a pick (supports both schemas)
- * Old schema: pick.result
- * New schema: pick.outcome.status
+ * Helper to get the result/status from a pick (new schema: pick.outcome.status)
  */
-const getResult = (pick) => {
-  if (pick.outcome?.status) return pick.outcome.status;
-  return pick.result;
-};
+const getResult = (pick) => pick.outcome?.status || '';
 
 /**
  * Helper to get prop type info for multi-player props (supports both schemas)

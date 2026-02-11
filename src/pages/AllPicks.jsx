@@ -37,8 +37,7 @@ const AllPicks = () => {
   // Flatten all picks with parlay context (supports both old and new schemas)
   const allPicks = [];
   parlays.forEach(parlay => {
-    // Get picks object (supports both picks and participants field names)
-    const picksObj = parlay.picks || parlay.participants || {};
+    const picksObj = parlay.picks || {};
     Object.entries(picksObj).forEach(([pickId, pick]) => {
       allPicks.push({
         ...pick,
@@ -59,10 +58,7 @@ const AllPicks = () => {
     const bigGuy = getPickBigGuy(pick);
     if (filters.player && bigGuy !== filters.player) return false;
     if (filters.sport && pick.sport !== filters.sport) return false;
-    if (filters.placedBy && pick.parlayPlacedBy !== filters.placedBy) return false;
-    // Support both submittedBy filter and placedBy filter
-    const submittedByFilter = filters.submittedBy || filters.placedBy;
-    if (submittedByFilter && pick.parlayPlacedBy !== submittedByFilter) return false;
+    if (filters.submittedBy && pick.parlayPlacedBy !== filters.submittedBy) return false;
     const pickResult = getPickResult(pick);
     if (filters.result && pickResult !== filters.result) return false;
     if (filters.autoUpdated === 'true' && !pick.autoUpdated) return false;
@@ -127,67 +123,41 @@ const AllPicks = () => {
         return;
       }
 
-      // Determine which schema the parlay uses
-      const isNewSchema = !!parlay.picks;
-      const picksFieldName = isNewSchema ? 'picks' : 'participants';
-      const picksObj = parlay[picksFieldName] || {};
+      const picksObj = parlay.picks || {};
 
       console.log('Found parlay:', parlay);
-      console.log('Schema type:', isNewSchema ? 'new (picks)' : 'old (participants)');
       console.log('Editing pick:', editingPick.participantId);
-      console.log('Current pick data:', picksObj[editingPick.participantId]);
 
       // Get the original pick to preserve any fields we're not editing
       const originalParticipant = picksObj[editingPick.participantId];
 
-      // Update the specific pick, preserving all original fields
-      // Support both old schema (player/result) and new schema (bigGuy/outcome.status)
+      // Update the specific pick (new schema only)
       const updatedPicks = { ...picksObj };
-      const bigGuyValue = editingPick.bigGuy || editingPick.player;
+      const bigGuyValue = editingPick.bigGuy || '';
 
       updatedPicks[editingPick.participantId] = {
-        ...originalParticipant, // Start with original to preserve any extra fields
-        // Write to both old and new field names for compatibility
-        player: bigGuyValue,
+        ...originalParticipant,
         bigGuy: bigGuyValue,
         sport: editingPick.sport,
-        team: editingPick.team || '',
-        awayTeam: editingPick.awayTeam || '',
-        homeTeam: editingPick.homeTeam || '',
         betType: editingPick.betType,
-        favorite: editingPick.favorite || 'Favorite',
-        spread: editingPick.spread || '',
-        total: editingPick.total || '',
-        overUnder: editingPick.overUnder || 'Over',
-        propType: editingPick.propType || '',
-        line: editingPick.line || '',
-        odds: editingPick.odds || '',
-        yesNoRuns: editingPick.yesNoRuns || '',
-        quarter: editingPick.quarter || '',
-        // Write to both old (result) and new (outcome.status) field names
-        result: editingPick.result,
         outcome: {
-          ...(originalParticipant.outcome || {}),
+          ...(originalParticipant?.outcome || {}),
           status: editingPick.result,
-          actualStats: editingPick.actualStats || originalParticipant.outcome?.actualStats || null
+          actualStats: editingPick.actualStats || originalParticipant?.outcome?.actualStats || null
         },
-        actualStats: editingPick.actualStats || null,
         autoUpdated: editingPick.autoUpdated || false,
-        manuallyOverridden: true // Mark as manually edited
+        manuallyOverridden: true
       };
 
       console.log('Updated pick data:', updatedPicks[editingPick.participantId]);
 
-      // Update in Firebase using the correct field name for this schema
+      // Update in Firebase
       if (parlay.id) {
         console.log('🔄 Updating Firebase document:', parlay.id);
-        console.log('📝 Parlay object:', parlay);
-        console.log('📝 Updated picks:', updatedPicks);
-        console.log('📝 Using field name:', picksFieldName);
 
         try {
           const result = await updateBrolay(parlay.id, {
-            [picksFieldName]: updatedPicks
+            picks: updatedPicks
           });
 
           console.log('✅ Update result:', result);
@@ -293,8 +263,8 @@ const AllPicks = () => {
               <div>
                 <label className="block text-sm font-medium mb-1 text-gray-300">Submitted By</label>
                 <select
-                  value={filters.submittedBy || filters.placedBy || ''}
-                  onChange={(e) => setFilters({...filters, submittedBy: e.target.value, placedBy: e.target.value})}
+                  value={filters.submittedBy || ''}
+                  onChange={(e) => setFilters({...filters, submittedBy: e.target.value})}
                   className="w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded text-white text-base focus:border-yellow-500 focus:outline-none"
                   style={{ fontSize: isMobile ? '16px' : '14px' }}
                 >
@@ -374,7 +344,7 @@ const AllPicks = () => {
             <Button
               onClick={() => setFilters({
                 dateFrom: '', dateTo: '', player: '', sport: '', teamPlayer: '',
-                submittedBy: '', placedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
+                submittedBy: '', minPayout: '', maxPayout: '', result: '', autoUpdated: '',
                 betType: '', propType: ''
               })}
               variant="secondary"

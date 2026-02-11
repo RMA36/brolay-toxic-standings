@@ -52,68 +52,71 @@ export const saveLearnedData = (teams, propTypes, players = []) => {
 };
 
 /**
- * Helper to get picks from parlay (supports both schemas)
+ * Helper to get picks from parlay (new schema)
  */
 const getPicksArray = (parlay) => {
-  const picksObj = parlay.picks || parlay.participants;
-  if (!picksObj) return [];
-  return Object.values(picksObj);
+  if (!parlay.picks) return [];
+  return Object.values(parlay.picks);
 };
 
 /**
- * Helper to get Big Guy from pick (supports both schemas)
+ * Helper to get Big Guy from pick (new schema)
  */
-const getPickBigGuy = (pick) => pick.bigGuy || pick.player;
+const getPickBigGuy = (pick) => pick.bigGuy || '';
 
 /**
- * Helper to get result from pick (supports both schemas)
+ * Helper to get result from pick (new schema)
  */
-const getPickResult = (pick) => pick.outcome?.status || pick.result;
+const getPickResult = (pick) => pick.outcome?.status || '';
 
 /**
- * Extract team/player info from a pick (supports both schemas)
+ * Extract team/player info from a pick (new schema)
  */
 const extractPickInfo = (pick) => {
   const info = {
-    team: pick.team,
-    awayTeam: pick.awayTeam,
-    homeTeam: pick.homeTeam,
-    propType: pick.propType,
-    player1: pick.player1,
-    player2: pick.player2,
-    selectedPlayer: pick.selectedPlayer
+    team: '',
+    awayTeam: '',
+    homeTeam: '',
+    propType: '',
+    player1: '',
+    player2: '',
+    selectedPlayer: ''
   };
 
-  // New schema: extract from entities
+  // Extract from entities
   if (pick.entities && pick.entities.length > 0) {
+    const primary = pick.entities.find(e => e.role === 'primary') || pick.entities[0];
+    if (primary) {
+      info.team = primary.name || '';
+      if (primary.entityType === 'player') {
+        info.player1 = primary.name || '';
+      }
+    }
     pick.entities.forEach(entity => {
-      if (entity.entityType === 'player') {
-        if (!info.player1) {
-          info.player1 = entity.name;
-        } else if (!info.player2) {
-          info.player2 = entity.name;
-        }
-      } else if (entity.entityType === 'team') {
-        if (entity.role === 'home') {
-          info.homeTeam = info.homeTeam || entity.name;
-        } else if (entity.role === 'away') {
-          info.awayTeam = info.awayTeam || entity.name;
-        } else {
-          info.team = info.team || entity.name;
-        }
+      if (entity.entityType === 'player' && entity.name !== info.player1) {
+        if (!info.player2) info.player2 = entity.name;
+      }
+      if (entity.entityType === 'team') {
+        if (entity.role === 'home') info.homeTeam = entity.name || '';
+        else if (entity.role === 'away') info.awayTeam = entity.name || '';
       }
     });
   }
 
-  // New schema: extract from game object
+  // Extract from game object
   if (pick.game) {
-    info.awayTeam = info.awayTeam || pick.game.awayTeam;
-    info.homeTeam = info.homeTeam || pick.game.homeTeam;
+    info.awayTeam = info.awayTeam || pick.game.awayTeam || '';
+    info.homeTeam = info.homeTeam || pick.game.homeTeam || '';
   }
 
-  // New schema: extract propType from line.statType
-  if (pick.line?.statType) {
-    info.propType = info.propType || pick.line.statType;
+  // Extract propType from line.statType
+  if (pick.line && typeof pick.line === 'object') {
+    info.propType = pick.line.statType || '';
+  }
+
+  // Selected player from outcome
+  if (pick.outcome?.selectedPlayer) {
+    info.selectedPlayer = pick.outcome.selectedPlayer;
   }
 
   return info;
@@ -189,11 +192,10 @@ export const applyFilters = (parlaysList, filters, editingParlayId = null) => {
     if (filters.dateFrom && parlay.date < filters.dateFrom) return false;
     if (filters.dateTo && parlay.date > filters.dateTo) return false;
 
-    // Submitted By filter (supports both submittedBy and placedBy)
-    const filterSubmittedBy = filters.submittedBy || filters.placedBy;
+    // Submitted By filter
+    const filterSubmittedBy = filters.submittedBy;
     if (filterSubmittedBy) {
-      const parlaySubmittedBy = parlay.submittedBy || parlay.placedBy;
-      if (parlaySubmittedBy !== filterSubmittedBy) return false;
+      if (parlay.submittedBy !== filterSubmittedBy) return false;
     }
 
     // Total Payout range filter

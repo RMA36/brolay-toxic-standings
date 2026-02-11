@@ -276,6 +276,7 @@ Comprehensive audit found remaining old-schema field access in 5 files:
 - Search cache may hold stale results from before fixes; cleared on page refresh
 
 ### Technical Debt Identified
+- **PickEntry.jsx native new schema**: Currently the entry form builds flat-field picks and Entry.jsx transforms them to new schema via `transformBrolayToNewSchema()` before Firebase write. The proper fix is to refactor PickEntry.jsx to natively construct new schema objects (`entities[]`, `line{}`, `outcome{}`, `game{}`) in its form state, eliminating the transformation layer. This also applies to EditParlayModal.
 - Tailwind CDN should be replaced with PostCSS build for production
 - Calendar logic could be extracted to a custom hook
 - GroupDashboard could be split into smaller sub-components
