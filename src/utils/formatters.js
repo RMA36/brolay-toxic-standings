@@ -422,6 +422,17 @@ export function transformPickToNewSchema(flatPick, pickIndex) {
       position: flatPick.player2Position || '',
       role: 'secondary'
     });
+  } else if (flatPick.betType === '3-Way Moneyline') {
+    // 3-Way Moneyline: away/home teams go in game{}, entity stores the pick
+    const pickLabel = flatPick.threeWayPick || 'Home';
+    let entityName = pickLabel;
+    if (pickLabel === 'Away' && flatPick.awayTeam) entityName = flatPick.awayTeam;
+    else if (pickLabel === 'Home' && flatPick.homeTeam) entityName = flatPick.homeTeam;
+    entities.push({
+      entityType: 'team',
+      name: entityName,
+      role: 'primary'
+    });
   } else {
     // Standard, Team Total, First Half, Quarter, etc.
     entities.push({
@@ -476,7 +487,7 @@ export function transformPickToNewSchema(flatPick, pickIndex) {
     league: flatPick.sport || '',
   };
 
-  return {
+  const result = {
     bigGuy: flatPick.bigGuy || flatPick.player || '',
     sport: flatPick.sport || '',
     betCategory,
@@ -487,6 +498,13 @@ export function transformPickToNewSchema(flatPick, pickIndex) {
     game,
     _originalIndex: pickIndex,
   };
+
+  // Preserve 3-Way Moneyline pick selection
+  if (flatPick.threeWayPick) {
+    result.threeWayPick = flatPick.threeWayPick;
+  }
+
+  return result;
 }
 
 /**
