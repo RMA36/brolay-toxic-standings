@@ -146,6 +146,10 @@ const Entry = () => {
       const losers = picks.filter(p => getPickResult(p) === 'loss');
       const winners = picks.filter(p => getPickResult(p) === 'win');
       const pushes = picks.filter(p => getPickResult(p) === 'push');
+      const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
+
+      // Only consider fully resolved brolays
+      if (!allResolved) continue;
 
       // Check for And-1 (exactly 1 loss, regardless of participant count)
       const isAnd1 = losers.length === 1;

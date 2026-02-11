@@ -444,7 +444,9 @@ export function transformPickToNewSchema(flatPick, pickIndex) {
 
   // Determine direction
   let direction = '';
-  if (flatPick.favorite) direction = flatPick.favorite.toLowerCase();
+  if (flatPick.favorite) {
+    direction = flatPick.favorite === 'Dog' ? 'underdog' : 'favorite';
+  }
   if (flatPick.overUnder) direction = flatPick.overUnder.toLowerCase();
 
   // Build line object
@@ -486,6 +488,44 @@ export function transformPickToNewSchema(flatPick, pickIndex) {
     _originalIndex: pickIndex,
   };
 }
+
+/**
+ * Flatten a new-schema pick into flat fields for PickEntry form editing.
+ * Reverses transformPickToNewSchema — used by the edit modal.
+ */
+export const flattenPickForForm = (pick) => {
+  const info = extractPickInfo(pick);
+  return {
+    sport: pick.sport || '',
+    betType: pick.betType || '',
+    bigGuy: pick.bigGuy || '',
+    betCategory: pick.betCategory || '',
+    team: info.team || '',
+    spread: info.spread !== undefined ? String(info.spread) : '',
+    total: info.total !== undefined ? String(info.total) : '',
+    line: info.line !== undefined ? String(info.line) : '',
+    favorite: info.favorite || '',
+    overUnder: info.overUnder || '',
+    awayTeam: info.awayTeam || '',
+    homeTeam: info.homeTeam || '',
+    propType: info.propType || '',
+    playerTeam: info.playerTeam || '',
+    playerPosition: info.playerPosition || '',
+    player1: info.player1 || '',
+    player2: info.player2 || '',
+    player1Team: info.player1Team || '',
+    player2Team: info.player2Team || '',
+    player1Position: info.player1Position || '',
+    player2Position: info.player2Position || '',
+    player1PropType: info.player1PropType || '',
+    player2PropType: info.player2PropType || '',
+    threeWayPick: pick.threeWayPick || '',
+    odds: (pick.line && pick.line.odds) || '',
+    oddsSource: (pick.line && pick.line.source) || '',
+    // Preserve outcome for status tracking during edits
+    outcome: pick.outcome || {},
+  };
+};
 
 /**
  * Transform a full flat-schema brolay (from the entry form) to new structured schema.

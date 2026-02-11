@@ -1277,7 +1277,7 @@ const PickEntry = ({
         {(() => {
           const showPlayerField = INDIVIDUAL_SPORTS.includes(participant.sport) || participant.betType === 'Player Prop';
           const showTeamField = !INDIVIDUAL_SPORTS.includes(participant.sport) &&
-            ['Spread', 'Moneyline', '3-Way Moneyline', 'First Half Spread', 'First Half Moneyline',
+            ['Spread', 'Moneyline', 'First Half Spread', 'First Half Moneyline',
              'Team Total', 'First Half Team Total', 'Quarter Moneyline',
              'Quarter Team Total', 'Quarter Spread', 'Team Prop'].includes(participant.betType);
 

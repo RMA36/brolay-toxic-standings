@@ -313,11 +313,13 @@ const GroupDashboard = () => {
                     const picks = getPicksArray(parlay);
                     const losers = picks.filter(p => getPickResult(p) === 'loss');
                     const winners = picks.filter(p => getPickResult(p) === 'win');
-                    const won = losers.length === 0 && winners.length > 0;
+                    const pushes = picks.filter(p => getPickResult(p) === 'push');
+                    const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
+                    const won = allResolved && losers.length === 0 && winners.length > 0;
 
                     if (won) {
                       return sum + ((parlay.totalPayout || 0) - (parlay.betAmount * picks.length));
-                    } else if (losers.length > 0) {
+                    } else if (allResolved && losers.length > 0) {
                       return sum - (parlay.betAmount * picks.length);
                     }
                     return sum;
@@ -330,11 +332,13 @@ const GroupDashboard = () => {
                     const picks = getPicksArray(parlay);
                     const losers = picks.filter(p => getPickResult(p) === 'loss');
                     const winners = picks.filter(p => getPickResult(p) === 'win');
-                    const won = losers.length === 0 && winners.length > 0;
+                    const pushes = picks.filter(p => getPickResult(p) === 'push');
+                    const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
+                    const won = allResolved && losers.length === 0 && winners.length > 0;
 
                     if (won) {
                       return sum + ((parlay.totalPayout || 0) - (parlay.betAmount * picks.length));
-                    } else if (losers.length > 0) {
+                    } else if (allResolved && losers.length > 0) {
                       return sum - (parlay.betAmount * picks.length);
                     }
                     return sum;
@@ -348,8 +352,10 @@ const GroupDashboard = () => {
                 const picks = getPicksArray(parlay);
                 const losers = picks.filter(p => getPickResult(p) === 'loss');
                 const winners = picks.filter(p => getPickResult(p) === 'win');
-                const won = losers.length === 0 && winners.length > 0;
-                const lost = losers.length > 0;
+                const pushes = picks.filter(p => getPickResult(p) === 'push');
+                const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
+                const won = allResolved && losers.length === 0 && winners.length > 0;
+                const lost = allResolved && losers.length > 0;
 
                 return (
                   <div

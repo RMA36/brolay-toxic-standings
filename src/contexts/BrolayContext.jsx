@@ -5,7 +5,7 @@ import { useESPN } from '../hooks/useESPN';
 import { useESPNTeams } from '../hooks/useESPNTeams';
 import { useStats } from '../hooks/useStats';
 import { useOdds } from '../hooks/useOdds';
-import { getCurrentETDate } from '../utils/formatters';
+import { getCurrentETDate, transformPickToNewSchema } from '../utils/formatters';
 import { findMoneyMaker, findDangerZone, getCurrentDayOfWeek, getCurrentSportsInSeason, getSeasonalTip } from '../insightsHelper';
 import { PLAYERS, PRELOADED_TEAMS, COMMON_PROP_TYPES } from '../constants/sports';
 import { extractTeamsFromParlays, saveLearnedData } from '../utils/actionHandlers';
@@ -249,10 +249,21 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
     try {
       setSaving(true);
 
-      const picksObj = editedParlay.picks || {};
+      const flatPicksObj = editedParlay.picks || {};
 
       // Helper to get result from pick
       const getPickResult = (pick) => pick.outcome?.status || '';
+
+      // Transform flat-form picks back to new schema before writing
+      const picksObj = {};
+      Object.entries(flatPicksObj).forEach(([id, flatPick], index) => {
+        const transformed = transformPickToNewSchema(flatPick, index);
+        // Preserve outcome from the flat pick (it was carried through editing)
+        if (flatPick.outcome) {
+          transformed.outcome = flatPick.outcome;
+        }
+        picksObj[id] = transformed;
+      });
 
       // Identify which picks need actualStats deleted (those reset to pending)
       const picksToClean = Object.entries(picksObj)

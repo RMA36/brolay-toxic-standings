@@ -426,7 +426,9 @@ const Payments = () => {
                   const picks = getPicksArray(parlay);
                   const winners = picks.filter(p => getPickResult(p) === 'win');
                   const losers = picks.filter(p => getPickResult(p) === 'loss');
-                  const won = losers.length === 0 && winners.length > 0;
+                  const pushes = picks.filter(p => getPickResult(p) === 'push');
+                  const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
+                  const won = allResolved && losers.length === 0 && winners.length > 0;
                   const placedBy = getSubmittedBy(parlay);
 
                   return (

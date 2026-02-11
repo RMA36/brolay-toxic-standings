@@ -161,12 +161,13 @@ const AllBrolays = () => {
       const losers = picks.filter(p => getPickResult(p) === 'loss');
       const winners = picks.filter(p => getPickResult(p) === 'win');
       const pushes = picks.filter(p => getPickResult(p) === 'push');
-      const won = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
+      const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
+      const won = allResolved && losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
 
       if (won) {
         const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
         if (netProfit > 0) allProfits.push(netProfit);
-      } else if (losers.length > 0) {
+      } else if (allResolved && losers.length > 0) {
         const totalRisk = parlay.betAmount * picks.length;
         allLosses.push(-totalRisk);
       }
@@ -334,8 +335,9 @@ const AllBrolays = () => {
                   const losers = picks.filter(p => getPickResult(p) === 'loss');
                   const winners = picks.filter(p => getPickResult(p) === 'win');
                   const pushes = picks.filter(p => getPickResult(p) === 'push');
-                  const won = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
-                  const and1 = losers.length === 1 && winners.length === picks.length - 1;
+                  const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
+                  const won = allResolved && losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
+                  const and1 = allResolved && losers.length === 1 && winners.length === picks.length - 1;
 
                   const sportsSet = [...new Set(picks.map(p => p.sport).filter(Boolean))];
                   const parlayType = sportsSet.length > 1 ? 'Multi-Sport' : sportsSet[0] || 'Brolay';
@@ -346,7 +348,7 @@ const AllBrolays = () => {
                       key={parlay.id}
                       className={`bg-gray-800/50 rounded-lg p-4 border transition-all ${
                         won ? 'border-green-500/30' :
-                        losers.length > 0 ? 'border-red-500/30' :
+                        (allResolved && losers.length > 0) ? 'border-red-500/30' :
                         'border-yellow-500/30'
                       }`}
                     >
@@ -363,10 +365,10 @@ const AllBrolays = () => {
                         <div className="flex items-center gap-2">
                           <span className={`px-3 py-1 rounded-full font-bold text-sm ${
                             won ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-black' :
-                            losers.length > 0 ? 'bg-gradient-to-r from-red-400 to-rose-500 text-white' :
+                            (allResolved && losers.length > 0) ? 'bg-gradient-to-r from-red-400 to-rose-500 text-white' :
                             'bg-gray-700 text-gray-300'
                           }`}>
-                            {won ? 'WON' : losers.length > 0 ? (and1 ? 'LOST (And-1)' : 'LOST') : 'PENDING'}
+                            {!allResolved ? 'PENDING' : won ? 'WON' : losers.length > 0 ? (and1 ? 'LOST (And-1)' : 'LOST') : 'PENDING'}
                           </span>
                           {pushes.length > 0 && won && (
                             <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded border border-yellow-500/30">
@@ -488,8 +490,9 @@ const AllBrolays = () => {
                 const losers = picks.filter(p => getPickResult(p) === 'loss');
                 const winners = picks.filter(p => getPickResult(p) === 'win');
                 const pushes = picks.filter(p => getPickResult(p) === 'push');
-                const won = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
-                const and1 = losers.length === 1 && winners.length === picks.length - 1;
+                const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
+                const won = allResolved && losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
+                const and1 = allResolved && losers.length === 1 && winners.length === picks.length - 1;
 
                 const sportsSet = [...new Set(picks.map(p => p.sport).filter(Boolean))];
                 const parlayType = sportsSet.length > 1 ? 'Multi-Sport' : sportsSet[0] || 'Brolay';
@@ -500,7 +503,7 @@ const AllBrolays = () => {
                     key={parlay.id}
                     className={`bg-gray-800/50 rounded-lg p-3 md:p-4 border transition-all ${
                       won ? 'border-green-500/30' :
-                      losers.length > 0 ? 'border-red-500/30' :
+                      (allResolved && losers.length > 0) ? 'border-red-500/30' :
                       'border-yellow-500/30'
                     }`}
                   >
@@ -529,10 +532,10 @@ const AllBrolays = () => {
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`px-2 md:px-3 py-1 rounded-full font-bold text-xs md:text-sm whitespace-nowrap ${
                           won ? 'bg-gradient-to-r from-green-400 to-emerald-500 text-black' :
-                          losers.length > 0 ? 'bg-gradient-to-r from-red-400 to-rose-500 text-white' :
+                          (allResolved && losers.length > 0) ? 'bg-gradient-to-r from-red-400 to-rose-500 text-white' :
                           'bg-gray-700 text-gray-300'
                         }`}>
-                          {won ? 'WON' : losers.length > 0 ? (and1 ? 'LOST (And-1)' : 'LOST') : 'PENDING'}
+                          {!allResolved ? 'PENDING' : won ? 'WON' : losers.length > 0 ? (and1 ? 'LOST (And-1)' : 'LOST') : 'PENDING'}
                         </span>
                         {pushes.length > 0 && won && (
                           <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded border border-yellow-500/30 whitespace-nowrap">

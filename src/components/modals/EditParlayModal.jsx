@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Button from '../common/Button';
 import PickEntry from '../forms/PickEntry';
 import { createDefaultParticipant } from '../../utils/actionHandlers';
+import { flattenPickForForm } from '../../utils/formatters';
 
 /**
  * EditParlayModal - Reusable modal for editing parlays across different pages
@@ -51,9 +52,18 @@ const EditParlayModal = ({
   const [editedParlay, setEditedParlay] = useState(null);
 
   // Initialize/update internal state when parlay changes
+  // Flatten new-schema picks into flat fields for PickEntry form compatibility
   useEffect(() => {
     if (parlay && isOpen) {
-      setEditedParlay({ ...parlay });
+      const flatParlay = { ...parlay };
+      if (parlay.picks) {
+        const flatPicks = {};
+        Object.entries(parlay.picks).forEach(([id, pick]) => {
+          flatPicks[id] = flattenPickForForm(pick);
+        });
+        flatParlay.picks = flatPicks;
+      }
+      setEditedParlay(flatParlay);
     }
   }, [parlay, isOpen]);
 

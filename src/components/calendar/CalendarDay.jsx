@@ -39,14 +39,15 @@ const CalendarDay = memo(({
     const losers = picks.filter(p => getPickResult(p) === 'loss');
     const winners = picks.filter(p => getPickResult(p) === 'win');
     const pushes = picks.filter(p => getPickResult(p) === 'push');
-    const won = losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
-    const and1 = losers.length === 1 && winners.length === picks.length - 1;
+    const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
+    const won = allResolved && losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
+    const and1 = allResolved && losers.length === 1 && winners.length === picks.length - 1;
 
     if (won) {
       const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
       dayNetProfit += netProfit;
       dayWins++;
-    } else if (losers.length > 0) {
+    } else if (allResolved && losers.length > 0) {
       const totalRisk = parlay.betAmount * picks.length;
       dayNetProfit -= totalRisk;
       dayLosses++;
