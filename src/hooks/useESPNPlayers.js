@@ -81,13 +81,18 @@ export const useESPNPlayers = () => {
 
           const rosterData = await rosterResponse.json();
 
-          // ESPN returns athletes grouped by position (offense, defense, special teams)
-          // We need to flatten all the groups' items arrays into one athlete list
+          // ESPN roster API has two formats:
+          // 1. Grouped by position (NFL): athletes is array of { items: [athlete, ...] }
+          // 2. Flat list (NBA, MLB, NHL, etc.): athletes is array of athlete objects directly
           const athletes = [];
           if (rosterData.athletes && Array.isArray(rosterData.athletes)) {
-            for (const group of rosterData.athletes) {
-              if (group.items && Array.isArray(group.items)) {
-                athletes.push(...group.items);
+            for (const entry of rosterData.athletes) {
+              if (entry.items && Array.isArray(entry.items)) {
+                // Grouped format (e.g., NFL offense/defense/special teams)
+                athletes.push(...entry.items);
+              } else if (entry.fullName || entry.displayName || entry.id) {
+                // Flat format — each entry IS an athlete object
+                athletes.push(entry);
               }
             }
           }
