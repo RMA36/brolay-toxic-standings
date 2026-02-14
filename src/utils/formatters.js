@@ -463,12 +463,15 @@ export function transformPickToNewSchema(flatPick, pickIndex) {
   // Get line value
   const rawLine = parseFloat(flatPick.spread || flatPick.total || flatPick.line || flatPick.h2hLine || '0');
 
-  // Determine direction
+  // Determine direction — favorite/underdog for spreads, over/under for totals/props
+  // These are mutually exclusive: spreads use favorite, totals/props use overUnder
   let direction = '';
-  if (flatPick.favorite) {
+  const usesFavorite = ['spread', 'moneyline'].includes(lineType);
+  if (usesFavorite && flatPick.favorite) {
     direction = flatPick.favorite === 'Dog' ? 'underdog' : 'favorite';
+  } else if (!usesFavorite && flatPick.overUnder) {
+    direction = flatPick.overUnder.toLowerCase();
   }
-  if (flatPick.overUnder) direction = flatPick.overUnder.toLowerCase();
 
   // Build line object
   const line = {
