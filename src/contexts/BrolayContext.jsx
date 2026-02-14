@@ -258,9 +258,15 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
       const picksObj = {};
       Object.entries(flatPicksObj).forEach(([id, flatPick], index) => {
         const transformed = transformPickToNewSchema(flatPick, index);
-        // Preserve outcome from the flat pick (it was carried through editing)
-        if (flatPick.outcome) {
-          transformed.outcome = flatPick.outcome;
+        // Build outcome from flat fields that PickEntry edits (result, actualStats, etc.)
+        // These take precedence over the stale outcome object carried through editing
+        if (flatPick.result !== undefined || flatPick.outcome) {
+          transformed.outcome = {
+            status: flatPick.result || flatPick.outcome?.status || 'pending',
+            actualStats: flatPick.actualStats ?? flatPick.outcome?.actualStats ?? '',
+            autoUpdated: flatPick.autoUpdated ?? flatPick.outcome?.autoUpdated ?? false,
+            settledAt: flatPick.outcome?.settledAt || '',
+          };
         }
         picksObj[id] = transformed;
       });

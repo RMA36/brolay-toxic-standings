@@ -48,6 +48,10 @@ export const extractPickInfo = (pick) => {
     player2: '',
     player1PropType: '',
     player2PropType: '',
+    player1Team: '',
+    player1Position: '',
+    player2Team: '',
+    player2Position: '',
     playerTeam: '',
     playerPosition: '',
     favorite: '',
@@ -64,6 +68,8 @@ export const extractPickInfo = (pick) => {
         info.playerTeam = primary.team || '';
         info.playerPosition = primary.position || '';
         info.player1 = primary.name || '';
+        info.player1Team = primary.team || '';
+        info.player1Position = primary.position || '';
         info.player1PropType = primary.statType || '';
       }
     }
@@ -73,6 +79,8 @@ export const extractPickInfo = (pick) => {
       const secondary = pick.entities.find(e => e.role === 'opponent' || e.role === 'secondary');
       if (secondary) {
         info.player2 = secondary.name || '';
+        info.player2Team = secondary.team || '';
+        info.player2Position = secondary.position || '';
         info.player2PropType = secondary.statType || '';
       }
     }
@@ -398,14 +406,16 @@ export function transformPickToNewSchema(flatPick, pickIndex) {
       name: flatPick.player1 || '',
       team: flatPick.player1Team || '',
       position: flatPick.player1Position || '',
-      role: 'primary'
+      role: 'primary',
+      statType: flatPick.player1PropType || ''
     });
     entities.push({
       entityType: 'player',
       name: flatPick.player2 || '',
       team: flatPick.player2Team || '',
       position: flatPick.player2Position || '',
-      role: 'opponent'
+      role: 'opponent',
+      statType: flatPick.player2PropType || ''
     });
   } else if (betCategory === 'combinedProp' || betCategory === 'eitherProp') {
     entities.push({
@@ -504,6 +514,24 @@ export function transformPickToNewSchema(flatPick, pickIndex) {
     result.threeWayPick = flatPick.threeWayPick;
   }
 
+  // Preserve H2H-specific fields
+  if (flatPick.selectedPlayer) {
+    result.selectedPlayer = flatPick.selectedPlayer;
+  }
+  if (flatPick.h2hLineType) {
+    result.h2hLineType = flatPick.h2hLineType;
+  }
+
+  // Preserve YRFI/NRFI selection
+  if (flatPick.yesNoRuns) {
+    result.yesNoRuns = flatPick.yesNoRuns;
+  }
+
+  // Preserve quarter/period selection
+  if (flatPick.quarter) {
+    result.quarter = flatPick.quarter;
+  }
+
   return result;
 }
 
@@ -513,6 +541,13 @@ export function transformPickToNewSchema(flatPick, pickIndex) {
  */
 export const flattenPickForForm = (pick) => {
   const info = extractPickInfo(pick);
+
+  // Reconstruct h2hLine from line.value for H2H props
+  let h2hLine = '';
+  if (pick.betType === 'H2H Prop' && pick.line && pick.line.value) {
+    h2hLine = String(pick.line.value);
+  }
+
   return {
     sport: pick.sport || '',
     betType: pick.betType || '',
@@ -540,7 +575,20 @@ export const flattenPickForForm = (pick) => {
     threeWayPick: pick.threeWayPick || '',
     odds: (pick.line && pick.line.odds) || '',
     oddsSource: (pick.line && pick.line.source) || '',
-    // Preserve outcome for status tracking during edits
+    // H2H-specific fields
+    selectedPlayer: pick.selectedPlayer || '',
+    h2hLine: h2hLine,
+    h2hLineType: pick.h2hLineType || '',
+    // YRFI/NRFI
+    yesNoRuns: pick.yesNoRuns || '',
+    // Quarter/Period
+    quarter: pick.quarter || '',
+    // Outcome fields flattened for PickEntry compatibility
+    result: pick.outcome?.status || 'pending',
+    actualStats: pick.outcome?.actualStats || '',
+    autoUpdated: pick.outcome?.autoUpdated || false,
+    manuallyOverridden: pick.outcome?.manuallyOverridden || false,
+    // Preserve full outcome object for save handler
     outcome: pick.outcome || {},
   };
 };
