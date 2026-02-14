@@ -551,6 +551,15 @@ export const flattenPickForForm = (pick) => {
     h2hLine = String(pick.line.value);
   }
 
+  // Determine sensible defaults for direction fields so PickEntry dropdowns
+  // reflect the correct value even if the stored direction is missing.
+  // PickEntry uses `participant.favorite || 'Favorite'` for display but
+  // never writes the default to state, so we must set it here.
+  const isSpreadOrML = (pick.betType || '').includes('Spread') ||
+    (pick.betType || '').includes('Moneyline');
+  const defaultFavorite = isSpreadOrML ? 'Favorite' : '';
+  const defaultOverUnder = !isSpreadOrML ? 'Over' : '';
+
   return {
     sport: pick.sport || '',
     betType: pick.betType || '',
@@ -560,8 +569,8 @@ export const flattenPickForForm = (pick) => {
     spread: info.spread !== undefined ? String(info.spread) : '',
     total: info.total !== undefined ? String(info.total) : '',
     line: info.line !== undefined ? String(info.line) : '',
-    favorite: info.favorite || '',
-    overUnder: info.overUnder || '',
+    favorite: info.favorite || defaultFavorite,
+    overUnder: info.overUnder || defaultOverUnder,
     awayTeam: info.awayTeam || '',
     homeTeam: info.homeTeam || '',
     propType: info.propType || '',
