@@ -272,7 +272,6 @@ const PickEntry = ({
         );
 
       case 'First Half Total':
-      case 'Half Total':
         return (
           <>
             <div>
@@ -302,7 +301,6 @@ const PickEntry = ({
         );
 
       case 'Team Total':
-      case 'Half Team Total':
       case 'First Half Team Total':
         return (
           <>
@@ -1075,8 +1073,8 @@ const PickEntry = ({
           </div>
         );
 
+      case 'First Half Spread':
       case 'Quarter Spread':
-      case 'Half Spread':
         return (
           <>
             <div>
@@ -1136,7 +1134,7 @@ const PickEntry = ({
         );
 
       case 'Quarter Moneyline':
-      case 'Half Moneyline':
+      case 'First Half Moneyline':
         return null; // Quarter/period selection is handled in the sub-type selector above
 
       default:
