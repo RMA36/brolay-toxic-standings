@@ -380,7 +380,8 @@ export const useOdds = (apiKey, matchTeamName) => {
         'WNBA': 'basketball_wnba',
         'Soccer': 'soccer_usa_mls',
         'Soccer (Women\'s)': 'soccer_usa_nwsl',
-        'College Baseball': 'baseball_ncaa'
+        'College Baseball': 'baseball_ncaa',
+        "Women's Hockey": 'icehockey_pwhl'
       };
 
       const oddsApiSport = sportMap[sport];
@@ -680,7 +681,8 @@ export const useOdds = (apiKey, matchTeamName) => {
       'WNBA': 'basketball_wnba',
       'Soccer': 'soccer_usa_mls',
       'Soccer (Women\'s)': 'soccer_usa_nwsl',
-      'College Baseball': 'baseball_ncaa'
+      'College Baseball': 'baseball_ncaa',
+      "Women's Hockey": 'icehockey_pwhl'
     };
 
     const eventsBySport = {};

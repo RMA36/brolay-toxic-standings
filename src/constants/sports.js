@@ -2,7 +2,7 @@
 
 export const SPORTS = [
   'NFL', 'NBA', 'MLB', 'NHL', 'College Football', 'College Basketball', 'WNBA',
-  'Soccer', 'Tennis', 'Golf', 'Rugby', 'UFC'
+  'Soccer', 'Tennis', 'Golf', 'Rugby', 'UFC', "Women's Hockey"
 ];
 
 export const PLAYERS = ['Management', 'CD', '914', 'Junior', 'Jacoby'];
@@ -145,6 +145,10 @@ export const PRELOADED_TEAMS = {
     'Arsenal', 'Chelsea', 'Liverpool', 'Manchester City', 'Manchester United', 'Tottenham',
     'Barcelona', 'Real Madrid', 'Bayern Munich', 'Paris Saint-Germain', 'Juventus', 'Inter Milan'
   ],
+  "Women's Hockey": [
+    'Boston Fleet', 'Minnesota Frost', 'Montreal Victoire', 'New York Sirens',
+    'Ottawa Charge', 'Toronto Sceptres'
+  ],
   Other: []
 };
 
@@ -199,6 +203,10 @@ export const PRELOADED_PLAYERS = {
   Soccer: [
     'Lionel Messi', 'Cristiano Ronaldo', 'Kylian Mbappe', 'Erling Haaland', 'Neymar',
     'Mohamed Salah', 'Kevin De Bruyne', 'Vinicius Jr', 'Harry Kane', 'Robert Lewandowski'
+  ],
+  "Women's Hockey": [
+    'Marie-Philip Poulin', 'Hilary Knight', 'Sarah Nurse', 'Brianna Decker', 'Kendall Coyne Schofield',
+    'Alex Carpenter', 'Hayley Wickenheiser', 'Natalie Spooner', 'Lara Stalder', 'Noora Raty'
   ],
   Other: []
 };
@@ -344,5 +352,12 @@ export const ESPN_STAT_MAPPINGS = {
     'goals': ['G', 'Goals'],
     'shots on goal': ['SOG', 'Shots'],
     'saves': ['SV', 'Saves']
+  },
+  "Women's Hockey": {
+    'goals': ['G', 'Goals'],
+    'shots on goal': ['SOG', 'Shots'],
+    'saves': ['SV', 'Saves'],
+    'assists': ['A', 'Assists'],
+    'points': ['PTS', 'Points']
   }
 };
