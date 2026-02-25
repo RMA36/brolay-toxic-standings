@@ -180,7 +180,7 @@ const Rankings = () => {
       let streakEnd = null;
 
       picks.forEach((pick, idx) => {
-        const result = getPickResult(pick);
+        const result = pick.result;
         const isWin = result === 'win';
         const isPush = result === 'push';
 
