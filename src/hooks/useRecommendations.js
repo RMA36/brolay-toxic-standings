@@ -256,13 +256,14 @@ const scorePick = (pick, profile, today) => {
 };
 
 /**
- * Create a unique key for a pick to detect duplicates across Big Guys
+ * Create a game-level key for deduplication.
+ * Once any pick from a game is assigned to a Big Guy, the entire game
+ * is off-limits for all other Big Guys. This prevents conflicting bets
+ * like one person getting the over and another getting the under, or
+ * one person on the spread and another on the moneyline of the same game.
  */
-const getPickKey = (pick) => {
-  if (pick.betType === 'Total') {
-    return `${pick.sport}|${pick.homeTeam}|${pick.awayTeam}|${pick.betType}|${pick.direction}|${pick.line}`;
-  }
-  return `${pick.sport}|${pick.team}|${pick.betType}`;
+const getGameKey = (pick) => {
+  return `${pick.sport}|${pick.homeTeam}|${pick.awayTeam}`;
 };
 
 /**
@@ -306,9 +307,10 @@ export const useRecommendations = (parlays, players, availablePicks) => {
       playerScored[player] = scored;
     });
 
-    // Deduplicate: assign picks so no two Big Guys share the same pick.
-    // Process players in order of their top pick score (highest first gets priority).
-    const usedPickKeys = new Set();
+    // Deduplicate at the GAME level: once a game is claimed by one Big Guy,
+    // no other Big Guy can get any pick from that game. This prevents
+    // conflicting bets (e.g., one person on the over and another on the under).
+    const usedGameKeys = new Set();
     const result = {};
 
     // Determine assignment order: Big Guy with highest top-pick score goes first
@@ -320,16 +322,16 @@ export const useRecommendations = (parlays, players, availablePicks) => {
         return bTop - aTop;
       });
 
-    // Assign one pick per Big Guy, skipping already-claimed picks
+    // Assign one pick per Big Guy, skipping games already claimed
     assignOrder.forEach(player => {
       const profile = profiles[player];
       const picks = playerScored[player];
 
       let assigned = null;
       for (const pick of picks) {
-        const key = getPickKey(pick);
-        if (!usedPickKeys.has(key)) {
-          usedPickKeys.add(key);
+        const gameKey = getGameKey(pick);
+        if (!usedGameKeys.has(gameKey)) {
+          usedGameKeys.add(gameKey);
           assigned = pick;
           break;
         }
