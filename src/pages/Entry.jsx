@@ -44,8 +44,6 @@ const Entry = () => {
     setSuggestions,
     showSuggestions,
     setShowSuggestions,
-    fetchOddsFromTheOddsAPI,
-    prefetchEventsBySport
   } = useBrolayContext();
 
   // Initialize ESPN Teams hook for autocomplete
@@ -362,55 +360,13 @@ const Entry = () => {
       return;
     }
 
-    // Auto-fetch odds for ALL picks without odds from The Odds API (FanDuel primary, DraftKings secondary)
+    // Submit the brolay (odds fetching removed — now handled by Recommendations tab)
     setSaving(true);
-    const participantsWithOdds = {};
-    let oddsFetchedCount = 0;
-    let oddsFailedCount = 0;
-
-    // Pre-fetch all events for all sports needed (do this once, not per pick)
-    const sportsNeeded = new Set();
-    Object.values(newParlay.participants).forEach(p => {
-      if (!p.odds) sportsNeeded.add(p.sport);
-    });
-
-    // Use the context function to pre-fetch events
-    const eventsBySport = await prefetchEventsBySport(Array.from(sportsNeeded), newParlay.date);
-
-    // Now fetch odds for each pick, using the pre-fetched events
-    for (const [id, participant] of Object.entries(newParlay.participants)) {
-      if (!participant.odds) {
-        try {
-          const result = await fetchOddsFromTheOddsAPI(participant, newParlay.date, eventsBySport[participant.sport]);
-
-          if (result) {
-            const odds = result.odds;
-            const bookmaker = result.bookmaker;
-
-            participantsWithOdds[id] = {
-              ...participant,
-              odds: typeof odds === 'string' ? odds : (odds > 0 ? `+${odds}` : `${odds}`),
-              oddsSource: bookmaker
-            };
-            oddsFetchedCount++;
-          } else {
-            participantsWithOdds[id] = participant;
-            oddsFailedCount++;
-          }
-        } catch (error) {
-          console.error(`Error fetching odds for pick ${id}:`, error);
-          participantsWithOdds[id] = participant;
-          oddsFailedCount++;
-        }
-      } else {
-        participantsWithOdds[id] = participant;
-      }
-    }
 
     // Build flat parlay data first (for learning/display), then transform to new schema for Firebase
     const flatParlayData = {
       ...newParlay,
-      participants: participantsWithOdds,
+      participants: { ...newParlay.participants },
       totalParticipants: participantCount,
       dayOfWeek: getDayOfWeek(newParlay.date)
     };
@@ -461,15 +417,7 @@ const Entry = () => {
         throw result.error;
       }
 
-      // Show success message with odds info
-      let message = 'Brolay saved successfully!';
-      if (oddsFetchedCount > 0) {
-        message += ` Fetched odds for ${oddsFetchedCount} pick(s).`;
-      }
-      if (oddsFailedCount > 0) {
-        message += ` Could not find odds for ${oddsFailedCount} pick(s) - enter manually if needed.`;
-      }
-      alert(message);
+      alert('Brolay saved successfully!');
     } catch (error) {
       console.error('Error adding parlay:', error);
       alert('Failed to save parlay. Please try again.');

@@ -427,6 +427,10 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
   // Context value with all shared state and handlers
   const value = {
     // Data
+    // Firebase/API references (for hooks that need direct access)
+    db,
+    oddsApiKey,
+
     parlays,
     players,
     stats,
