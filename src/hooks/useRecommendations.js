@@ -20,38 +20,17 @@ const getDayOfWeek = (dateStr) => {
 };
 
 /**
- * Categorize odds into buckets for pattern analysis
- * Returns a label like "heavy-favorite", "slight-favorite", "even", "slight-underdog", "heavy-underdog"
- */
-const categorizeOdds = (odds) => {
-  if (odds === undefined || odds === null) return 'unknown';
-  if (odds <= -200) return 'heavy-favorite';
-  if (odds <= -120) return 'moderate-favorite';
-  if (odds < -100) return 'slight-favorite';
-  if (odds >= -100 && odds <= 100) return 'even';
-  if (odds <= 120) return 'slight-underdog';
-  if (odds <= 200) return 'moderate-underdog';
-  return 'heavy-underdog';
-};
-
-/**
  * Minimum sample size required to consider a pattern statistically relevant
  */
 const MIN_SAMPLE_SIZE = 5;
 
 /**
- * Build a comprehensive profile of a Big Guy's betting tendencies
- * Analyzes all settled picks to find patterns in:
- *   - Sport preferences and win rates
- *   - Bet type preferences and win rates
- *   - Day of week patterns
- *   - Odds range performance
- *   - Favorite vs underdog tendencies
- *   - Recent form (last 20 picks)
+ * Build a comprehensive profile of a Big Guy's betting tendencies.
  *
- * @param {string} bigGuy - Player name
- * @param {Array} parlays - All parlays from Firestore
- * @returns {Object} Big Guy profile with pattern data
+ * The profile captures both win rates AND pick volume (preference share).
+ * Volume matters because if a Big Guy makes 80% of their picks on spreads,
+ * the engine should lean toward spreads for them — not toward a bet type
+ * they've only tried a handful of times even if the win rate was higher.
  */
 const buildBigGuyProfile = (bigGuy, parlays) => {
   const profile = {
@@ -59,36 +38,16 @@ const buildBigGuyProfile = (bigGuy, parlays) => {
     totalPicks: 0,
     totalWins: 0,
     totalLosses: 0,
-
-    // Win rates by sport
     bySport: {},
-
-    // Win rates by bet type
     byBetType: {},
-
-    // Win rates by day of week
     byDayOfWeek: {},
-
-    // Win rates by sport + bet type combo
     bySportBetType: {},
-
-    // Win rates by sport + day of week combo
     bySportDay: {},
-
-    // Win rates by odds category (favorite vs underdog)
-    byOddsCategory: {},
-
-    // Win rates by direction (over/under/favorite/underdog)
     byDirection: {},
-
-    // Recent form — last 20 settled picks
     recentPicks: [],
-
-    // Streak tracking
     currentStreak: { type: null, count: 0 }
   };
 
-  // Collect all settled picks for this Big Guy, sorted by date
   const allPicks = [];
 
   parlays.forEach(parlay => {
@@ -108,7 +67,6 @@ const buildBigGuyProfile = (bigGuy, parlays) => {
     });
   });
 
-  // Sort by date (oldest first for streak calculation)
   allPicks.sort((a, b) => (a.parlayDate || '').localeCompare(b.parlayDate || ''));
 
   allPicks.forEach(pick => {
@@ -116,7 +74,7 @@ const buildBigGuyProfile = (bigGuy, parlays) => {
     const isWin = result === 'win';
     const isLoss = result === 'loss';
 
-    if (!isWin && !isLoss) return; // Skip pushes for win rate calculations
+    if (!isWin && !isLoss) return;
 
     profile.totalPicks++;
     if (isWin) profile.totalWins++;
@@ -154,17 +112,7 @@ const buildBigGuyProfile = (bigGuy, parlays) => {
     if (isWin) profile.bySportDay[sportDayKey].wins++;
     if (isLoss) profile.bySportDay[sportDayKey].losses++;
 
-    // By odds category (if odds data available)
-    const odds = pick.line?.odds ? parseInt(pick.line.odds) : null;
-    if (odds !== null && !isNaN(odds)) {
-      const cat = categorizeOdds(odds);
-      if (!profile.byOddsCategory[cat]) profile.byOddsCategory[cat] = { wins: 0, losses: 0, total: 0 };
-      profile.byOddsCategory[cat].total++;
-      if (isWin) profile.byOddsCategory[cat].wins++;
-      if (isLoss) profile.byOddsCategory[cat].losses++;
-    }
-
-    // By direction (favorite/underdog/over/under)
+    // By direction (over/under/favorite/underdog)
     const direction = pick.line?.direction;
     if (direction) {
       if (!profile.byDirection[direction]) profile.byDirection[direction] = { wins: 0, losses: 0, total: 0 };
@@ -173,19 +121,15 @@ const buildBigGuyProfile = (bigGuy, parlays) => {
       if (isLoss) profile.byDirection[direction].losses++;
     }
 
-    // Track streak (processing oldest to newest, so final state = current streak)
+    // Streak tracking
     if (isWin) {
-      if (profile.currentStreak.type === 'win') {
-        profile.currentStreak.count++;
-      } else {
-        profile.currentStreak = { type: 'win', count: 1 };
-      }
+      profile.currentStreak = profile.currentStreak.type === 'win'
+        ? { type: 'win', count: profile.currentStreak.count + 1 }
+        : { type: 'win', count: 1 };
     } else if (isLoss) {
-      if (profile.currentStreak.type === 'loss') {
-        profile.currentStreak.count++;
-      } else {
-        profile.currentStreak = { type: 'loss', count: 1 };
-      }
+      profile.currentStreak = profile.currentStreak.type === 'loss'
+        ? { type: 'loss', count: profile.currentStreak.count + 1 }
+        : { type: 'loss', count: 1 };
     }
   });
 
@@ -199,7 +143,7 @@ const buildBigGuyProfile = (bigGuy, parlays) => {
 };
 
 /**
- * Calculate win rate from a stats bucket, returning null if below minimum sample
+ * Get win rate from a bucket, null if below minimum sample
  */
 const getWinRate = (bucket) => {
   if (!bucket || bucket.total < MIN_SAMPLE_SIZE) return null;
@@ -207,134 +151,132 @@ const getWinRate = (bucket) => {
 };
 
 /**
- * Score a pick candidate for a specific Big Guy based on their profile
+ * Get the preference share — what fraction of a Big Guy's total picks
+ * fall into this bucket. Returns 0-1.
+ */
+const getPreferenceShare = (bucket, totalPicks) => {
+  if (!bucket || totalPicks === 0) return 0;
+  return bucket.total / totalPicks;
+};
+
+/**
+ * Score a pick for a Big Guy, blending win rate with pick preference.
  *
- * Scoring factors (weighted):
- *   - Sport win rate (weight: 3) — how well they do in this sport
- *   - Bet type win rate (weight: 3) — how well they do with this bet type
- *   - Sport + Bet type combo (weight: 4) — the intersection is most predictive
- *   - Day of week for this sport (weight: 2) — day-specific patterns
- *   - Direction tendency (weight: 1) — favorite/underdog/over/under patterns
- *   - Recent form bonus/penalty (weight: 1) — hot/cold adjustment
+ * The old engine only looked at win rates, which caused it to favor
+ * bet types the Big Guy rarely uses (e.g., 3 underdog picks with 67% win rate
+ * beat 50 favorite picks at 56%). The fix: multiply win rate by a preference
+ * boost so picks that align with what the Big Guy actually does get ranked higher.
  *
- * @param {Object} pick - A pick candidate from getFilteredPicks()
- * @param {Object} profile - Big Guy's profile from buildBigGuyProfile()
- * @param {string} today - Today's day of week name
- * @returns {Object} Scored pick with score, confidence, and reasoning
+ * Preference boost formula: 1 + (preferenceShare * boostFactor)
+ * If a Big Guy makes 60% of picks as Spreads, the spread score gets
+ * multiplied by 1 + (0.6 * 0.5) = 1.30 — a meaningful but not overwhelming boost.
  */
 const scorePick = (pick, profile, today) => {
   let totalScore = 0;
   let totalWeight = 0;
   const reasons = [];
-  let dataPoints = 0; // How many patterns we have data for
 
-  // 1. Sport win rate (weight: 3)
-  const sportRate = getWinRate(profile.bySport[pick.sport]);
+  const PREFERENCE_BOOST = 0.5; // How much pick volume influences score
+
+  // 1. Sport (weight: 3)
+  const sportBucket = profile.bySport[pick.sport];
+  const sportRate = getWinRate(sportBucket);
   if (sportRate !== null) {
-    totalScore += sportRate * 3;
+    const prefBoost = 1 + getPreferenceShare(sportBucket, profile.totalPicks) * PREFERENCE_BOOST;
+    totalScore += (sportRate * prefBoost) * 3;
     totalWeight += 3;
-    dataPoints++;
-    const sportStats = profile.bySport[pick.sport];
-    if (sportRate >= 55) {
-      reasons.push(`${sportRate.toFixed(0)}% win rate in ${pick.sport} (${sportStats.wins}-${sportStats.losses})`);
-    } else if (sportRate < 45) {
-      reasons.push(`Only ${sportRate.toFixed(0)}% in ${pick.sport} — not a strength`);
+    if (sportRate >= 52) {
+      reasons.push(`${sportRate.toFixed(0)}% in ${pick.sport} (${sportBucket.wins}-${sportBucket.losses})`);
     }
   }
 
-  // 2. Bet type win rate (weight: 3)
-  const betTypeRate = getWinRate(profile.byBetType[pick.betType]);
+  // 2. Bet type (weight: 3)
+  const betBucket = profile.byBetType[pick.betType];
+  const betTypeRate = getWinRate(betBucket);
   if (betTypeRate !== null) {
-    totalScore += betTypeRate * 3;
+    const prefBoost = 1 + getPreferenceShare(betBucket, profile.totalPicks) * PREFERENCE_BOOST;
+    totalScore += (betTypeRate * prefBoost) * 3;
     totalWeight += 3;
-    dataPoints++;
-    const btStats = profile.byBetType[pick.betType];
-    if (betTypeRate >= 55) {
-      reasons.push(`${betTypeRate.toFixed(0)}% on ${pick.betType}s (${btStats.wins}-${btStats.losses})`);
+    if (betTypeRate >= 52) {
+      reasons.push(`${betTypeRate.toFixed(0)}% on ${pick.betType}s (${betBucket.wins}-${betBucket.losses})`);
     }
   }
 
-  // 3. Sport + Bet type combo (weight: 4) — most predictive
+  // 3. Sport + Bet type combo (weight: 4 — most predictive)
   const comboKey = `${pick.sport}|${pick.betType}`;
-  const comboRate = getWinRate(profile.bySportBetType[comboKey]);
+  const comboBucket = profile.bySportBetType[comboKey];
+  const comboRate = getWinRate(comboBucket);
   if (comboRate !== null) {
-    totalScore += comboRate * 4;
+    const prefBoost = 1 + getPreferenceShare(comboBucket, profile.totalPicks) * PREFERENCE_BOOST;
+    totalScore += (comboRate * prefBoost) * 4;
     totalWeight += 4;
-    dataPoints++;
-    const comboStats = profile.bySportBetType[comboKey];
-    if (comboRate >= 55) {
-      reasons.push(`${comboRate.toFixed(0)}% on ${pick.sport} ${pick.betType}s (${comboStats.wins}-${comboStats.losses})`);
+    if (comboRate >= 52) {
+      reasons.push(`${comboRate.toFixed(0)}% on ${pick.sport} ${pick.betType}s (${comboBucket.wins}-${comboBucket.losses})`);
     }
   }
 
-  // 4. Sport + Day of week combo (weight: 2)
+  // 4. Sport + Day of week (weight: 2)
   const sportDayKey = `${pick.sport}|${today}`;
-  const sportDayRate = getWinRate(profile.bySportDay[sportDayKey]);
+  const sportDayBucket = profile.bySportDay[sportDayKey];
+  const sportDayRate = getWinRate(sportDayBucket);
   if (sportDayRate !== null) {
     totalScore += sportDayRate * 2;
     totalWeight += 2;
-    dataPoints++;
     if (sportDayRate >= 55) {
       reasons.push(`${sportDayRate.toFixed(0)}% on ${pick.sport} ${today}s`);
     }
   }
 
-  // 5. Direction tendency (weight: 1)
-  const directionRate = getWinRate(profile.byDirection[pick.direction]);
-  if (directionRate !== null) {
-    totalScore += directionRate * 1;
-    totalWeight += 1;
-    dataPoints++;
+  // 5. Direction — boost picks matching what they actually bet (weight: 2)
+  const dirBucket = profile.byDirection[pick.direction];
+  const dirRate = getWinRate(dirBucket);
+  if (dirRate !== null) {
+    // Strong preference boost for direction — this is the key fix for the
+    // "only showing dogs and unders" problem. If a Big Guy bets favorites
+    // 80% of the time, favorites get a big boost even if underdog win rate
+    // is slightly higher on a small sample.
+    const prefBoost = 1 + getPreferenceShare(dirBucket, profile.totalPicks) * PREFERENCE_BOOST * 2;
+    totalScore += (dirRate * prefBoost) * 2;
+    totalWeight += 2;
   }
 
-  // 6. Recent form adjustment (weight: 1)
+  // 6. Recent form (weight: 1)
   if (profile.recentPicks.length >= 10) {
     totalScore += profile.recentWinRate * 1;
     totalWeight += 1;
-
-    if (profile.currentStreak.count >= 3) {
-      if (profile.currentStreak.type === 'win') {
-        reasons.push(`🔥 ${profile.currentStreak.count}-pick win streak`);
-      } else {
-        reasons.push(`❄️ ${profile.currentStreak.count}-pick cold streak`);
-      }
-    }
   }
 
-  // Calculate final score (weighted average, 0-100 scale)
   const finalScore = totalWeight > 0 ? totalScore / totalWeight : 0;
-
-  // Confidence level based on how many data points we have
-  let confidence = 'low';
-  if (dataPoints >= 4) confidence = 'high';
-  else if (dataPoints >= 2) confidence = 'medium';
 
   return {
     ...pick,
     score: Math.round(finalScore * 10) / 10,
-    confidence,
-    dataPoints,
-    reasons: reasons.length > 0 ? reasons : ['Limited historical data for this combination']
+    reasons: reasons.length > 0 ? reasons : ['Aligns with overall betting profile']
   };
 };
 
 /**
- * Custom hook for generating pick recommendations for each Big Guy
+ * Create a unique key for a pick to detect duplicates across Big Guys
+ */
+const getPickKey = (pick) => {
+  if (pick.betType === 'Total') {
+    return `${pick.sport}|${pick.homeTeam}|${pick.awayTeam}|${pick.betType}|${pick.direction}|${pick.line}`;
+  }
+  return `${pick.sport}|${pick.team}|${pick.betType}`;
+};
+
+/**
+ * Custom hook for generating one pick recommendation per Big Guy.
  *
- * Analyzes historic pick data to build Big Guy profiles, then scores
- * today's available picks against each profile to produce personalized
- * recommendations.
- *
- * @param {Array} parlays - All parlays from Firestore
- * @param {Array} players - Array of Big Guy names
- * @param {Array} availablePicks - Today's filtered pick candidates from useDailyOdds
- * @returns {Object} Recommendations keyed by Big Guy name
+ * The engine:
+ *   1. Builds a profile for each Big Guy from their settled pick history
+ *   2. Scores every available pick, blending win rate with pick preferences
+ *   3. Assigns the best pick to each Big Guy with deduplication — if two
+ *      Big Guys want the same pick, the one with the higher score gets it
+ *      and the other falls to their next best
  */
 export const useRecommendations = (parlays, players, availablePicks) => {
 
-  /**
-   * Build profiles for all Big Guys
-   */
   const profiles = useMemo(() => {
     const result = {};
     players.forEach(player => {
@@ -343,44 +285,75 @@ export const useRecommendations = (parlays, players, availablePicks) => {
     return result;
   }, [parlays, players]);
 
-  /**
-   * Generate recommendations for all Big Guys
-   */
   const recommendations = useMemo(() => {
     if (!availablePicks || availablePicks.length === 0) {
       return {};
     }
 
     const today = getDayOfWeek(new Date().toISOString().split('T')[0]);
-    const result = {};
 
+    // Score all picks for all players
+    const playerScored = {};
     players.forEach(player => {
       const profile = profiles[player];
       if (!profile || profile.totalPicks === 0) {
-        result[player] = { picks: [], profile, message: 'No historical data to analyze' };
+        playerScored[player] = [];
         return;
       }
+      const scored = availablePicks
+        .map(pick => scorePick(pick, profile, today))
+        .sort((a, b) => b.score - a.score);
+      playerScored[player] = scored;
+    });
 
-      // Score every available pick for this Big Guy
-      const scoredPicks = availablePicks.map(pick => scorePick(pick, profile, today));
+    // Deduplicate: assign picks so no two Big Guys share the same pick.
+    // Process players in order of their top pick score (highest first gets priority).
+    const usedPickKeys = new Set();
+    const result = {};
 
-      // Sort by score (highest first), then by confidence
-      const confidenceOrder = { high: 0, medium: 1, low: 2 };
-      scoredPicks.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return (confidenceOrder[a.confidence] || 3) - (confidenceOrder[b.confidence] || 3);
+    // Determine assignment order: Big Guy with highest top-pick score goes first
+    const assignOrder = [...players]
+      .filter(p => playerScored[p].length > 0)
+      .sort((a, b) => {
+        const aTop = playerScored[a][0]?.score || 0;
+        const bTop = playerScored[b][0]?.score || 0;
+        return bTop - aTop;
       });
 
-      // Top 5 recommendations
-      const topPicks = scoredPicks.slice(0, 5);
+    // Assign one pick per Big Guy, skipping already-claimed picks
+    assignOrder.forEach(player => {
+      const profile = profiles[player];
+      const picks = playerScored[player];
+
+      let assigned = null;
+      for (const pick of picks) {
+        const key = getPickKey(pick);
+        if (!usedPickKeys.has(key)) {
+          usedPickKeys.add(key);
+          assigned = pick;
+          break;
+        }
+      }
 
       result[player] = {
-        picks: topPicks,
+        pick: assigned,
         profile,
         overallWinRate: profile.totalPicks > 0
           ? ((profile.totalWins / profile.totalPicks) * 100).toFixed(1)
           : '0.0'
       };
+    });
+
+    // Handle players with no data
+    players.forEach(player => {
+      if (!result[player]) {
+        result[player] = {
+          pick: null,
+          profile: profiles[player],
+          overallWinRate: '0.0',
+          message: 'No historical data to analyze'
+        };
+      }
     });
 
     return result;

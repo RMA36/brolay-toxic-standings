@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { RefreshCw, TrendingUp, AlertTriangle, Clock, Zap, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { RefreshCw, AlertTriangle, Zap, ChevronDown, ChevronUp, Calendar } from 'lucide-react';
 import { useBrolayContext } from '../contexts/BrolayContext';
 import { PLAYERS } from '../constants/sports';
 import { useDailyOdds } from '../hooks/useDailyOdds';
@@ -10,7 +10,7 @@ import Card from '../components/common/Card';
  * Format odds for display (+150, -110, etc.)
  */
 const formatOdds = (odds) => {
-  if (odds === undefined || odds === null) return '—';
+  if (odds === undefined || odds === null) return '';
   return odds > 0 ? `+${odds}` : `${odds}`;
 };
 
@@ -24,103 +24,72 @@ const formatGameTime = (isoString) => {
 };
 
 /**
- * Get a color class based on score
+ * Build pick description line
  */
-const getScoreColor = (score) => {
-  if (score >= 60) return 'text-green-400';
-  if (score >= 52) return 'text-yellow-400';
-  if (score >= 45) return 'text-gray-400';
-  return 'text-red-400';
-};
-
-/**
- * Get a badge color based on confidence
- */
-const getConfidenceBadge = (confidence) => {
-  switch (confidence) {
-    case 'high': return 'bg-green-900/50 text-green-400 border-green-700';
-    case 'medium': return 'bg-yellow-900/50 text-yellow-400 border-yellow-700';
-    case 'low': return 'bg-gray-800 text-gray-500 border-gray-700';
-    default: return 'bg-gray-800 text-gray-500 border-gray-700';
-  }
-};
-
-/**
- * Pick direction label
- */
-const getDirectionLabel = (pick) => {
+const getPickDescription = (pick) => {
+  if (!pick) return '';
   if (pick.betType === 'Total') {
-    return pick.direction === 'over' ? 'Over' : 'Under';
+    const dir = pick.direction === 'over' ? 'Over' : 'Under';
+    return `${dir} ${pick.line}`;
   }
   if (pick.betType === 'Spread') {
-    return pick.line > 0 ? `+${pick.line}` : `${pick.line}`;
+    const line = pick.line > 0 ? `+${pick.line}` : `${pick.line}`;
+    return `${pick.team} ${line}`;
   }
-  return '';
+  // Moneyline
+  return `${pick.team}`;
 };
 
 /**
- * Single recommendation card for a pick
+ * Single Big Guy recommendation row
  */
-const PickCard = ({ pick, rank }) => {
-  const [expanded, setExpanded] = useState(false);
+const BigGuyPick = ({ player, rec }) => {
+  const [expanded, setExpanded] = React.useState(false);
+  const pick = rec.pick;
+
+  if (!pick) {
+    return (
+      <div className="bg-gray-800/60 rounded-lg border border-gray-700/50 p-3 md:p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-white font-bold text-sm md:text-base">{player}</span>
+          <span className="text-gray-500 text-xs italic">No pick available</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-800/60 rounded-lg border border-gray-700/50 p-3 md:p-4">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          {/* Rank badge */}
-          <div className="flex-shrink-0 w-7 h-7 rounded-full bg-yellow-500/20 text-yellow-400 flex items-center justify-center text-sm font-bold">
-            {rank}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            {/* Sport + Bet Type */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-medium px-2 py-0.5 rounded bg-gray-700 text-gray-300">
-                {pick.sport}
-              </span>
-              <span className="text-xs font-medium px-2 py-0.5 rounded bg-gray-700 text-gray-300">
-                {pick.betType}
-              </span>
-              <span className={`text-xs font-medium px-2 py-0.5 rounded border ${getConfidenceBadge(pick.confidence)}`}>
-                {pick.confidence}
-              </span>
-            </div>
-
-            {/* Main pick info */}
-            <div className="mt-1.5">
-              {pick.betType === 'Total' ? (
-                <p className="text-white font-semibold text-sm md:text-base truncate">
-                  {pick.team} — {getDirectionLabel(pick)} {pick.line}
-                </p>
-              ) : pick.betType === 'Spread' ? (
-                <p className="text-white font-semibold text-sm md:text-base truncate">
-                  {pick.team} {getDirectionLabel(pick)}
-                </p>
-              ) : (
-                <p className="text-white font-semibold text-sm md:text-base truncate">
-                  {pick.team}
-                </p>
-              )}
-              <p className="text-gray-400 text-xs mt-0.5">
-                {pick.awayTeam} @ {pick.homeTeam} • {formatGameTime(pick.commenceTime)}
-              </p>
-            </div>
-          </div>
+      {/* Main row: Big Guy name | Pick | Odds */}
+      <div className="flex items-center gap-3">
+        {/* Big Guy name */}
+        <div className="flex-shrink-0 w-20 md:w-24">
+          <span className="text-white font-bold text-sm md:text-base">{player}</span>
+          <div className="text-gray-500 text-xs">{rec.overallWinRate}% overall</div>
         </div>
 
-        {/* Score + Odds */}
-        <div className="flex-shrink-0 text-right ml-3">
-          <div className={`text-lg font-bold ${getScoreColor(pick.score)}`}>
-            {pick.score}
+        {/* Pick details */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">{pick.sport}</span>
+            <span className="text-xs px-1.5 py-0.5 rounded bg-gray-700 text-gray-300">{pick.betType}</span>
           </div>
-          <div className="text-xs text-gray-400">
-            {formatOdds(pick.odds)}
-          </div>
+          <p className="text-white font-semibold text-sm md:text-base mt-1 truncate">
+            {getPickDescription(pick)}
+          </p>
+          <p className="text-gray-500 text-xs truncate">
+            {pick.awayTeam} @ {pick.homeTeam} · {formatGameTime(pick.commenceTime)}
+          </p>
+        </div>
+
+        {/* Odds */}
+        <div className="flex-shrink-0 text-right">
+          <div className="text-white font-bold text-sm md:text-base">{formatOdds(pick.odds)}</div>
+          <div className="text-gray-600 text-xs">{pick.bookmaker}</div>
         </div>
       </div>
 
-      {/* Reasoning (expandable) */}
+      {/* Expandable reasoning */}
       {pick.reasons && pick.reasons.length > 0 && (
         <div className="mt-2">
           <button
@@ -128,7 +97,7 @@ const PickCard = ({ pick, rank }) => {
             className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300 transition-colors"
           >
             {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            {expanded ? 'Hide' : 'Show'} reasoning
+            Why this pick
           </button>
           {expanded && (
             <ul className="mt-1.5 space-y-0.5">
@@ -146,77 +115,10 @@ const PickCard = ({ pick, rank }) => {
 };
 
 /**
- * Big Guy profile summary card
- */
-const ProfileSummary = ({ profile, overallWinRate }) => {
-  if (!profile || profile.totalPicks === 0) {
-    return (
-      <div className="text-gray-500 text-sm italic">No historical data available</div>
-    );
-  }
-
-  // Find top sport and bet type
-  const topSport = Object.entries(profile.bySport)
-    .filter(([, s]) => s.total >= 5)
-    .sort((a, b) => (b[1].wins / b[1].total) - (a[1].wins / a[1].total))[0];
-
-  const topBetType = Object.entries(profile.byBetType)
-    .filter(([, s]) => s.total >= 5)
-    .sort((a, b) => (b[1].wins / b[1].total) - (a[1].wins / a[1].total))[0];
-
-  return (
-    <div className="flex flex-wrap gap-3 text-xs">
-      <div className="bg-gray-800/60 rounded px-2.5 py-1.5 border border-gray-700/50">
-        <span className="text-gray-500">Overall: </span>
-        <span className="text-white font-medium">{overallWinRate}%</span>
-        <span className="text-gray-600 ml-1">({profile.totalWins}-{profile.totalLosses})</span>
-      </div>
-      <div className="bg-gray-800/60 rounded px-2.5 py-1.5 border border-gray-700/50">
-        <span className="text-gray-500">Recent: </span>
-        <span className={`font-medium ${profile.recentWinRate >= 55 ? 'text-green-400' : profile.recentWinRate < 45 ? 'text-red-400' : 'text-yellow-400'}`}>
-          {profile.recentWinRate.toFixed(0)}%
-        </span>
-        <span className="text-gray-600 ml-1">(last 20)</span>
-      </div>
-      {profile.currentStreak.count >= 2 && (
-        <div className="bg-gray-800/60 rounded px-2.5 py-1.5 border border-gray-700/50">
-          {profile.currentStreak.type === 'win'
-            ? <span className="text-green-400">🔥 {profile.currentStreak.count}W streak</span>
-            : <span className="text-red-400">❄️ {profile.currentStreak.count}L streak</span>
-          }
-        </div>
-      )}
-      {topSport && (
-        <div className="bg-gray-800/60 rounded px-2.5 py-1.5 border border-gray-700/50">
-          <span className="text-gray-500">Best sport: </span>
-          <span className="text-white font-medium">{topSport[0]}</span>
-          <span className="text-gray-600 ml-1">({((topSport[1].wins / topSport[1].total) * 100).toFixed(0)}%)</span>
-        </div>
-      )}
-      {topBetType && (
-        <div className="bg-gray-800/60 rounded px-2.5 py-1.5 border border-gray-700/50">
-          <span className="text-gray-500">Best type: </span>
-          <span className="text-white font-medium">{topBetType[0]}</span>
-          <span className="text-gray-600 ml-1">({((topBetType[1].wins / topBetType[1].total) * 100).toFixed(0)}%)</span>
-        </div>
-      )}
-    </div>
-  );
-};
-
-/**
- * Recommendations - AI-curated pick recommendations per Big Guy
- *
- * Features:
- * - Daily odds fetching from The Odds API (bulk, cached in Firestore)
- * - Stats-based recommendation engine analyzing Big Guy historic patterns
- * - Personalized top 5 picks per Big Guy with scoring and reasoning
- * - "Avoid" picks (low-scoring patterns)
- * - API usage tracking
- * - Manual refresh with smart caching
+ * Recommendations page — one recommended pick per Big Guy, no duplicates
  */
 const Recommendations = () => {
-  const { parlays, isMobile, db, oddsApiKey } = useBrolayContext();
+  const { parlays, db, oddsApiKey } = useBrolayContext();
   const players = PLAYERS;
 
   // Daily odds hook
@@ -233,16 +135,13 @@ const Recommendations = () => {
   // Get available picks (filtered to -150 to +150)
   const availablePicks = useMemo(() => getFilteredPicks(), [getFilteredPicks]);
 
-  // Recommendation engine
-  const { recommendations, profiles } = useRecommendations(parlays, players, availablePicks);
-
-  // UI state
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  // Recommendation engine — returns 1 pick per Big Guy, deduplicated
+  const { recommendations } = useRecommendations(parlays, players, availablePicks);
 
   // Date display for the banner
   const bannerDate = useMemo(() => {
     if (!oddsDate) return null;
-    const d = new Date(oddsDate + 'T12:00:00'); // Noon to avoid timezone shifts
+    const d = new Date(oddsDate + 'T12:00:00');
     return {
       dayName: d.toLocaleDateString('en-US', { weekday: 'long' }),
       dateDisplay: d.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })
@@ -267,7 +166,7 @@ const Recommendations = () => {
           Recommendations
         </h1>
         <p className="text-gray-400 text-sm mt-1">
-          Stats-driven picks personalized for each Big Guy
+          Today's best pick for each Big Guy
         </p>
       </div>
 
@@ -282,14 +181,14 @@ const Recommendations = () => {
                 Loading today's picks...
               </span>
             ) : bannerDate ? (
-              <span className="text-white font-semibold">
+              <span className="text-white font-semibold text-sm">
                 Currently showing picks for {bannerDate.dayName} {bannerDate.dateDisplay}
                 {isStale && (
                   <span className="text-yellow-500 font-normal ml-1">(previous day)</span>
                 )}
               </span>
             ) : (
-              <span className="text-gray-400 font-semibold">
+              <span className="text-gray-400 font-semibold text-sm">
                 No picks available yet
               </span>
             )}
@@ -320,91 +219,31 @@ const Recommendations = () => {
         </Card>
       )}
 
-      {/* Player tab selector */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        <button
-          onClick={() => setSelectedPlayer(null)}
-          className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            selectedPlayer === null
-              ? 'bg-yellow-500 text-gray-900'
-              : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-          }`}
-        >
-          All Big Guys
-        </button>
-        {players.map(player => (
-          <button
-            key={player}
-            onClick={() => setSelectedPlayer(player)}
-            className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              selectedPlayer === player
-                ? 'bg-yellow-500 text-gray-900'
-                : 'bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700'
-            }`}
-          >
-            {player}
-          </button>
-        ))}
-      </div>
+      {/* Picks list — one per Big Guy */}
+      {!oddsLoading && availablePicks.length > 0 && (
+        <div className="space-y-2 md:space-y-3">
+          {players.map(player => {
+            const rec = recommendations[player];
+            if (!rec) return null;
+            return <BigGuyPick key={player} player={player} rec={rec} />;
+          })}
+        </div>
+      )}
 
-      {/* No odds loaded state */}
+      {/* Empty states */}
       {!oddsLoading && availablePicks.length === 0 && !oddsError && (
         <Card variant="default">
           <div className="text-center py-8">
             <Zap size={40} className="mx-auto text-gray-600 mb-3" />
-            <p className="text-gray-400 mb-1">No picks available in the -150 to +150 range today</p>
+            <p className="text-gray-400 mb-1">No picks available in the -150 to +150 range</p>
             <p className="text-gray-600 text-sm">
               {lastFetched
-                ? 'Try refreshing odds or check back when more games are posted'
-                : 'Fetch today\'s odds to see recommendations'
+                ? 'Check back when more games are posted'
+                : 'Picks load at 9am ET daily'
               }
             </p>
           </div>
         </Card>
-      )}
-
-      {/* Recommendations by Big Guy */}
-      {availablePicks.length > 0 && (
-        <div className="space-y-4 md:space-y-6">
-          {(selectedPlayer ? [selectedPlayer] : players).map(player => {
-            const rec = recommendations[player];
-            if (!rec) return null;
-
-            return (
-              <Card key={player} variant="default">
-                {/* Player header */}
-                <div className="mb-3">
-                  <h2 className="text-lg font-bold text-white">{player}</h2>
-                </div>
-
-                {/* Profile summary */}
-                <div className="mb-4">
-                  <ProfileSummary profile={rec.profile} overallWinRate={rec.overallWinRate} />
-                </div>
-
-                {/* Pick recommendations */}
-                <div className="space-y-2">
-                  {rec.picks.length > 0 ? (
-                    <>
-                      <div className="flex items-center gap-1.5 text-green-400 text-sm mb-2">
-                        <TrendingUp size={14} />
-                        <span className="font-medium">Top Picks</span>
-                        <span className="text-gray-600 text-xs ml-1">(scored 0-100 based on historical patterns)</span>
-                      </div>
-                      {rec.picks.map((pick, i) => (
-                        <PickCard key={`pick-${i}`} pick={pick} rank={i + 1} />
-                      ))}
-                    </>
-                  ) : (
-                    <p className="text-gray-500 text-sm italic">
-                      {rec.message || 'Not enough historical data to generate recommendations'}
-                    </p>
-                  )}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
       )}
     </div>
   );
