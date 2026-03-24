@@ -16,7 +16,7 @@ const Rankings = lazy(() => import('../pages/Rankings'));
 const Grid = lazy(() => import('../pages/Grid'));
 const Settings = lazy(() => import('../pages/Settings'));
 const Import = lazy(() => import('../pages/Import'));
-const Recommendations = lazy(() => import('../pages/Recommendations'));
+// Recommendations tab decommissioned — was the only active Odds API consumer
 
 /**
  * Application router configuration using React Router v6
@@ -32,7 +32,6 @@ const Recommendations = lazy(() => import('../pages/Recommendations'));
  * - /payments → Payment tracking
  * - /rankings → Player rankings
  * - /grid → Brolay grid view
- * - /recommendations → AI-curated pick recommendations
  * - /settings → Application settings
  * - /import → Data import
  */
@@ -80,10 +79,6 @@ export const router = createBrowserRouter([
       {
         path: 'grid',
         element: <Grid />
-      },
-      {
-        path: 'recommendations',
-        element: <Recommendations />
       },
       {
         path: 'settings',

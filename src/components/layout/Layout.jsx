@@ -133,15 +133,6 @@ const Layout = () => {
               ✨ New Brolay
             </Button>
 
-            {/* Recommendations Button (standalone) */}
-            <Button
-              onClick={() => handleNavClick('/recommendations')}
-              variant={isActive('/recommendations') ? 'primary' : 'secondary'}
-              className={isMobile ? 'w-full min-h-[44px]' : ''}
-            >
-              ⚡ Recommendations
-            </Button>
-
             {/* Brolays Dropdown */}
             <div className={`${isMobile ? 'w-full' : 'dropdown'}`}>
               <Button

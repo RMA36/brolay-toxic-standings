@@ -360,7 +360,7 @@ const Entry = () => {
       return;
     }
 
-    // Submit the brolay (odds fetching removed — now handled by Recommendations tab)
+    // Submit the brolay
     setSaving(true);
 
     // Build flat parlay data first (for learning/display), then transform to new schema for Firebase
