@@ -305,6 +305,10 @@ export const BrolayProvider = ({ db, authenticated, oddsApiKey, children }) => {
           updateObject.sortOrder = editedParlay.sortOrder;
         }
 
+        // Edge case flags (birthday brolay and even split)
+        updateObject.birthdayPlayer = editedParlay.birthdayPlayer || deleteField();
+        updateObject.evenSplit = editedParlay.evenSplit ? true : deleteField();
+
         const result = await updateBrolay(editedParlay.id, updateObject);
 
         if (!result.success) {
