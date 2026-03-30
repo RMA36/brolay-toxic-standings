@@ -309,6 +309,57 @@ const EditParlayModal = ({
             </div>
           </div>
 
+          {/* Edge Case Toggles */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 mb-6">
+            <div className="flex items-start gap-3 p-3 border border-gray-700 rounded-lg bg-gray-800/50">
+              <input
+                type="checkbox"
+                id="birthdayBrolay"
+                checked={!!editedParlay.birthdayPlayer}
+                onChange={(e) => {
+                  setEditedParlay({
+                    ...editedParlay,
+                    birthdayPlayer: e.target.checked ? (players[0] || '') : null
+                  });
+                }}
+                className="mt-1 accent-yellow-500"
+              />
+              <div className="flex-1">
+                <label htmlFor="birthdayBrolay" className="block text-sm font-medium text-yellow-400 cursor-pointer">
+                  Birthday Brolay
+                </label>
+                <p className="text-xs text-gray-400 mb-2">Birthday player has no risk</p>
+                {editedParlay.birthdayPlayer && (
+                  <select
+                    value={editedParlay.birthdayPlayer}
+                    onChange={(e) => setEditedParlay({ ...editedParlay, birthdayPlayer: e.target.value })}
+                    className="w-full px-3 py-2 border rounded text-base bg-gray-900 border-gray-700 text-white focus:border-yellow-500 focus:outline-none"
+                    style={{ fontSize: isMobile ? '16px' : '14px' }}
+                  >
+                    {players.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                )}
+              </div>
+            </div>
+            <div className="flex items-start gap-3 p-3 border border-gray-700 rounded-lg bg-gray-800/50">
+              <input
+                type="checkbox"
+                id="evenSplit"
+                checked={!!editedParlay.evenSplit}
+                onChange={(e) => {
+                  setEditedParlay({ ...editedParlay, evenSplit: e.target.checked });
+                }}
+                className="mt-1 accent-yellow-500"
+              />
+              <div>
+                <label htmlFor="evenSplit" className="block text-sm font-medium text-yellow-400 cursor-pointer">
+                  Even Split
+                </label>
+                <p className="text-xs text-gray-400">Split risk evenly among all participants</p>
+              </div>
+            </div>
+          </div>
+
           {/* Picks */}
           <h3 className="text-base md:text-lg font-semibold mb-3 text-yellow-400">Picks</h3>
           <div className="space-y-4 mb-6">

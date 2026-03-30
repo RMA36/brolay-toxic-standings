@@ -89,30 +89,114 @@ const Payments = () => {
   // Calculate who owes who
   const payments = [];
 
-  // Lost parlays - winners get paid by placer
+  // Lost parlays - losers pay placer
   lostParlays.forEach(parlay => {
     const picks = getPicksArray(parlay);
     const losers = picks.filter(p => getPickResult(p) === 'loss');
     const winners = picks.filter(p => getPickResult(p) === 'win');
     const and1 = losers.length === 1 && winners.length === picks.length - 1;
     const totalAmount = parlay.betAmount * picks.length;
-    const amountPerLoser = losers.length === 1 ? totalAmount : totalAmount / losers.length;
     const placedBy = getSubmittedBy(parlay);
+    const birthdayPlayer = parlay.birthdayPlayer;
+    const isEvenSplit = parlay.evenSplit;
 
-    losers.forEach(loser => {
-      const loserPlayer = getPickBigGuy(loser);
-      if (loserPlayer && placedBy) {
-        payments.push({
-          from: loserPlayer,
-          to: placedBy,
-          amount: amountPerLoser,
-          parlayId: parlay.id,
-          parlayDate: parlay.date,
-          type: 'loss',
-          and1: and1
+    if (isEvenSplit) {
+      // Even split: all participants split risk equally
+      const amountPerPerson = totalAmount / picks.length;
+      picks.forEach(pick => {
+        const player = getPickBigGuy(pick);
+        if (player && placedBy && player !== placedBy) {
+          payments.push({
+            from: player,
+            to: placedBy,
+            amount: amountPerPerson,
+            parlayId: parlay.id,
+            parlayDate: parlay.date,
+            type: 'loss',
+            and1: false,
+            evenSplit: true
+          });
+        }
+      });
+    } else if (birthdayPlayer) {
+      const birthdayLost = losers.some(l => getPickBigGuy(l) === birthdayPlayer);
+      const nonBirthdayLosers = losers.filter(l => getPickBigGuy(l) !== birthdayPlayer);
+      const nonBirthdayPicks = picks.filter(p => getPickBigGuy(p) !== birthdayPlayer);
+      const isBirthdayAnd1 = birthdayLost && losers.length === 1;
+
+      if (isBirthdayAnd1) {
+        // Birthday guy is only loser → all non-birthday participants split risk
+        const amountPerPerson = totalAmount / nonBirthdayPicks.length;
+        nonBirthdayPicks.forEach(pick => {
+          const player = getPickBigGuy(pick);
+          if (player && placedBy) {
+            payments.push({
+              from: player,
+              to: placedBy,
+              amount: amountPerPerson,
+              parlayId: parlay.id,
+              parlayDate: parlay.date,
+              type: 'loss',
+              and1: true,
+              birthday: birthdayPlayer
+            });
+          }
+        });
+      } else if (birthdayLost && nonBirthdayLosers.length > 0) {
+        // Birthday guy lost alongside others → only non-birthday losers pay
+        const amountPerLoser = totalAmount / nonBirthdayLosers.length;
+        nonBirthdayLosers.forEach(loser => {
+          const loserPlayer = getPickBigGuy(loser);
+          if (loserPlayer && placedBy) {
+            payments.push({
+              from: loserPlayer,
+              to: placedBy,
+              amount: amountPerLoser,
+              parlayId: parlay.id,
+              parlayDate: parlay.date,
+              type: 'loss',
+              and1: false,
+              birthday: birthdayPlayer
+            });
+          }
+        });
+      } else {
+        // Birthday guy won → normal logic for other losers
+        const amountPerLoser = losers.length === 1 ? totalAmount : totalAmount / losers.length;
+        losers.forEach(loser => {
+          const loserPlayer = getPickBigGuy(loser);
+          if (loserPlayer && placedBy) {
+            payments.push({
+              from: loserPlayer,
+              to: placedBy,
+              amount: amountPerLoser,
+              parlayId: parlay.id,
+              parlayDate: parlay.date,
+              type: 'loss',
+              and1: and1,
+              birthday: birthdayPlayer
+            });
+          }
         });
       }
-    });
+    } else {
+      // Normal logic (unchanged)
+      const amountPerLoser = losers.length === 1 ? totalAmount : totalAmount / losers.length;
+      losers.forEach(loser => {
+        const loserPlayer = getPickBigGuy(loser);
+        if (loserPlayer && placedBy) {
+          payments.push({
+            from: loserPlayer,
+            to: placedBy,
+            amount: amountPerLoser,
+            parlayId: parlay.id,
+            parlayDate: parlay.date,
+            type: 'loss',
+            and1: and1
+          });
+        }
+      });
+    }
   });
 
   // Won parlays - placer pays winners
@@ -369,8 +453,61 @@ const Payments = () => {
               const winners = picks.filter(p => getPickResult(p) === 'win');
               const and1 = losers.length === 1 && winners.length === picks.length - 1;
               const totalLost = parlay.betAmount * picks.length;
-              const amountPerLoser = losers.length > 0 ? (totalLost / losers.length) : 0;
               const placedBy = getSubmittedBy(parlay);
+              const birthdayPlayer = parlay.birthdayPlayer;
+              const isEvenSplit = parlay.evenSplit;
+
+              // Calculate display amounts based on edge cases
+              let paymentDescription;
+              if (isEvenSplit) {
+                const amountPerPerson = totalLost / picks.length;
+                const payers = picks.filter(p => getPickBigGuy(p) !== placedBy);
+                paymentDescription = (
+                  <>
+                    <span className="font-medium text-white">Even split — all pay {placedBy || 'Unknown'}: </span>
+                    {payers.map(p => `${getPickBigGuy(p)} ($${amountPerPerson.toFixed(2)})`).join(', ')}
+                  </>
+                );
+              } else if (birthdayPlayer) {
+                const birthdayLost = losers.some(l => getPickBigGuy(l) === birthdayPlayer);
+                const nonBirthdayLosers = losers.filter(l => getPickBigGuy(l) !== birthdayPlayer);
+                const nonBirthdayPicks = picks.filter(p => getPickBigGuy(p) !== birthdayPlayer);
+                const isBirthdayAnd1 = birthdayLost && losers.length === 1;
+
+                if (isBirthdayAnd1) {
+                  const amountPerPerson = totalLost / nonBirthdayPicks.length;
+                  paymentDescription = (
+                    <>
+                      <span className="font-medium text-white">All pay {placedBy || 'Unknown'} ({birthdayPlayer}'s bday): </span>
+                      {nonBirthdayPicks.map(p => `${getPickBigGuy(p)} ($${amountPerPerson.toFixed(2)})`).join(', ')}
+                    </>
+                  );
+                } else if (birthdayLost && nonBirthdayLosers.length > 0) {
+                  const amountPerLoser = totalLost / nonBirthdayLosers.length;
+                  paymentDescription = (
+                    <>
+                      <span className="font-medium text-white">Losers pay {placedBy || 'Unknown'} ({birthdayPlayer}'s bday): </span>
+                      {nonBirthdayLosers.map(l => `${getPickBigGuy(l)} ($${amountPerLoser.toFixed(2)})`).join(', ')}
+                    </>
+                  );
+                } else {
+                  const amountPerLoser = losers.length === 1 ? totalLost : totalLost / losers.length;
+                  paymentDescription = (
+                    <>
+                      <span className="font-medium text-white">Losers pay {placedBy || 'Unknown'}: </span>
+                      {losers.map(l => `${getPickBigGuy(l)} ($${amountPerLoser.toFixed(2)})`).join(', ')}
+                    </>
+                  );
+                }
+              } else {
+                const amountPerLoser = losers.length > 0 ? (totalLost / losers.length) : 0;
+                paymentDescription = (
+                  <>
+                    <span className="font-medium text-white">Losers pay {placedBy || 'Unknown'}: </span>
+                    {losers.map(loser => `${getPickBigGuy(loser)} ($${Number(amountPerLoser).toFixed(2)})`).join(', ')}
+                  </>
+                );
+              }
 
               return (
                 <div key={parlay.id} className="border border-gray-700 rounded-lg p-4 bg-gray-800/50">
@@ -386,11 +523,12 @@ const Payments = () => {
                         ${(parlay.betAmount * picks.length).toFixed(2)}
                       </div>
                       {and1 && <span className="text-xs text-red-400 font-semibold">And-1</span>}
+                      {birthdayPlayer && <span className="text-xs text-yellow-400 font-semibold ml-1">Birthday</span>}
+                      {isEvenSplit && <span className="text-xs text-blue-400 font-semibold ml-1">Even Split</span>}
                     </div>
                   </div>
                   <div className="text-sm mb-2 text-gray-300">
-                    <span className="font-medium text-white">Losers pay {placedBy || 'Unknown'}: </span>
-                    {losers.map(loser => `${getPickBigGuy(loser)} ($${Number(amountPerLoser).toFixed(2)})`).join(', ')}
+                    {paymentDescription}
                   </div>
                   <Button
                     onClick={() => toggleSettlement(parlay.id)}

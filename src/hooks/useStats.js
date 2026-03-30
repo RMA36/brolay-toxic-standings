@@ -233,14 +233,46 @@ export const useStats = (parlays, players, editingParlay = null) => {
             }
           }
 
-          if (and1) {
+          const totalAmount = parlay.betAmount * picks.length;
+          const birthdayPlayer = parlay.birthdayPlayer;
+          const isEvenSplit = parlay.evenSplit;
+
+          if (isEvenSplit) {
+            // Even split: everyone loses equally
+            playerStats.moneyLost += totalAmount / picks.length;
+          } else if (birthdayPlayer && bigGuy === birthdayPlayer) {
+            // Birthday player has no risk — $0 lost
+          } else if (birthdayPlayer) {
+            const birthdayLost = losers.some(l => getBigGuy(l) === birthdayPlayer);
+            const nonBirthdayLosers = losers.filter(l => getBigGuy(l) !== birthdayPlayer);
+            const nonBirthdayPicks = picks.filter(p => getBigGuy(p) !== birthdayPlayer);
+            const isBirthdayAnd1 = birthdayLost && losers.length === 1;
+
+            if (isBirthdayAnd1) {
+              // Birthday guy only loser → all non-birthday participants split
+              playerStats.moneyLost += totalAmount / nonBirthdayPicks.length;
+            } else if (birthdayLost && nonBirthdayLosers.length > 0) {
+              // Birthday guy lost too → only non-birthday losers split
+              playerStats.moneyLost += totalAmount / nonBirthdayLosers.length;
+            } else {
+              // Birthday guy won → normal logic for this loser
+              if (and1) {
+                playerStats.and1s++;
+                const potentialNetProfit = (parlay.totalPayout || 0) - totalAmount;
+                playerStats.and1Cost += potentialNetProfit;
+                playerStats.moneyLost += totalAmount;
+              } else {
+                playerStats.moneyLost += totalAmount / losers.length;
+              }
+            }
+          } else if (and1) {
             playerStats.and1s++;
             // For And-1s, the cost is the potential net profit we would have won
-            const potentialNetProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
+            const potentialNetProfit = (parlay.totalPayout || 0) - totalAmount;
             playerStats.and1Cost += potentialNetProfit;
-            playerStats.moneyLost += parlay.betAmount * picks.length;
+            playerStats.moneyLost += totalAmount;
           } else {
-            playerStats.moneyLost += (parlay.betAmount * picks.length) / losers.length;
+            playerStats.moneyLost += totalAmount / losers.length;
           }
         }
       });
@@ -395,13 +427,41 @@ export const useStats = (parlays, players, editingParlay = null) => {
             playerStats.byCombinedPropType[propType].losses++;
           }
 
-          if (and1) {
+          const totalAmount = parlay.betAmount * picks.length;
+          const birthdayPlayer = parlay.birthdayPlayer;
+          const isEvenSplit = parlay.evenSplit;
+
+          if (isEvenSplit) {
+            playerStats.moneyLost += totalAmount / picks.length;
+          } else if (birthdayPlayer && bigGuy === birthdayPlayer) {
+            // Birthday player has no risk
+          } else if (birthdayPlayer) {
+            const birthdayLost = losers.some(l => getBigGuy(l) === birthdayPlayer);
+            const nonBirthdayLosers = losers.filter(l => getBigGuy(l) !== birthdayPlayer);
+            const nonBirthdayPicks = picks.filter(p => getBigGuy(p) !== birthdayPlayer);
+            const isBirthdayAnd1 = birthdayLost && losers.length === 1;
+
+            if (isBirthdayAnd1) {
+              playerStats.moneyLost += totalAmount / nonBirthdayPicks.length;
+            } else if (birthdayLost && nonBirthdayLosers.length > 0) {
+              playerStats.moneyLost += totalAmount / nonBirthdayLosers.length;
+            } else {
+              if (and1) {
+                playerStats.and1s++;
+                const potentialNetProfit = (parlay.totalPayout || 0) - totalAmount;
+                playerStats.and1Cost += potentialNetProfit;
+                playerStats.moneyLost += totalAmount;
+              } else {
+                playerStats.moneyLost += totalAmount / losers.length;
+              }
+            }
+          } else if (and1) {
             playerStats.and1s++;
-            const potentialNetProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
+            const potentialNetProfit = (parlay.totalPayout || 0) - totalAmount;
             playerStats.and1Cost += potentialNetProfit;
-            playerStats.moneyLost += parlay.betAmount * picks.length;
+            playerStats.moneyLost += totalAmount;
           } else {
-            playerStats.moneyLost += (parlay.betAmount * picks.length) / losers.length;
+            playerStats.moneyLost += totalAmount / losers.length;
           }
         } else if (result === 'push') {
           playerStats.pushes++;
