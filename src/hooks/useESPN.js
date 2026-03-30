@@ -263,7 +263,25 @@ export const useESPN = () => {
         return standard;
       }
     }
-    
+
+    // Normalize combined stat props (e.g., "Hits+Runs+RBIs" → "hits+runs+rbis")
+    // Handle common variations with spaces, ampersands, and different separators
+    const combinedMappings = {
+      'hits+runs+rbis': ['hits + runs + rbis', 'h+r+rbi', 'hits+runs+rbi', 'hits, runs, rbis', 'hits runs rbis'],
+      'points+rebounds+assists': ['pts+reb+ast', 'pts+rebs+asts', 'points + rebounds + assists', 'pra', 'points rebounds assists'],
+      'points+rebounds': ['pts+reb', 'pts+rebs', 'points + rebounds', 'points rebounds', 'pr'],
+      'points+assists': ['pts+ast', 'pts+asts', 'points + assists', 'points assists', 'pa'],
+      'rebounds+assists': ['reb+ast', 'rebs+asts', 'rebounds + assists', 'rebounds assists', 'ra'],
+      'goals+assists': ['g+a', 'goals + assists', 'goals assists'],
+      'rushing yards+receiving yards': ['rush+rec yards', 'rushing + receiving yards', 'rushing and receiving yards', 'rushing+receiving yards', 'rush yards+rec yards']
+    };
+
+    for (const [standard, variations] of Object.entries(combinedMappings)) {
+      if (normalized === standard || variations.includes(normalized)) {
+        return standard;
+      }
+    }
+
     return normalized;
   };
 
@@ -298,33 +316,62 @@ export const useESPN = () => {
 
   const extractPlayerStat = (boxscoreData, playerName, propType, sport) => {
     if (!boxscoreData || !boxscoreData.players) return null;
-    
+
     const normalizedPropType = normalizePropType(propType);
     const propLower = propType.toLowerCase();
-    
-    const isTDScorerProp = propLower.includes('anytime') || 
-                           propLower.includes('2+') || 
+
+    // Handle combined stat props (e.g., "Hits+Runs+RBIs", "Points+Rebounds+Assists")
+    // Split on '+' and sum each component stat individually
+    const combinedComponents = normalizedPropType.split('+').map(s => s.trim()).filter(Boolean);
+    if (combinedComponents.length > 1) {
+      console.log('📊 Combined stat prop detected:', normalizedPropType, '→ components:', combinedComponents);
+      let combinedTotal = 0;
+      let allFound = true;
+      const componentResults = [];
+
+      for (const component of combinedComponents) {
+        const normalizedComponent = normalizePropType(component);
+        const componentStat = extractPlayerStat(boxscoreData, playerName, normalizedComponent, sport);
+        if (componentStat === null) {
+          console.log('❌ Could not find stat for component:', normalizedComponent);
+          allFound = false;
+          break;
+        }
+        console.log(`✅ ${normalizedComponent}: ${componentStat}`);
+        componentResults.push(`${normalizedComponent}: ${componentStat}`);
+        combinedTotal += componentStat;
+      }
+
+      if (allFound) {
+        console.log('📊 Combined total:', combinedTotal, `(${componentResults.join(', ')})`);
+        return combinedTotal;
+      }
+      return null;
+    }
+
+    const isTDScorerProp = propLower.includes('anytime') ||
+                           propLower.includes('2+') ||
                            propLower.includes('multiple td');
-    
+
     try {
       let totalTDs = 0;
       let playerFound = false;
-      
+
       for (const team of boxscoreData.players) {
         if (!team.statistics) continue;
-        
+
         for (const statCategory of team.statistics) {
           if (!statCategory.athletes) continue;
-          
+
           // Match the stat category to the prop type
           const categoryName = statCategory.name?.toLowerCase() || '';
-          const shouldCheckCategory = 
+          const shouldCheckCategory =
             (normalizedPropType.includes('passing') && categoryName.includes('passing')) ||
             (normalizedPropType.includes('rushing') && categoryName.includes('rushing')) ||
             (normalizedPropType.includes('receiving') && categoryName.includes('receiving')) ||
             (normalizedPropType.includes('receptions') && categoryName.includes('receiving')) ||
             (!normalizedPropType.includes('passing') && !normalizedPropType.includes('rushing') && !normalizedPropType.includes('receiving'));
-          
+
           for (const athlete of statCategory.athletes) {
             if (!matchPlayerName(playerName, athlete.athlete?.displayName)) continue;
 
@@ -374,27 +421,27 @@ export const useESPN = () => {
               }
               continue;
             }
-            
+
             // Only check this category if it matches the prop type
             if (!shouldCheckCategory) {
               console.log('⏭️ Skipping category - does not match prop type');
               continue;
             }
-            
+
             const stat = getStatValue(athlete.stats, normalizedPropType, sport, statCategory.labels);
             if (stat !== null) return stat;
           }
         }
       }
-      
+
       if (isTDScorerProp && playerFound) {
         return totalTDs;
       }
-      
+
     } catch (error) {
       console.error('Error extracting player stat:', error);
     }
-    
+
     return null;
   };
 
