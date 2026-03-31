@@ -4,6 +4,7 @@
  */
 
 import { normalizePlayerName } from './formatters';
+import { getCurrentSportsInSeason } from '../insightsHelper';
 
 /**
  * Matches player names between pick and API data
@@ -247,11 +248,14 @@ export const applyFilters = (parlaysList, filters, editingParlayId = null) => {
  * Includes both old and new schema field names for compatibility during transition
  * @returns {Object} Default participant/pick structure
  */
-export const createDefaultParticipant = () => ({
+export const createDefaultParticipant = () => {
+  const inSeason = getCurrentSportsInSeason();
+  const defaultSport = inSeason.length > 0 ? inSeason[0] : 'NFL';
+  return {
   // Big Guy - both old (player) and new (bigGuy) field names
   player: '',
   bigGuy: '',
-  sport: 'NFL',
+  sport: defaultSport,
   team: '',
   playerTeam: '',           // Auto-filled from ESPN for Player Props
   playerPosition: '',       // Auto-filled from ESPN for Player Props
@@ -281,4 +285,5 @@ export const createDefaultParticipant = () => ({
   player1Position: '',      // Auto-filled from ESPN for H2H/Either/Combined
   player2Team: '',          // Auto-filled from ESPN for H2H/Either/Combined
   player2Position: ''       // Auto-filled from ESPN for H2H/Either/Combined
-});
+  };
+};
