@@ -119,7 +119,7 @@ export const useStats = (parlays, players, editingParlay = null) => {
       const pushes = picks.filter(p => getResult(p) === 'push');
       const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
       const parlayWon = allResolved && losers.length === 0 && winners.length > 0;
-      const and1 = allResolved && losers.length === 1 && winners.length === picks.length - 1;
+      const and1 = allResolved && losers.length === 1 && winners.length + pushes.length === picks.length - 1;
 
       picks.forEach(pick => {
         const bigGuy = getBigGuy(pick);
@@ -316,7 +316,7 @@ export const useStats = (parlays, players, editingParlay = null) => {
       const pushes = picks.filter(p => getResult(p) === 'push');
       const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
       const parlayWon = allResolved && losers.length === 0 && winners.length > 0;
-      const and1 = allResolved && losers.length === 1 && winners.length === picks.length - 1;
+      const and1 = allResolved && losers.length === 1 && winners.length + pushes.length === picks.length - 1;
 
       picks.forEach(pick => {
         const bigGuy = getBigGuy(pick);
