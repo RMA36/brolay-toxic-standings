@@ -94,7 +94,8 @@ const Payments = () => {
     const picks = getPicksArray(parlay);
     const losers = picks.filter(p => getPickResult(p) === 'loss');
     const winners = picks.filter(p => getPickResult(p) === 'win');
-    const and1 = losers.length === 1 && winners.length === picks.length - 1;
+    const pushes = picks.filter(p => getPickResult(p) === 'push');
+    const and1 = losers.length === 1 && winners.length + pushes.length === picks.length - 1;
     const totalAmount = parlay.betAmount * picks.length;
     const placedBy = getSubmittedBy(parlay);
     const birthdayPlayer = parlay.birthdayPlayer;
@@ -451,7 +452,8 @@ const Payments = () => {
               const picks = getPicksArray(parlay);
               const losers = picks.filter(p => getPickResult(p) === 'loss');
               const winners = picks.filter(p => getPickResult(p) === 'win');
-              const and1 = losers.length === 1 && winners.length === picks.length - 1;
+              const pushes = picks.filter(p => getPickResult(p) === 'push');
+              const and1 = losers.length === 1 && winners.length + pushes.length === picks.length - 1;
               const totalLost = parlay.betAmount * picks.length;
               const placedBy = getSubmittedBy(parlay);
               const birthdayPlayer = parlay.birthdayPlayer;

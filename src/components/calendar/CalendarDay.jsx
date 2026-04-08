@@ -41,7 +41,7 @@ const CalendarDay = memo(({
     const pushes = picks.filter(p => getPickResult(p) === 'push');
     const allResolved = (losers.length + winners.length + pushes.length) === picks.length;
     const won = allResolved && losers.length === 0 && winners.length > 0 && pushes.length < picks.length;
-    const and1 = allResolved && losers.length === 1 && winners.length === picks.length - 1;
+    const and1 = allResolved && losers.length === 1 && winners.length + pushes.length === picks.length - 1;
 
     if (won) {
       const netProfit = (parlay.totalPayout || 0) - (parlay.betAmount * picks.length);
