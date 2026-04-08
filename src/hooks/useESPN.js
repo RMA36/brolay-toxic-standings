@@ -1385,10 +1385,61 @@ export const useESPN = () => {
         }
       }
       
+      // If no game found, try the next day (handles cases where parlay date != game date)
+      if (!relevantGame) {
+        const nextDate = new Date(gameDate + 'T12:00:00');
+        nextDate.setDate(nextDate.getDate() + 1);
+        const nextFormatted = nextDate.toISOString().slice(0, 10).replace(/-/g, '');
+        console.log(`⏭️ No game found on ${gameDate}, trying next day: ${nextDate.toISOString().slice(0, 10)}`);
+
+        const nextUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${nextFormatted}${groupsParam}`;
+        const nextResponse = await fetch(nextUrl);
+        const nextData = await nextResponse.json();
+
+        if (nextData.events) {
+          for (const event of nextData.events) {
+            const competition = event.competitions[0];
+            const competitors = competition.competitors;
+
+            if (competition.status.type.completed !== true) continue;
+
+            const homeTeamName = competitors.find(c => c.homeAway === 'home')?.team.displayName || '';
+            const awayTeamName = competitors.find(c => c.homeAway === 'away')?.team.displayName || '';
+
+            if (betType === 'Total') {
+              const awayMatch = matchTeamName(awayTeam, awayTeamName);
+              const homeMatch = matchTeamName(homeTeam, homeTeamName);
+              const awayMatchReversed = matchTeamName(awayTeam, homeTeamName);
+              const homeMatchReversed = matchTeamName(homeTeam, awayTeamName);
+              if ((awayMatch && homeMatch) || (awayMatchReversed && homeMatchReversed)) {
+                relevantGame = competition;
+                console.log('✅ MATCH FOUND on next day!');
+                break;
+              }
+            } else {
+              if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
+                if (awayTeam && homeTeam) {
+                  if ((matchTeamName(awayTeam, awayTeamName) && matchTeamName(homeTeam, homeTeamName)) ||
+                      (matchTeamName(awayTeam, homeTeamName) && matchTeamName(homeTeam, awayTeamName))) {
+                    relevantGame = competition;
+                    console.log('✅ MATCH FOUND on next day!');
+                    break;
+                  }
+                } else {
+                  relevantGame = competition;
+                  console.log('✅ MATCH FOUND on next day!');
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+
       if (!relevantGame) {
         return { result: 'pending', stats: null };
       }
-      
+
       const competitors = relevantGame.competitors;
       const homeComp = competitors.find(c => c.homeAway === 'home');
       const awayComp = competitors.find(c => c.homeAway === 'away');
@@ -1532,8 +1583,10 @@ export const useESPN = () => {
 
           try {
             // Convert to flat format for checkGameResult
+            // Use the pick's own game date if available, otherwise fall back to parlay date
             const participant = pickToParticipant(pick);
-            const resultData = await checkGameResult(participant, parlay.date);
+            const pickGameDate = pick.game?.date || parlay.date;
+            const resultData = await checkGameResult(participant, pickGameDate);
 
             if (resultData && resultData.result && resultData.result !== 'pending') {
               const { outcome: oldOutcome, ...cleanPick } = pick;
