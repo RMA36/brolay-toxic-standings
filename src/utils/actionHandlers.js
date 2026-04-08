@@ -4,7 +4,6 @@
  */
 
 import { normalizePlayerName } from './formatters';
-import { getCurrentSportsInSeason } from '../insightsHelper';
 
 /**
  * Matches player names between pick and API data
@@ -249,8 +248,7 @@ export const applyFilters = (parlaysList, filters, editingParlayId = null) => {
  * @returns {Object} Default participant/pick structure
  */
 export const createDefaultParticipant = () => {
-  const inSeason = getCurrentSportsInSeason();
-  const defaultSport = inSeason.length > 0 ? inSeason[0] : 'NFL';
+  const defaultSport = 'MLB';
   return {
   // Big Guy - both old (player) and new (bigGuy) field names
   player: '',

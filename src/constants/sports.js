@@ -1,7 +1,7 @@
 // Core data constants - maintains existing localStorage learning functionality
 
 export const SPORTS = [
-  'NFL', 'NBA', 'MLB', 'NHL', 'College Football', 'College Basketball', 'WNBA',
+  'NFL', 'NBA', 'MLB', 'NHL', 'College Football', 'College Basketball', 'College Basketball (W)', 'WNBA',
   'Soccer', 'Tennis', 'Golf', 'Rugby', 'UFC', "Women's Hockey"
 ];
 
@@ -140,6 +140,21 @@ export const PRELOADED_TEAMS = {
     'TCU', 'Tennessee', 'Texas', 'Texas A&M', 'Texas Tech', 'UCF', 'UCLA', 'UConn', 'USC', 'Utah',
     'Vanderbilt', 'Villanova', 'Virginia', 'Virginia Tech', 'Wake Forest', 'Washington',
     'Washington State', 'West Virginia', 'Wisconsin', 'Xavier'
+  ],
+  'College Basketball (W)': [
+    'Alabama', 'Arizona', 'Arizona State', 'Arkansas', 'Auburn', 'Baylor', 'Boston College', 'BYU',
+    'California', 'Cincinnati', 'Clemson', 'Colorado', 'Connecticut', 'Creighton',
+    'Duke', 'Florida', 'Florida State', 'Georgetown', 'Georgia', 'Georgia Tech',
+    'Gonzaga', 'Houston', 'Illinois', 'Indiana', 'Iowa', 'Iowa State',
+    'Kansas', 'Kansas State', 'Kentucky', 'Louisville', 'LSU',
+    'Marquette', 'Maryland', 'Miami', 'Michigan', 'Michigan State', 'Minnesota',
+    'Mississippi State', 'Missouri', 'NC State', 'Nebraska', 'North Carolina', 'Northwestern',
+    'Notre Dame', 'Ohio State', 'Oklahoma', 'Oklahoma State', 'Ole Miss', 'Oregon', 'Oregon State',
+    'Penn State', 'Pitt', 'Purdue', 'Rutgers', 'SMU',
+    'South Carolina', 'Stanford', 'Syracuse',
+    'TCU', 'Tennessee', 'Texas', 'Texas A&M', 'Texas Tech', 'UCF', 'UCLA', 'UConn', 'USC', 'Utah',
+    'Vanderbilt', 'Villanova', 'Virginia', 'Virginia Tech', 'Wake Forest', 'Washington',
+    'West Virginia', 'Wisconsin'
   ],
   Soccer: [
     'Arsenal', 'Chelsea', 'Liverpool', 'Manchester City', 'Manchester United', 'Tottenham',
