@@ -1333,106 +1333,55 @@ export const useESPN = () => {
       }
       
       let relevantGame = null;
-      
+
       // CRITICAL FIX: Improved game matching logic
       for (const event of data.events) {
         const competition = event.competitions[0];
         const competitors = competition.competitors;
+        const statusName = competition.status.type.name || '';
+
+        const homeTeamName = competitors.find(c => c.homeAway === 'home')?.team.displayName || '';
+        const awayTeamName = competitors.find(c => c.homeAway === 'away')?.team.displayName || '';
+
+        // Check if this game matches the pick's team(s)
+        let isMatchingGame = false;
+        if (betType === 'Total') {
+          const awayMatch = matchTeamName(awayTeam, awayTeamName);
+          const homeMatch = matchTeamName(homeTeam, homeTeamName);
+          const awayMatchReversed = matchTeamName(awayTeam, homeTeamName);
+          const homeMatchReversed = matchTeamName(homeTeam, awayTeamName);
+          isMatchingGame = (awayMatch && homeMatch) || (awayMatchReversed && homeMatchReversed);
+        } else {
+          if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
+            if (awayTeam && homeTeam) {
+              isMatchingGame = (matchTeamName(awayTeam, awayTeamName) && matchTeamName(homeTeam, homeTeamName)) ||
+                               (matchTeamName(awayTeam, homeTeamName) && matchTeamName(homeTeam, awayTeamName));
+            } else {
+              isMatchingGame = true;
+            }
+          }
+        }
+
+        // If the matching game was postponed/cancelled/suspended, mark as push
+        if (isMatchingGame && (statusName === 'STATUS_POSTPONED' || statusName === 'STATUS_CANCELED' || statusName === 'STATUS_SUSPENDED')) {
+          console.log(`🌧️ Game ${awayTeamName} @ ${homeTeamName} was ${statusName.replace('STATUS_', '').toLowerCase()} - marking as push`);
+          return { result: 'push', stats: `Game ${statusName.replace('STATUS_', '').toLowerCase()}` };
+        }
 
         if (competition.status.type.completed !== true) {
           console.log('⏭️ Skipping incomplete game');
           continue;
         }
 
-        const homeTeamName = competitors.find(c => c.homeAway === 'home')?.team.displayName || '';
-        const awayTeamName = competitors.find(c => c.homeAway === 'away')?.team.displayName || '';
-
         console.log(`🏀 Checking game: ${awayTeamName} @ ${homeTeamName}`);
 
-        // For totals, match BOTH teams to ensure correct game
-        // Also check reversed order in case away/home were entered swapped
-        if (betType === 'Total') {
-          console.log(`🎯 Total bet - Looking for: ${awayTeam} @ ${homeTeam}`);
-          const awayMatch = matchTeamName(awayTeam, awayTeamName);
-          const homeMatch = matchTeamName(homeTeam, homeTeamName);
-          const awayMatchReversed = matchTeamName(awayTeam, homeTeamName);
-          const homeMatchReversed = matchTeamName(homeTeam, awayTeamName);
-          console.log(`   Away match (${awayTeam} vs ${awayTeamName}): ${awayMatch}`);
-          console.log(`   Home match (${homeTeam} vs ${homeTeamName}): ${homeMatch}`);
-          if ((awayMatch && homeMatch) || (awayMatchReversed && homeMatchReversed)) {
-            relevantGame = competition;
-            if (awayMatchReversed && homeMatchReversed && !awayMatch) {
-              console.log('✅ MATCH FOUND! (away/home were swapped)');
-            } else {
-              console.log('✅ MATCH FOUND!');
-            }
-            break;
+        if (isMatchingGame) {
+          relevantGame = competition;
+          if (betType === 'Total') {
+            console.log(`🎯 Total bet - Looking for: ${awayTeam} @ ${homeTeam}`);
           }
-        } else {
-          // For spreads and moneylines, match the team
-          if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
-            // ADDITIONAL CHECK: If we have away/home team info, verify it's the right matchup
-            if (awayTeam && homeTeam) {
-              if (matchTeamName(awayTeam, awayTeamName) && matchTeamName(homeTeam, homeTeamName)) {
-                relevantGame = competition;
-                break;
-              }
-            } else {
-              relevantGame = competition;
-              break;
-            }
-          }
-        }
-      }
-      
-      // If no game found, try the next day (handles cases where parlay date != game date)
-      if (!relevantGame) {
-        const nextDate = new Date(gameDate + 'T12:00:00');
-        nextDate.setDate(nextDate.getDate() + 1);
-        const nextFormatted = nextDate.toISOString().slice(0, 10).replace(/-/g, '');
-        console.log(`⏭️ No game found on ${gameDate}, trying next day: ${nextDate.toISOString().slice(0, 10)}`);
-
-        const nextUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${nextFormatted}${groupsParam}`;
-        const nextResponse = await fetch(nextUrl);
-        const nextData = await nextResponse.json();
-
-        if (nextData.events) {
-          for (const event of nextData.events) {
-            const competition = event.competitions[0];
-            const competitors = competition.competitors;
-
-            if (competition.status.type.completed !== true) continue;
-
-            const homeTeamName = competitors.find(c => c.homeAway === 'home')?.team.displayName || '';
-            const awayTeamName = competitors.find(c => c.homeAway === 'away')?.team.displayName || '';
-
-            if (betType === 'Total') {
-              const awayMatch = matchTeamName(awayTeam, awayTeamName);
-              const homeMatch = matchTeamName(homeTeam, homeTeamName);
-              const awayMatchReversed = matchTeamName(awayTeam, homeTeamName);
-              const homeMatchReversed = matchTeamName(homeTeam, awayTeamName);
-              if ((awayMatch && homeMatch) || (awayMatchReversed && homeMatchReversed)) {
-                relevantGame = competition;
-                console.log('✅ MATCH FOUND on next day!');
-                break;
-              }
-            } else {
-              if (matchTeamName(team, homeTeamName) || matchTeamName(team, awayTeamName)) {
-                if (awayTeam && homeTeam) {
-                  if ((matchTeamName(awayTeam, awayTeamName) && matchTeamName(homeTeam, homeTeamName)) ||
-                      (matchTeamName(awayTeam, homeTeamName) && matchTeamName(homeTeam, awayTeamName))) {
-                    relevantGame = competition;
-                    console.log('✅ MATCH FOUND on next day!');
-                    break;
-                  }
-                } else {
-                  relevantGame = competition;
-                  console.log('✅ MATCH FOUND on next day!');
-                  break;
-                }
-              }
-            }
-          }
+          console.log('✅ MATCH FOUND!');
+          break;
         }
       }
 
