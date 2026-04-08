@@ -83,7 +83,7 @@ export const useESPN = () => {
       'NHL': 'hockey/nhl',
       'College Football': 'football/college-football',
       'College Basketball': 'basketball/mens-college-basketball',
-      'College Basketball (Women\'s)': 'basketball/womens-college-basketball',
+      'College Basketball (W)': 'basketball/womens-college-basketball',
       'Soccer': 'soccer/usa.1',
       'Soccer (Women\'s)': 'soccer/usa.nwsl',
       'Tennis': 'tennis/atp',
@@ -182,7 +182,17 @@ export const useESPN = () => {
         'home runs': ['HR', 'Home Runs'],
         'rbis': ['RBI', 'RBIs'],
         'runs': ['R', 'Runs'],
-        'stolen bases': ['SB', 'Stolen Bases']
+        'stolen bases': ['SB', 'Stolen Bases'],
+        'earned runs allowed': ['ER', 'Earned runs', 'Earned Runs'],
+        'innings pitched': ['IP', 'Innings pitched', 'Innings Pitched'],
+        'walks allowed': ['BB', 'Walks'],
+        'pitching strikeouts': ['K', 'Strikeouts'],
+        'hits allowed': ['H', 'Hits'],
+        'home runs allowed': ['HR', 'Home Runs'],
+        'wins': ['W', 'Wins'],
+        'losses': ['L', 'Losses'],
+        'era': ['ERA', 'Earned Run Average'],
+        'whip': ['WHIP', 'Walks Plus Hits Per Inning Pitched']
       },
       'NHL': {
         'goals': ['G', 'Goals'],
@@ -253,6 +263,14 @@ export const useESPN = () => {
       'rbis': ['rbi', 'runs batted in'],
       'runs': ['r'],
       'stolen bases': ['sb', 'steals'],
+      'earned runs allowed': ['era allowed', 'earned runs', 'er', 'ers'],
+      'innings pitched': ['ip', 'innings'],
+      'walks allowed': ['bb', 'walks', 'bases on balls'],
+      'pitching strikeouts': ['pitcher strikeouts', 'pitcher k', 'pitcher ks'],
+      'hits allowed': ['ha', 'hits against'],
+      'home runs allowed': ['hra', 'hr allowed', 'homers allowed'],
+      'era': ['earned run average'],
+      'whip': [],
       'goals': ['g'],
       'saves': ['sv'],
       'shots on goal': ['sog', 'shots']
@@ -510,18 +528,20 @@ export const useESPN = () => {
     
     try {
       const formattedDate = gameDate.replace(/-/g, '');
-      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}`;
-      
+      const isCollegeSport = sport === 'College Basketball' || sport === 'College Football' || sport === 'College Basketball (W)';
+      const groupsParam = isCollegeSport ? '&groups=50' : '';
+      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}${groupsParam}`;
+
       const response = await fetch(url);
       const data = await response.json();
-      
+
       console.log('📡 ESPN API returned', data.events?.length || 0, 'events for date', gameDate);
-      
+
       if (!data.events || data.events.length === 0) {
         console.log('❌ No events found');
         return { result: 'pending', stats: null };
       }
-      
+
       // Try to find the game with this player
       for (const event of data.events) {
         const competition = event.competitions?.[0];
@@ -1297,7 +1317,7 @@ export const useESPN = () => {
     try {
       const formattedDate = gameDate.replace(/-/g, '');
       // For college sports, add groups=50 to get ALL Division I games, not just Top 25
-      const isCollegeSport = sport === 'College Basketball' || sport === 'College Football';
+      const isCollegeSport = sport === 'College Basketball' || sport === 'College Football' || sport === 'College Basketball (W)';
       const groupsParam = isCollegeSport ? '&groups=50' : '';
       const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/scoreboard?dates=${formattedDate}${groupsParam}`;
 
@@ -1330,15 +1350,22 @@ export const useESPN = () => {
         console.log(`🏀 Checking game: ${awayTeamName} @ ${homeTeamName}`);
 
         // For totals, match BOTH teams to ensure correct game
+        // Also check reversed order in case away/home were entered swapped
         if (betType === 'Total') {
           console.log(`🎯 Total bet - Looking for: ${awayTeam} @ ${homeTeam}`);
           const awayMatch = matchTeamName(awayTeam, awayTeamName);
           const homeMatch = matchTeamName(homeTeam, homeTeamName);
+          const awayMatchReversed = matchTeamName(awayTeam, homeTeamName);
+          const homeMatchReversed = matchTeamName(homeTeam, awayTeamName);
           console.log(`   Away match (${awayTeam} vs ${awayTeamName}): ${awayMatch}`);
           console.log(`   Home match (${homeTeam} vs ${homeTeamName}): ${homeMatch}`);
-          if (awayMatch && homeMatch) {
+          if ((awayMatch && homeMatch) || (awayMatchReversed && homeMatchReversed)) {
             relevantGame = competition;
-            console.log('✅ MATCH FOUND!');
+            if (awayMatchReversed && homeMatchReversed && !awayMatch) {
+              console.log('✅ MATCH FOUND! (away/home were swapped)');
+            } else {
+              console.log('✅ MATCH FOUND!');
+            }
             break;
           }
         } else {
