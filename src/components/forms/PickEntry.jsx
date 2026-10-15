@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Button from '../common/Button';
 
 import { colors } from '../../constants/theme';
@@ -73,7 +73,14 @@ const PickEntry = ({
   const [showPlayerSuggestions, setShowPlayerSuggestions] = useState(false);
   const [loadingPlayerData, setLoadingPlayerData] = useState(false);
   const [currentPlayerField, setCurrentPlayerField] = useState(null); // 'player1', 'player2', or null
-  const { lookupPlayer } = useESPNPlayers();
+  const { lookupPlayer, prefetchRosters } = useESPNPlayers();
+
+  // Load rosters in the background once a player bet + sport are chosen,
+  // so team/position fill instantly when the player field loses focus
+  const isPlayerLookupBet = ['Player Prop', 'H2H Prop', 'Either Prop', 'Combined Prop'].includes(participant.betType);
+  useEffect(() => {
+    if (isPlayerLookupBet) prefetchRosters(participant.sport);
+  }, [isPlayerLookupBet, participant.sport]);
 
   const updateField = (field, value) => {
     onUpdate(participantId, field, value);
@@ -1345,10 +1352,14 @@ const PickEntry = ({
               )}
 
               {/* Auto-filled team/position display (for Player Props) */}
-              {showPlayerField && participant.playerTeam && (
+              {showPlayerField && participant.playerTeam && !loadingPlayerData && (
                 <div className="mt-1 text-xs text-gray-300">
                   {participant.playerTeam} • {participant.playerPosition}
-                  {loadingPlayerData && <span className="ml-2">Loading...</span>}
+                </div>
+              )}
+              {showPlayerField && loadingPlayerData && (
+                <div className="mt-1 text-xs text-gray-300">
+                  Looking up player on ESPN...
                 </div>
               )}
             </div>

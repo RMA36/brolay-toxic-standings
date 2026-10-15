@@ -1,6 +1,100 @@
 import { normalizePlayerName } from '../utils/formatters';
 import { INDIVIDUAL_SPORTS, ESPN_SITE_API_PROXY } from '../constants/sports';
 
+// ESPN occasionally leaves a request hanging with no response. Without a timeout,
+// one stuck roster blocks the whole lookup forever, so cap each request
+// (rosters normally return in well under 500ms).
+const ESPN_REQUEST_TIMEOUT_MS = 3000;
+
+// Rosters rarely change within a session - cache them per sport so repeat lookups
+// are instant and don't re-fire ~30 roster requests on every blur.
+const ROSTER_CACHE_TTL_MS = 30 * 60 * 1000;
+const rosterCache = new Map(); // espnSport -> { fetchedAt, promise }
+
+const fetchWithTimeout = async (url) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ESPN_REQUEST_TIMEOUT_MS);
+  try {
+    return await fetch(url, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+};
+
+/**
+ * Fetch every team roster for a sport (cached).
+ * Teams whose roster fails or times out are skipped rather than failing the lookup.
+ * @returns {Promise<Array<{ team, athletes }>>}
+ */
+const loadRosters = async (espnSport) => {
+  const teamsUrl = `${ESPN_SITE_API_PROXY}/site/v2/sports/${espnSport}/teams`;
+  const teamsResponse = await fetchWithTimeout(teamsUrl);
+
+  if (!teamsResponse.ok) {
+    throw new Error(`Failed to fetch teams: ${teamsResponse.status}`);
+  }
+
+  const teamsData = await teamsResponse.json();
+  const teams = teamsData.sports?.[0]?.leagues?.[0]?.teams;
+  if (!teams) {
+    throw new Error('Invalid teams data structure');
+  }
+
+  const rosters = await Promise.all(teams.map(async ({ team }) => {
+    try {
+      const rosterUrl = `${ESPN_SITE_API_PROXY}/site/v2/sports/${espnSport}/teams/${team.id}/roster`;
+      const rosterResponse = await fetchWithTimeout(rosterUrl);
+
+      if (!rosterResponse.ok) {
+        console.warn(`Failed to fetch roster for ${team.displayName}`);
+        return null;
+      }
+
+      const rosterData = await rosterResponse.json();
+
+      // ESPN roster API has two formats:
+      // 1. Grouped by position (NFL): athletes is array of { items: [athlete, ...] }
+      // 2. Flat list (NBA, MLB, NHL, etc.): athletes is array of athlete objects directly
+      const athletes = [];
+      if (rosterData.athletes && Array.isArray(rosterData.athletes)) {
+        for (const entry of rosterData.athletes) {
+          if (entry.items && Array.isArray(entry.items)) {
+            athletes.push(...entry.items);
+          } else if (entry.fullName || entry.displayName || entry.id) {
+            athletes.push(entry);
+          }
+        }
+      }
+
+      return { team, athletes };
+    } catch (error) {
+      console.warn(`Error fetching roster for ${team.displayName}:`, error.name === 'AbortError' ? 'timed out' : error);
+      return null;
+    }
+  }));
+
+  return rosters;
+};
+
+const getRosters = (espnSport) => {
+  const cached = rosterCache.get(espnSport);
+  if (cached && Date.now() - cached.fetchedAt < ROSTER_CACHE_TTL_MS) {
+    return cached.promise;
+  }
+
+  const promise = loadRosters(espnSport).then((rosters) => {
+    // Use a partial result now (some rosters failed/timed out), but don't cache it
+    if (rosters.some(r => !r)) rosterCache.delete(espnSport);
+    return rosters.filter(Boolean);
+  }).catch((error) => {
+    rosterCache.delete(espnSport);
+    throw error;
+  });
+
+  rosterCache.set(espnSport, { fetchedAt: Date.now(), promise });
+  return promise;
+};
+
 /**
  * Custom hook for ESPN player roster lookups
  * Fetches player team and position data from ESPN API
@@ -47,65 +141,9 @@ export const useESPNPlayers = () => {
         return null;
       }
 
-      // ESPN teams endpoint (via same-origin proxy - no CORS headers on direct calls)
-      const teamsUrl = `${ESPN_SITE_API_PROXY}/site/v2/sports/${espnSport}/teams`;
-      console.log(`Fetching teams for ${sport} player lookup`);
-      const teamsResponse = await fetch(teamsUrl);
-
-      if (!teamsResponse.ok) {
-        console.error(`Failed to fetch teams: ${teamsResponse.status}`);
-        return null;
-      }
-
-      const teamsData = await teamsResponse.json();
-
-      if (!teamsData.sports || !teamsData.sports[0] || !teamsData.sports[0].leagues || !teamsData.sports[0].leagues[0]) {
-        console.error('Invalid teams data structure');
-        return null;
-      }
-
+      console.log(`Loading ${sport} rosters for player lookup`);
+      const rosters = await getRosters(espnSport);
       const suggestions = [];
-      const teams = teamsData.sports[0].leagues[0].teams;
-
-      // Fetch all team rosters in parallel for much faster lookups
-      const rosterPromises = teams.map(async (teamObj) => {
-        const team = teamObj.team;
-        try {
-          const rosterUrl = `${ESPN_SITE_API_PROXY}/site/v2/sports/${espnSport}/teams/${team.id}/roster`;
-          const rosterResponse = await fetch(rosterUrl);
-
-          if (!rosterResponse.ok) {
-            console.warn(`Failed to fetch roster for ${team.displayName}`);
-            return null;
-          }
-
-          const rosterData = await rosterResponse.json();
-
-          // ESPN roster API has two formats:
-          // 1. Grouped by position (NFL): athletes is array of { items: [athlete, ...] }
-          // 2. Flat list (NBA, MLB, NHL, etc.): athletes is array of athlete objects directly
-          const athletes = [];
-          if (rosterData.athletes && Array.isArray(rosterData.athletes)) {
-            for (const entry of rosterData.athletes) {
-              if (entry.items && Array.isArray(entry.items)) {
-                // Grouped format (e.g., NFL offense/defense/special teams)
-                athletes.push(...entry.items);
-              } else if (entry.fullName || entry.displayName || entry.id) {
-                // Flat format — each entry IS an athlete object
-                athletes.push(entry);
-              }
-            }
-          }
-
-          return { team, athletes };
-        } catch (error) {
-          console.warn(`Error fetching roster for ${team.displayName}:`, error);
-          return null;
-        }
-      });
-
-      // Wait for all roster fetches to complete
-      const rosters = await Promise.all(rosterPromises);
 
       const totalAthletes = rosters.reduce((sum, r) => sum + (r?.athletes?.length || 0), 0);
       console.log(`Searching for "${playerName}" across ${rosters.filter(r => r).length} team rosters (${totalAthletes} total players)`);
@@ -188,5 +226,16 @@ export const useESPNPlayers = () => {
     }
   };
 
-  return { lookupPlayer };
+  /**
+   * Warm the roster cache in the background (e.g. as soon as a Player Prop
+   * and sport are chosen) so the lookup on blur is instant.
+   */
+  const prefetchRosters = (sport) => {
+    if (!sport || INDIVIDUAL_SPORTS.includes(sport)) return;
+    const espnSport = getESPNSport(sport);
+    if (!espnSport) return;
+    getRosters(espnSport).catch(() => {}); // lookupPlayer retries and logs on failure
+  };
+
+  return { lookupPlayer, prefetchRosters };
 };
