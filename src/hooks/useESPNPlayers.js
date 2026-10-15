@@ -1,5 +1,5 @@
 import { normalizePlayerName } from '../utils/formatters';
-import { INDIVIDUAL_SPORTS } from '../constants/sports';
+import { INDIVIDUAL_SPORTS, ESPN_SITE_API_PROXY } from '../constants/sports';
 
 /**
  * Custom hook for ESPN player roster lookups
@@ -47,8 +47,8 @@ export const useESPNPlayers = () => {
         return null;
       }
 
-      // ESPN teams endpoint
-      const teamsUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/teams`;
+      // ESPN teams endpoint (via same-origin proxy - no CORS headers on direct calls)
+      const teamsUrl = `${ESPN_SITE_API_PROXY}/site/v2/sports/${espnSport}/teams`;
       console.log(`Fetching teams for ${sport} player lookup`);
       const teamsResponse = await fetch(teamsUrl);
 
@@ -71,7 +71,7 @@ export const useESPNPlayers = () => {
       const rosterPromises = teams.map(async (teamObj) => {
         const team = teamObj.team;
         try {
-          const rosterUrl = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/teams/${team.id}/roster`;
+          const rosterUrl = `${ESPN_SITE_API_PROXY}/site/v2/sports/${espnSport}/teams/${team.id}/roster`;
           const rosterResponse = await fetch(rosterUrl);
 
           if (!rosterResponse.ok) {

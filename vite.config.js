@@ -2,6 +2,16 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Same-origin proxy for ESPN's site API (mirrors the rewrite in vercel.json).
+// ESPN's /teams endpoint sends no CORS headers, so the browser can't call it directly.
+const espnProxy = {
+  '/api/espn': {
+    target: 'https://site.api.espn.com',
+    changeOrigin: true,
+    rewrite: (path) => path.replace(/^\/api\/espn/, '/apis')
+  }
+}
+
 export default defineConfig({
   test: {
     environment: 'jsdom',
@@ -100,7 +110,11 @@ export default defineConfig({
     // Prevent aggressive caching in development
     headers: {
       'Cache-Control': 'no-store'
-    }
+    },
+    proxy: espnProxy
+  },
+  preview: {
+    proxy: espnProxy
   },
   build: {
     sourcemap: false,

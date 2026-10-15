@@ -75,7 +75,7 @@ describe('useESPNTeams', () => {
       const teams = await result.current.lookupTeams('Michigan', 'College Basketball');
 
       expect(fetch).toHaveBeenCalledWith(
-        'https://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/teams'
+        '/api/espn/site/v2/sports/basketball/mens-college-basketball/teams?limit=1000'
       );
       expect(teams).toHaveLength(2);
       expect(teams[0].name).toBe('Michigan Wolverines');

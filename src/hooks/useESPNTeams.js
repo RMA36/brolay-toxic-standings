@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ESPN_SITE_API_PROXY } from '../constants/sports';
 
 /**
  * Custom hook for ESPN Team lookup and autocomplete
@@ -56,7 +57,8 @@ export const useESPNTeams = () => {
 
     try {
       // Fetch teams from ESPN API with limit parameter to get all teams
-      const url = `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/teams?limit=1000`;
+      // (via same-origin proxy - ESPN's /teams endpoint sends no CORS headers)
+      const url = `${ESPN_SITE_API_PROXY}/site/v2/sports/${espnSport}/teams?limit=1000`;
       console.log('[lookupTeams] Fetching from URL:', url);
 
       const response = await fetch(url);

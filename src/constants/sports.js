@@ -329,6 +329,11 @@ export const ODDS_API_PROP_MAPPINGS = {
   'last_goal_scorer': 'player_goal_scorer_last'
 };
 
+// Same-origin proxy for ESPN's site API (maps to https://site.api.espn.com/apis).
+// ESPN's /teams endpoint stopped sending CORS headers, so browsers block direct calls.
+// Proxied by vite.config.js in dev/preview and vercel.json rewrites in production.
+export const ESPN_SITE_API_PROXY = '/api/espn';
+
 // ESPN API stat mappings for auto-updates
 export const ESPN_STAT_MAPPINGS = {
   'NFL': {

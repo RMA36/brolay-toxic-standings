@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/espn/:path*",
+      "destination": "https://site.api.espn.com/apis/:path*"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
