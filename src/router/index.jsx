@@ -5,17 +5,36 @@ import Layout from '../components/layout/Layout';
 // Keep Entry eager - most common first page
 import Entry from '../pages/Entry';
 
+// After a deploy, a tab still running the old build asks for page chunks whose
+// hashed filenames no longer exist, and the import fails. Reload once to pick up
+// the new build instead of showing the router's error screen. The timestamp
+// guard prevents a reload loop if the chunk is genuinely broken.
+const CHUNK_RELOAD_KEY = 'brolay-chunk-reload-at';
+const lazyWithReload = (importPage) => lazy(() =>
+  importPage().catch((error) => {
+    let lastReload = 0;
+    try { lastReload = Number(sessionStorage.getItem(CHUNK_RELOAD_KEY)) || 0; } catch { /* storage blocked */ }
+
+    if (Date.now() - lastReload > 10000) {
+      try { sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now())); } catch { /* storage blocked */ }
+      window.location.reload();
+      return new Promise(() => {}); // keep Suspense fallback up while the page reloads
+    }
+    throw error;
+  })
+);
+
 // Route-level code splitting - heavy pages loaded on demand
-const Search = lazy(() => import('../pages/Search'));
-const AllBrolays = lazy(() => import('../pages/AllBrolays'));
-const AllPicks = lazy(() => import('../pages/AllPicks'));
-const IndividualDashboard = lazy(() => import('../pages/IndividualDashboard'));
-const GroupDashboard = lazy(() => import('../pages/GroupDashboard'));
-const Payments = lazy(() => import('../pages/Payments'));
-const Rankings = lazy(() => import('../pages/Rankings'));
-const Grid = lazy(() => import('../pages/Grid'));
-const Settings = lazy(() => import('../pages/Settings'));
-const Import = lazy(() => import('../pages/Import'));
+const Search = lazyWithReload(() => import('../pages/Search'));
+const AllBrolays = lazyWithReload(() => import('../pages/AllBrolays'));
+const AllPicks = lazyWithReload(() => import('../pages/AllPicks'));
+const IndividualDashboard = lazyWithReload(() => import('../pages/IndividualDashboard'));
+const GroupDashboard = lazyWithReload(() => import('../pages/GroupDashboard'));
+const Payments = lazyWithReload(() => import('../pages/Payments'));
+const Rankings = lazyWithReload(() => import('../pages/Rankings'));
+const Grid = lazyWithReload(() => import('../pages/Grid'));
+const Settings = lazyWithReload(() => import('../pages/Settings'));
+const Import = lazyWithReload(() => import('../pages/Import'));
 // Recommendations tab decommissioned — was the only active Odds API consumer
 
 /**
